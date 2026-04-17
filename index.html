@@ -948,7 +948,7 @@ ${instruccion}`;
 })();
 }
 
-function savePip(){
+async function savePip(){
   const c=gc();if(!c)return;
   const g=id=>document.getElementById(id);
   if(g('pip-estado'))c.estado=g('pip-estado').value;
@@ -974,7 +974,7 @@ function savePip(){
   await sv(c);
 }
 
-function saveNew(){const $=s=>document.querySelector(s);const name=$('#fn-name')?.value.trim();if(!name){$('#fn-name')?.focus();return}const sn=[...document.querySelectorAll('#fn-needs-grid .need-toggle.on')].map(t=>t.dataset.need);
+async function saveNew(){const $=s=>document.querySelector(s);const name=$('#fn-name')?.value.trim();if(!name){$('#fn-name')?.focus();return}const sn=[...document.querySelectorAll('#fn-needs-grid .need-toggle.on')].map(t=>t.dataset.need);
   const tipo=document.querySelector('#fn-tipo-grid .need-toggle.on')?.dataset.tipo||'Abono';
   const plataformas=tipo==='LC'?[...document.querySelectorAll('#fn-plat-grid .need-toggle.on')].map(t=>t.dataset.plat):[];
   const modalidadPago=document.querySelector('#fn-modal-grid .need-toggle.on')?.dataset.modal||'';
