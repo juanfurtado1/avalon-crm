@@ -59,7 +59,6 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .field-input,.field-select,.field-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;outline:none}
 .field-input:focus,.field-select:focus,.field-textarea:focus{border-color:var(--gold)}
 .field-select option{background:var(--surface2)}
-.field-select option:checked{background:var(--gold);color:#000}
 .field-textarea{resize:vertical;min-height:80px;line-height:1.5}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .needs-grid{display:flex;gap:6px;flex-wrap:wrap}
@@ -72,6 +71,7 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .btn-outline{width:100%;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:10px;padding:10px;font-family:'Montserrat',sans-serif;font-size:11px;cursor:pointer;margin-top:8px;font-weight:600}
 .btn-sm{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;display:inline-flex;align-items:center;gap:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
 .btn-sm:hover{border-color:#555;color:var(--text)}
+.btn-gold{background:var(--gold-dim);border-color:rgba(155,109,255,.4);color:var(--gold)}
 .ai-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:12px;line-height:1.7;color:var(--text);white-space:pre-wrap;margin-bottom:10px}
 .ai-box.loading{color:var(--text-muted);font-style:italic;display:flex;align-items:center;gap:8px}
 .ai-box h3{font-size:11px;color:var(--gold);margin:12px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
@@ -84,7 +84,6 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .question-num{font-size:8px;color:var(--gold);font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:.8px}
 .btn-copy{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;font-size:11px;color:var(--text-muted);cursor:pointer;margin-bottom:8px;font-family:'Montserrat',sans-serif;font-weight:600}
 .btn-copy.copied{border-color:var(--green);color:var(--green)}
-.channel-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
 .channel-btn{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px;text-align:center;cursor:pointer;font-size:11px;color:var(--text-muted);font-family:'Montserrat',sans-serif;font-weight:600}
 .channel-btn.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
 .channel-icon{font-size:20px;margin-bottom:3px}
@@ -113,108 +112,59 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .modal-handle{width:32px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
 .modal-title{font-size:17px;font-weight:800;color:var(--gold);margin-bottom:14px;letter-spacing:-.3px}
 .divider{border:none;border-top:1px solid var(--border);margin:14px 0}
-.info-chip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:10px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px;margin-bottom:8px;font-weight:600}
-.info-chip a{color:var(--blue);text-decoration:none}
+.info-chip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:10px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px;margin-bottom:8px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-const SP=`Sos un asistente estratégico-comercial para Juan, ejecutivo de Avalon World Agency, agencia de marketing y comunicación (Buenos Aires, Miami, Dubai, Barcelona, San Pablo). Modelo de negocio: servicio principal estrategia + pauta (Meta Ads, Google Ads). Complementario: redes, contenido, diseño, branding. Juan NO vende redes aisladas. Analizar marcas: leer negocio real, detectar contradicciones, evaluar fit con Avalon. Preguntas discovery: específicas al negocio, nunca genéricas, revelan problema real y presupuesto, posicionan a Juan como partner estratégico. 5 preguntas máximo. Propuestas: partir del negocio real, eje estrategia + pauta. Estilo: español rioplatense (vos), directo, comercial, sin paja.`;
+// ── CONSTANTS ──
+const SP=`Sos un asistente estratégico-comercial para Juan, ejecutivo de Avalon World Agency, agencia de marketing y comunicación (Buenos Aires, Miami, Dubai, Barcelona, San Pablo). Modelo de negocio: servicio principal estrategia + pauta (Meta Ads, Google Ads). Complementario: redes, contenido, diseño, branding. Juan NO vende redes aisladas. Analizar marcas: leer negocio real, detectar contradicciones, evaluar fit con Avalon. Preguntas discovery: específicas al negocio, nunca genéricas, revelan problema real y presupuesto, posicionan a Juan como partner estratégico. 5 preguntas máximo. Propuestas: partir del negocio real, eje estrategia + pauta. Módulos disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre. Estilo: español rioplatense (vos), directo, comercial, sin paja.`;
 const ESTADOS=['Enviada','En negociación','Sin respuesta','Cerrada','Perdida'];
 const EC={'Enviada':'s-enviada','En negociación':'s-negociacion','Sin respuesta':'s-sin-respuesta','Cerrada':'s-cerrada','Perdida':'s-perdida'};
 const NEEDS=['Posicionamiento','Ventas','Comunidad','Nueva identidad','Rebranding','Pauta digital','Contenido','Estrategia','E-commerce','Awareness'];
 const PLATAFORMAS=['Meta','Google','TikTok','Pinterest','Otra'];
 const CANALES=['Meta','LinkedIn','Google','Referido','Nico','Ger','Caza'];
-function getApiKey(){return localStorage.getItem('avalon_api_key')||''}
-function setApiKey(k){localStorage.setItem('avalon_api_key',k)}
 const MODALIDADES=['Facturado','Financiera','En mano'];
 const MONEDAS=['ARS','USD','USDT'];
-function nc(d={}){return{id:d.id||Date.now().toString(),name:d.name||'',company:d.company||'',email:d.email||'',canal:d.canal||'',web:d.web||'',instagram:d.instagram||'',phone:d.phone||'',needs:d.needs||[],service:d.service||'',amount:d.amount||'',
-    tipo:d.tipo||'Abono',plataformas:d.plataformas||[],presupuesto:d.presupuesto||'',modalidadPago:d.modalidadPago||'',moneda:d.moneda||'ARS',estado:d.estado||'Enviada',lastContact:d.lastContact||new Date().toISOString().split('T')[0],
-    note:d.note||'',notes:d.notes||(d.note?[{date:d.lastContact||new Date().toISOString().split('T')[0],text:d.note}]:[]),
-    investigacion:d.investigacion||{contexto:'',resultado:'',preguntas:[]},reunion:d.reunion||{notasVivo:'',checkedQs:[]},propuesta:d.propuesta||{transcripcion:'',brief:'',data:null},followupChannel:d.followupChannel||'email',followupText:d.followupText||''}}
-// ── SUPABASE CONFIG ──
+
+// ── SUPABASE ──
 const SB_URL='https://jbfpwrkcyhoclqxvxuqq.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZnB3cmtjeWhvY2xxeHZ4dXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDg2NDksImV4cCI6MjA5MjAyNDY0OX0.P93RK6PKiU7LlDdWGT00ad_nHOVU6aSM0dsQjVUl05M';
-function getSbUrl(){return SB_URL}
-function getSbKey(){return SB_KEY}
-function setSbConfig(url,key){}
-function sbHeaders(){return{'Content-Type':'application/json','apikey':getSbKey(),'Authorization':'Bearer '+getSbKey(),'Prefer':'return=representation'}}
-function sbReady(){return true}
-
+function sbH(){return{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=representation'}}
 let clients=[];
-let sbLoading=false;
-
 async function loadC(){
-  // Migrate from localStorage if needed
   try{
     const old=JSON.parse(localStorage.getItem('avalon_clients')||'[]');
-    if(old.length&&sbReady()){
-      for(const c of old){await sbUpsert(c);}
-      localStorage.removeItem('avalon_clients');
-      localStorage.removeItem('pipeline_clients');
-    }
+    if(old.length){for(const c of old)await sbUp(c);localStorage.removeItem('avalon_clients');localStorage.removeItem('pipeline_clients');}
   }catch(e){}
-  if(!sbReady())return;
   try{
-    const r=await fetch(getSbUrl()+'/rest/v1/clients?select=data&order=created_at.desc',{headers:sbHeaders()});
+    const r=await fetch(SB_URL+'/rest/v1/clients?select=data&order=created_at.desc',{headers:sbH()});
     const rows=await r.json();
     if(Array.isArray(rows))clients=rows.map(row=>nc(row.data));
   }catch(e){console.error('Load error',e);}
 }
-async function sv(client){
-  if(!sbReady()||!client)return;
-  await sbUpsert(client);
-}
-async function svAll(){
-  if(!sbReady())return;
-  for(const c of clients)await sbUpsert(c);
-}
-async function sbUpsert(c){
+async function sv(c){if(!c)return;await sbUp(c);}
+async function sbUp(c){
   try{
-    await fetch(getSbUrl()+'/rest/v1/clients',{
+    await fetch(SB_URL+'/rest/v1/clients',{
       method:'POST',
-      headers:{...sbHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'},
+      headers:{...sbH(),'Prefer':'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify({id:c.id,data:c,updated_at:new Date().toISOString()})
     });
   }catch(e){console.error('Upsert error',e);}
 }
-async function sbDelete(id){
-  try{
-    await fetch(getSbUrl()+'/rest/v1/clients?id=eq.'+id,{method:'DELETE',headers:sbHeaders()});
-  }catch(e){console.error('Delete error',e);}
+async function sbDel(id){
+  try{await fetch(SB_URL+'/rest/v1/clients?id=eq.'+id,{method:'DELETE',headers:sbH()});}
+  catch(e){console.error('Delete error',e);}
 }
-let st={view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showNewModal:false,showFilters:false,showApiModal:false,showSbModal:false,sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,copiedInv:false,copiedBrief:false,copiedFollowup:false,
-  filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''}
-};
-function ds(d){if(!d)return 999;return Math.floor((new Date()-new Date(d))/86400000)}
-function ul(d,e){if(['Cerrada','Perdida'].includes(e))return'none';if(d>=7)return'hot';if(d>=3)return'warm';return'ok'}
-function uc(l){return{hot:'#d95f5f',warm:'#c49a20',ok:'#4aab7a',none:'#2e2e2e'}[l]}
-function ula(d,e){if(e==='Cerrada')return'✓ Cerrada';if(e==='Perdida')return'✗ Perdida';if(d===999)return'Sin fecha';if(d===0)return'Hoy';return`Hace ${d}d`}
-function sp(c){return[!!c.investigacion?.resultado,!!(c.investigacion?.preguntas?.length),!!c.propuesta?.brief,!!c.lastContact]}
-function gc(){return clients.find(c=>c.id===st.activeClient)}
-function wa(p){if(!p)return null;const n=p.replace(/\D/g,'');const a=n.startsWith('54')?n:'549'+n.replace(/^0/,'').replace(/^11/,'11');return`https://wa.me/${a}`}
-function igUrl(ig){
-  if(!ig)return null;
-  ig=ig.trim();
-  if(ig.startsWith('http'))return ig;
-  ig=ig.replace(/^@/,'');
-  return'https://instagram.com/'+ig;
-}
-function igLabel(ig){
-  if(!ig)return'';
-  ig=ig.trim();
-  if(ig.startsWith('http')){try{const u=new URL(ig);return u.pathname.replace(/\//g,'')||ig;}catch(e){return ig;}}
-  return ig.replace(/^@/,'');
-}
-function fmt(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^###\s*(.+)$/gm,'<h3>$1</h3>').replace(/^##\s*(.+)$/gm,'<h3>$1</h3>').replace(/\n/g,'<br>')}
+
+// ── ANTHROPIC ──
+function getApiKey(){return localStorage.getItem('avalon_api_key')||''}
+function setApiKey(k){localStorage.setItem('avalon_api_key',k)}
 async function claude(messages){
   const key=getApiKey();
-  if(!key){
-    showApiModal();
-    throw new Error('Sin API key');
-  }
+  if(!key){st.showApiModal=true;render();throw new Error('Sin API key');}
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -224,119 +174,59 @@ async function claude(messages){
   if(d.error)throw new Error(d.error.message||'API error');
   return d.content?.[0]?.text||'Error.';
 }
-function showApiModal(){st.showApiModal=true;render()}
 
-function rApiModal(){
-  const k=getApiKey();
-  return`<div class="modal-overlay" id="api-modal-overlay"><div class="modal"><div class="modal-handle"></div>
-  <div class="modal-title">⚙ API Key de Anthropic</div>
-  <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">Para que el CRM pueda usar IA necesitás una API key de Anthropic. Se guarda solo en este dispositivo, nunca sale a ningún servidor.<br><br>Obtenela gratis en <span onclick="window.open('https://console.anthropic.com','_blank')" style="color:var(--gold);cursor:pointer;text-decoration:underline">console.anthropic.com</span></p>
-  <div class="field"><label class="field-label">Tu API Key</label><input class="field-input" id="api-key-input" type="password" placeholder="sk-ant-..." value="${k}"></div>
-  <button class="btn-primary" id="btn-save-api-key">Guardar y continuar</button>
-  <button class="btn-outline" id="btn-cancel-api">Cancelar</button>
-  </div></div>`;
-}
-function rSbModal(){
-  const url=getSbUrl(),key=getSbKey();
-  return`<div class="modal-overlay" id="sb-modal-overlay"><div class="modal"><div class="modal-handle"></div>
-  <div class="modal-title">🗄 Conectar base de datos</div>
-  <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">Para sincronizar datos entre todos tus dispositivos necesitás conectar Supabase. Los datos se guardan en tu propia base de datos, segura y privada.</p>
-  <div class="field"><label class="field-label">Project URL</label><input class="field-input" id="sb-url-input" placeholder="https://xxxx.supabase.co" value="${url}"></div>
-  <div class="field"><label class="field-label">Anon Key</label><input class="field-input" id="sb-key-input" type="password" placeholder="eyJ..." value="${key}"></div>
-  <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Encontrás estos datos en <strong style="color:var(--gold)">supabase.com → tu proyecto → Settings → API</strong></p>
-  <button class="btn-primary" id="btn-save-sb">Conectar y cargar datos</button>
-  <button class="btn-outline" id="btn-cancel-sb">Cancelar</button>
-  </div></div>`;
-}
-function rLoadingScreen(){
-  return`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px">
-    <div class="spinner" style="width:24px;height:24px;border-width:3px"></div>
-    <div style="font-size:12px;color:var(--text-muted);font-weight:600">Cargando clientes...</div>
-  </div>`;
-}
-function rNoConfig(){
-  return`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;padding:32px;text-align:center">
-    <div style="font-size:40px">🗄</div>
-    <div style="font-family:Montserrat,sans-serif;font-size:18px;font-weight:800;color:var(--gold)">Configurar base de datos</div>
-    <div style="font-size:12px;color:var(--text2);line-height:1.6;max-width:320px">Conectá tu proyecto de Supabase para guardar los datos en la nube y acceder desde cualquier dispositivo.</div>
-    <button class="btn-primary" style="max-width:260px" id="btn-open-sb-setup">Conectar Supabase</button>
-    <div style="font-size:10px;color:var(--text-muted)">¿No tenés cuenta? Gratis en supabase.com</div>
-  </div>`;
-}
-async function render(){
-  const app=document.getElementById('app');
-  // sbReady() always true — credentials hardcoded
-  if(st.sbLoading){app.innerHTML=rLoadingScreen();return;}
-  app.innerHTML=st.view==='list'?rList():rDetail();
-  if(st.showSbModal)app.insertAdjacentHTML('beforeend',rSbModal());
-  if(st.showApiModal)app.insertAdjacentHTML('beforeend',rApiModal());
-  if(st.showNewModal)app.insertAdjacentHTML('beforeend',rNewModal());
-  bind();
+// ── DATA MODEL ──
+function nc(d={}){
+  return{
+    id:d.id||Date.now().toString(),
+    name:d.name||'',company:d.company||'',email:d.email||'',canal:d.canal||'',
+    web:d.web||'',instagram:d.instagram||'',phone:d.phone||'',
+    needs:d.needs||[],service:d.service||'',
+    tipo:d.tipo||'Abono',plataformas:d.plataformas||[],
+    presupuesto:d.presupuesto||'',modalidadPago:d.modalidadPago||'',moneda:d.moneda||'ARS',
+    estado:d.estado||'Enviada',
+    lastContact:d.lastContact||new Date().toISOString().split('T')[0],
+    note:d.note||'',
+    notes:d.notes||(d.note?[{date:d.lastContact||new Date().toISOString().split('T')[0],text:d.note}]:[]),
+    investigacion:d.investigacion||{contexto:'',resultado:'',preguntas:[]},
+    reunion:d.reunion||{notasVivo:'',checkedQs:[]},
+    propuesta:d.propuesta||{transcripcion:'',brief:'',data:null},
+    followupChannel:d.followupChannel||'email',
+    followupText:d.followupText||''
+  };
 }
 
-function rFilterPanel(){
-  const f=st.filters;
-  return`<div class="filter-panel">
-    <div>
-      <div class="filter-label">Período — último contacto</div>
-      <div class="filter-row">
-        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Desde</span>
-        <input type="date" class="filter-input-sm" id="f-date-from" value="${f.dateFrom||''}">
-        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Hasta</span>
-        <input type="date" class="filter-input-sm" id="f-date-to" value="${f.dateTo||''}">
-        <button class="filter-chip" id="f-week">Semana</button>
-        <button class="filter-chip" id="f-month">Mes</button>
-      </div>
-    </div>
-    <div>
-      <div class="filter-label">Tipo de cliente</div>
-      <div class="filter-row">
-        ${['Abono','LC'].map(t=>`<button class="filter-chip ${f.tipo===t?'on':''}" data-ftipo="${t}">${t==='LC'?'LC — Línea de Crédito':t}</button>`).join('')}
-      </div>
-    </div>
-    <div>
-      <div class="filter-label">Plataforma (LC)</div>
-      <div class="filter-row">
-        ${['Meta','Google','TikTok','Pinterest','Otra'].map(p=>`<button class="filter-chip ${f.plataforma===p?'on':''}" data-fplat="${p}">${p}</button>`).join('')}
-      </div>
-    </div>
-    <div>
-      <div class="filter-label">Modalidad de pago</div>
-      <div class="filter-row">
-        ${['Facturado','Financiera','En mano'].map(m=>`<button class="filter-chip ${f.modalidad===m?'on':''}" data-fmodal="${m}">${m}</button>`).join('')}
-      </div>
-    </div>
-    <div>
-      <div class="filter-label">Moneda</div>
-      <div class="filter-row">
-        ${['ARS','USD','USDT'].map(m=>`<button class="filter-chip ${f.moneda===m?'on':''}" data-fmoneda="${m}">${m}</button>`).join('')}
-      </div>
-    </div>
-    <div>
-      <div class="filter-label">Urgencia</div>
-      <div class="filter-row">
-        <button class="filter-chip ${f.urgencia==='urgente'?'on':''}" data-furg="urgente">🔴 Urgentes (+7d)</button>
-        <button class="filter-chip ${f.urgencia==='sin-contacto'?'on':''}" data-furg="sin-contacto">🟡 Sin contacto (+3d)</button>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:flex-end">
-      <button class="btn-sm" id="btn-clear-filters" style="color:var(--red);border-color:rgba(217,95,95,.3)">✕ Limpiar filtros</button>
-    </div>
-  </div>`
+// ── STATE ──
+let st={
+  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',
+  showNewModal:false,showFilters:false,showApiModal:false,showSbModal:false,
+  sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
+  copiedInv:false,copiedBrief:false,copiedFollowup:false,
+  filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''}
+};
+
+// ── HELPERS ──
+function ds(d){if(!d)return 999;return Math.floor((new Date()-new Date(d))/86400000)}
+function ul(d,e){if(['Cerrada','Perdida'].includes(e))return'none';if(d>=7)return'hot';if(d>=3)return'warm';return'ok'}
+function uc(l){return{hot:'#d95f5f',warm:'#c49a20',ok:'#4aab7a',none:'#2e2e2e'}[l]}
+function ula(d,e){if(e==='Cerrada')return'✓ Cerrada';if(e==='Perdida')return'✗ Perdida';if(d===999)return'Sin fecha';if(d===0)return'Hoy';return`Hace ${d}d`}
+function sp(c){return[!!c.investigacion?.resultado,!!(c.investigacion?.preguntas?.length),!!c.propuesta?.brief,!!c.lastContact]}
+function gc(){return clients.find(c=>c.id===st.activeClient)}
+function wa(p){if(!p)return null;const n=p.replace(/\D/g,'');const a=n.startsWith('54')?n:'549'+n.replace(/^0/,'').replace(/^11/,'11');return`https://wa.me/${a}`}
+function igUrl(ig){if(!ig)return null;ig=ig.trim();if(ig.startsWith('http'))return ig;return'https://instagram.com/'+ig.replace(/^@/,'')}
+function igLabel(ig){if(!ig)return'';ig=ig.trim();if(ig.startsWith('http')){try{const u=new URL(ig);return u.pathname.replace(/\//g,'')||ig;}catch(e){return ig;}}return ig.replace(/^@/,'')}
+function fmt(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^###\s*(.+)$/gm,'<h3>$1</h3>').replace(/^##\s*(.+)$/gm,'<h3>$1</h3>').replace(/\n/g,'<br>')}
+function gi(id){const el=document.getElementById(id);return el?el.value.trim():null}
+function fmtPres(el){let raw=el.value.replace(/[^0-9]/g,'');if(!raw){el.value='';return;}el.value=parseInt(raw,10).toLocaleString('es-AR');}
+function presRaw(val){return val?val.replace(/[^\d]/g,''):''}
+function fmtPresByMoneda(val,moneda){if(!val)return'';const n=parseInt(val);if(isNaN(n))return val;const f=n.toLocaleString('es-AR');return moneda==='ARS'?'$'+f:f;}
+function updPresPrefix(moneda){
+  const pfx=document.getElementById('pip-pres-prefix');
+  const inp=document.getElementById('pip-presupuesto');
+  if(pfx)pfx.style.display=moneda==='ARS'?'block':'none';
+  if(inp)inp.style.paddingLeft=moneda==='ARS'?'24px':'12px';
 }
-function rReportBar(fl,totalMonto){
-  if(!fl.length&&!hasActiveFilters())return'';
-  const byEstado={};fl.forEach(c=>{byEstado[c.estado]=(byEstado[c.estado]||0)+1});
-  const montoFmt=totalMonto>0?'$'+totalMonto.toLocaleString('es-AR'):'—';
-  const hasF=hasActiveFilters();
-  return`<div class="report-bar">
-    <div class="report-stat"><div class="report-stat-n">${fl.length}</div><div class="report-stat-l">${hasF?'Filtrados':'Clientes'}</div></div>
-    ${totalMonto>0?`<div class="report-stat"><div class="report-stat-n" style="color:var(--green)">${montoFmt}</div><div class="report-stat-l">Monto total</div></div>`:''}
-    ${fl.filter(c=>c.tipo==='LC').length?`<div class="report-stat"><div class="report-stat-n" style="color:var(--blue)">${fl.filter(c=>c.tipo==='LC').length}</div><div class="report-stat-l">LC</div></div>`:''}
-    ${fl.filter(c=>c.tipo!=='LC').length?`<div class="report-stat"><div class="report-stat-n">${fl.filter(c=>c.tipo!=='LC').length}</div><div class="report-stat-l">Abonos</div></div>`:''}
-    ${Object.entries(byEstado).map(([e,n])=>`<div class="report-stat"><div class="report-stat-n" style="font-size:11px">${n}</div><div class="report-stat-l">${e}</div></div>`).join('')}
-  </div>`
-}
+function hasActiveFilters(){const f=st.filters;return f.tipo||f.modalidad||f.plataforma||f.moneda||f.urgencia||f.dateFrom||f.dateTo;}
 function applyFilters(list){
   const f=st.filters;
   return list.filter(c=>{
@@ -347,173 +237,356 @@ function applyFilters(list){
     if(f.moneda&&c.moneda!==f.moneda)return false;
     if(f.urgencia==='urgente'&&ul(ds(c.lastContact),c.estado)!=='hot')return false;
     if(f.urgencia==='sin-contacto'&&ds(c.lastContact)<3)return false;
-    if(f.dateFrom){const d=new Date(c.lastContact);const df=new Date(f.dateFrom);if(d<df)return false;}
-    if(f.dateTo){const d=new Date(c.lastContact);const dt=new Date(f.dateTo);if(d>dt)return false;}
+    if(f.dateFrom){const d=new Date(c.lastContact);if(d<new Date(f.dateFrom))return false;}
+    if(f.dateTo){const d=new Date(c.lastContact);if(d>new Date(f.dateTo))return false;}
     return true;
   });
 }
-function hasActiveFilters(){
+function cpT(text,flag){
+  navigator.clipboard.writeText(text||'').then(()=>{
+    st[flag]=true;render();
+    setTimeout(()=>{st[flag]=false;render();},2000);
+  });
+}
+function toast(msg){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;border:1px solid #9b6dff;color:#9b6dff;padding:8px 16px;border-radius:8px;font-size:11px;z-index:999;white-space:nowrap;font-family:Montserrat,sans-serif;font-weight:700';
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2000);
+}
+
+// ── RENDER ──
+async function render(){
+  const app=document.getElementById('app');
+  if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
+  app.innerHTML=st.view==='list'?rList():rDetail();
+  if(st.showSbModal)app.insertAdjacentHTML('beforeend',rSbModal());
+  if(st.showApiModal)app.insertAdjacentHTML('beforeend',rApiModal());
+  if(st.showNewModal)app.insertAdjacentHTML('beforeend',rNewModal());
+  bind();
+}
+
+function rLoading(){
+  return`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px">
+    <div class="spinner" style="width:24px;height:24px;border-width:3px"></div>
+    <div style="font-size:12px;color:var(--text-muted);font-weight:600">Cargando clientes...</div>
+  </div>`;
+}
+
+function rApiModal(){
+  return`<div class="modal-overlay" id="api-modal-overlay"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-title">⚙ API Key de Anthropic</div>
+  <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">Para usar IA necesitás una API key de Anthropic. Se guarda solo en este dispositivo.<br><br>Obtenela en <span onclick="window.open('https://console.anthropic.com','_blank')" style="color:var(--gold);cursor:pointer;text-decoration:underline">console.anthropic.com</span></p>
+  <div class="field"><label class="field-label">Tu API Key</label><input class="field-input" id="api-key-input" type="password" placeholder="sk-ant-..." value="${getApiKey()}"></div>
+  <button class="btn-primary" id="btn-save-api-key">Guardar y continuar</button>
+  <button class="btn-outline" id="btn-cancel-api">Cancelar</button>
+  </div></div>`;
+}
+
+function rSbModal(){
+  return`<div class="modal-overlay" id="sb-modal-overlay"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-title">🗄 Base de datos</div>
+  <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">Credenciales de Supabase hardcodeadas en el código. Proyecto: <strong style="color:var(--gold)">avalon-crm</strong></p>
+  <div class="field"><label class="field-label">URL</label><input class="field-input" value="${SB_URL}" readonly style="opacity:.6"></div>
+  <div class="field"><label class="field-label">Estado</label><div style="background:rgba(74,171,122,.1);border:1px solid rgba(74,171,122,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green);font-weight:600">✓ Conectado — ${clients.length} clientes cargados</div></div>
+  <button class="btn-outline" id="btn-cancel-sb">Cerrar</button>
+  </div></div>`;
+}
+
+function rFilterPanel(){
   const f=st.filters;
-  return f.tipo||f.modalidad||f.plataforma||f.moneda||f.urgencia||f.dateFrom||f.dateTo;
-}
-function rList(){
-const fl=applyFilters(clients);
-const sr=[...fl].sort((a,b)=>{const o={hot:0,warm:1,ok:2,none:3};return o[ul(ds(a.lastContact),a.estado)]-o[ul(ds(b.lastContact),b.estado)]});
-const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='hot').length};
-// report totals from filtered
-const totalMonto=fl.reduce((acc,c)=>{const v=parseInt(c.presupuesto||c.amount?.replace(/[^\d]/g,'')||0);return acc+(isNaN(v)?0:v);},0);
-const pc=['var(--blue)','var(--yellow)','var(--gold)','var(--green)'];
-const haf=hasActiveFilters();
-return`<div class="header"><div class="logo-wrap"><img class="logo-img" src="https://avalonworldagency.com/wp-content/uploads/2024/06/logo-avalon-1.png" alt="Avalon" onerror="this.style.display='none';this.nextSibling.style.display='block'"><span style="display:none;font-size:16px;font-weight:800;color:var(--gold);letter-spacing:1px">AVALON</span><div class="logo-sep"></div><div class="logo-sub">CRM</div></div><div style="display:flex;gap:6px;align-items:center"><button class="btn-sm" id="btn-export">⬇</button><input type="file" id="import-file" accept=".json" style="display:none"><button class="btn-sm" id="btn-import">⬆</button><button class="btn-sm" id="btn-api-key" title="API Key">⚙</button><button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button><button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters">⚡ Filtros${haf?' ●':''}</button><button class="btn-add" id="btn-open-new">+ Prospecto</button></div></div>
-<div class="gold-bar"></div>
-${st.showFilters?rFilterPanel():''}
-${rReportBar(fl,totalMonto)}
-<div class="stats"><div class="stat"><div class="stat-n">${ct.total}</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n">${ct.abonos}</div><div class="stat-l">Abonos</div></div><div class="stat"><div class="stat-n" style="color:var(--gold)">${ct.lc}</div><div class="stat-l">LC</div></div><div class="stat"><div class="stat-n" style="color:${ct.urgentes>0?'var(--red)':'var(--text-muted)'}">${ct.urgentes}</div><div class="stat-l">Urgentes</div></div></div>
-<div class="filters">${['Todos',...ESTADOS].map(f=>`<button class="filt ${st.filter===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div>
-<div class="cards">${sr.length===0?`<div class="empty"><div class="empty-icon">🎯</div>${clients.length===0?'Agregá tu primer prospecto':'Sin clientes en este estado'}</div>`:sr.map(c=>{const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l),pr=sp(c);return`<div class="card" data-id="${c.id}"><div class="card-bar" style="background:${co}"></div><div class="card-top"><div><div class="c-name">${c.name}</div>${c.company?`<div class="c-company">${c.company}</div>`:''}</div><span class="badge ${EC[c.estado]}">${c.estado}</span></div><div class="card-meta"><div class="meta"><span class="dot" style="background:${co}"></span><b style="color:${co}">${ula(d,c.estado)}</b></div>${c.presupuesto?`<div class="meta">💰 <b>$${parseInt(c.presupuesto).toLocaleString('es-AR')} ${c.moneda||'ARS'}</b></div>`:c.amount?`<div class="meta">💰 <b>${c.amount}</b></div>`:''} ${c.modalidadPago?`<div class="meta">🧾 <b>${c.modalidadPago}</b></div>`:''} ${c.service?`<div class="meta">📌 <b>${c.service}</b></div>`:''}</div>${c.tipo?`<div class="needs-chips"><span class="need-chip" style="${c.tipo==='LC'?'border-color:rgba(155,109,255,.5);color:var(--gold)':''}">${c.tipo}</span>${c.tipo==='LC'&&c.plataformas?.length?c.plataformas.map(p=>`<span class="need-chip">${p}</span>`).join(''):''}${c.moneda&&c.moneda!=='ARS'?`<span class="need-chip" style="color:var(--green)">${c.moneda}</span>`:''}</div>`:''}${c.needs?.length?`<div class="needs-chips">${c.needs.map(n=>`<span class="need-chip">${n}</span>`).join('')}</div>`:''}<div class="card-stages">${pr.map((done,i)=>`<div class="stage-pip" style="background:${done?pc[i]:'var(--surface3)'}"></div>`).join('')}</div></div>`}).join('')}</div>
-${st.showNewModal?rNewModal():''}`;
-}
-
-function rNewModal(){return`<div class="modal-overlay" id="modal-overlay"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Nuevo Prospecto</div>
-<div class="field-row"><div class="field"><label class="field-label">Nombre *</label><input class="field-input" id="fn-name" placeholder="Ej: Martín López"></div><div class="field"><label class="field-label">Empresa / Marca</label><input class="field-input" id="fn-company" placeholder="Ej: Sakura Japan"></div></div>
-<div class="field-row"><div class="field"><label class="field-label">Web</label><input class="field-input" id="fn-web" placeholder="https://..."></div><div class="field"><label class="field-label">Instagram</label><input class="field-input" id="fn-ig" placeholder="@usuario"></div></div>
-<div class="field-row"><div class="field"><label class="field-label">Teléfono</label><input class="field-input" id="fn-phone" placeholder="Ej: 11 5555-5555" type="tel"></div><div class="field"><label class="field-label">Email</label><input class="field-input" id="fn-email" placeholder="Ej: martin@empresa.com" type="email"></div></div>
-<div class="field"><label class="field-label">Canal — ¿de dónde viene?</label><div class="needs-grid" id="fn-canal-grid">${CANALES.map(c=>`<div class="need-toggle" data-canal="${c}">${c}</div>`).join('')}</div></div>
-<div class="field"><label class="field-label">¿Qué necesita? (multiselección)</label><div class="needs-grid" id="fn-needs-grid">${NEEDS.map(n=>`<div class="need-toggle" data-need="${n}">${n}</div>`).join('')}</div></div>
-<div class="field"><label class="field-label">Tipo de cliente</label><div class="needs-grid" id="fn-tipo-grid"><div class="need-toggle on" data-tipo="Abono">Abono</div><div class="need-toggle" data-tipo="LC">LC — Línea de Crédito</div></div></div>
-<div id="fn-lc-fields" style="display:none">
-<div class="field"><label class="field-label">Plataformas</label><div class="needs-grid" id="fn-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle" data-plat="${p}">${p}</div>`).join('')}</div></div>
-</div>
-<div class="field-row">
-<div class="field"><label class="field-label">Presupuesto aprox.</label><input class="field-input" id="fn-presupuesto" placeholder="Ej: 500.000" oninput="fmtPres(this)" inputmode="numeric"></div>
-<div class="field"><label class="field-label">Moneda</label><select class="field-select" id="fn-moneda">${MONEDAS.map(m=>`<option value="${m}">${m}</option>`).join('')}</select></div>
-</div>
-<div class="field"><label class="field-label">Modalidad de pago</label><div class="needs-grid" id="fn-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle" data-modal="${m}">${m}</div>`).join('')}</div></div>
-<div class="field"><label class="field-label">Servicio / Descripción</label><input class="field-input" id="fn-service" placeholder="Estrategia + pauta"></div>
-<button class="btn-primary" id="btn-save-new">Crear prospecto</button><button class="btn-outline" id="btn-cancel-new">Cancelar</button></div></div>`}
-
-function rDetail(){
-const c=gc();if(!c){st.view='list';return rList()}
-const pr=sp(c);
-return`<div class="detail-header"><button class="btn-back" id="btn-back">← Volver</button><div style="flex:1;min-width:0"><div class="detail-name">${c.name}</div>${c.company?`<div class="detail-company">${c.company}</div>`:''}</div></div>
-<div class="gold-bar"></div>
-<div class="tabs"><div class="tab ${st.activeTab==='inv'?'active':''}" data-tab="inv">🔍 Research${pr[0]?'<span class="tab-done"></span>':''}</div><div class="tab ${st.activeTab==='reunion'?'active':''}" data-tab="reunion">📋 Reunión${pr[1]?'<span class="tab-done"></span>':''}</div><div class="tab ${st.activeTab==='propuesta'?'active':''}" data-tab="propuesta">📄 Propuesta${pr[2]?'<span class="tab-done"></span>':''}</div><div class="tab ${st.activeTab==='pipeline'?'active':''}" data-tab="pipeline">📊 Pipeline</div></div>
-${rInv(c)}${rReunion(c)}${rProp(c)}${rPipe(c)}`;
-}
-
-function rInv(c){const inv=c.investigacion,show=st.activeTab==='inv',wl=wa(c.phone);
-return`<div class="tab-content ${show?'active':''}" id="tab-inv">
-${(c.web||c.instagram||c.phone)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${c.web?`<div class="info-chip" onclick="window.open('${c.web.startsWith('http')?c.web:'https://'+c.web}','_blank')" style="cursor:pointer">🌐 ${c.web.replace(/https?:\/\//,'')}</div>`:''} ${c.instagram?`<div class="info-chip" onclick="window.open('${igUrl(c.instagram)}','_blank')" style="cursor:pointer">📸 ${igLabel(c.instagram)}</div>`:''} ${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}</div>`:''}
-${c.needs?.length?`<div class="needs-chips" style="margin-bottom:12px">${c.needs.map(n=>`<span class="need-chip">${n}</span>`).join('')}</div>`:''}
-<div class="field"><label class="field-label">Web del cliente</label><input class="field-input" id="inv-web" value="${c.web||''}" placeholder="https://..."></div>
-<div class="field"><label class="field-label">Instagram</label><input class="field-input" id="inv-ig" value="${c.instagram||''}" placeholder="@usuario o URL"></div>
-<div class="field"><label class="field-label">Contexto adicional</label><textarea class="field-textarea" id="inv-contexto" placeholder="Rubro, qué te contactó, lo que encontraste...">${inv.contexto||''}</textarea></div>
-<button class="btn-primary" id="btn-analizar" ${st.loadingInv?'disabled':''}>${st.loadingInv?'Analizando...':'✦ Analizar cliente'}</button>
-${st.loadingInv?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando marca y detectando oportunidades...</div>`:''}
-${inv.resultado&&!st.loadingInv?`<hr class="divider"><div class="section-title">Análisis de marca</div><div class="ai-box">${fmt(inv.resultado)}</div><button class="btn-copy ${st.copiedInv?'copied':''}" id="btn-copy-inv">${st.copiedInv?'✓ Copiado':'📋 Copiar análisis'}</button><button class="btn-outline" id="btn-reanalizar">↻ Reanalizar</button>`:''}
-</div>`}
-
-function rReunion(c){const qs=c.investigacion?.preguntas||[],ch=c.reunion?.checkedQs||[],show=st.activeTab==='reunion';
-return`<div class="tab-content ${show?'active':''}" id="tab-reunion">
-${qs.length===0?`<div class="empty" style="padding:40px 10px"><div class="empty-icon">💡</div><div style="font-size:12px">Primero analizá el cliente<br>en la pestaña <strong>Research</strong></div></div>`:`<div class="section-title">Preguntas de discovery</div><div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-weight:600">Tocá para tildar cada pregunta hecha</div><div class="questions-list">${qs.map((q,i)=>`<div class="question-item ${ch.includes(i)?'done':''}" data-qidx="${i}"><div class="question-num">Pregunta ${i+1}</div>${q}</div>`).join('')}</div><button class="btn-sm" id="btn-reset-qs">↺ Reiniciar</button>`}
-<hr class="divider"><div class="section-title">Notas en vivo</div>
-<textarea class="field-textarea" id="reunion-notas" style="min-height:130px" placeholder="Respuestas clave, señales de presupuesto, objeciones, datos del negocio...">${c.reunion?.notasVivo||''}</textarea>
-<button class="btn-primary" id="btn-save-notas" style="margin-top:8px">Guardar notas</button>
-</div>`}
-
-function rProp(c){
-const show=st.activeTab==='propuesta';
-const pd=c.propuesta?.data;
-return`<div class="tab-content ${show?'active':''}" id="tab-propuesta">
-<div class="section-title">Transcripción de la reunión</div>
-<textarea class="field-textarea" id="prop-transcripcion" style="min-height:100px" placeholder="Pegá la transcripción o resumen de la meet...">${c.propuesta?.transcripcion||''}</textarea>
-<button class="btn-primary" id="btn-generar-brief" ${st.loadingPropuesta?'disabled':''}>${st.loadingPropuesta?'Generando propuesta...':'✦ Generar propuesta'}</button>
-${st.loadingPropuesta?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando reunión y armando propuesta...</div>`:''}
-${pd&&!st.loadingPropuesta?renderPropuesta(pd,c):''}
-</div>`}
-
-function renderPropuesta(pd,c){
-const faseColors=['#9b6dff','#6aabe8','#4aab7a'];
-const moduloIcons={
-  'Estrategia de Comunicación':'🧭',
-  'Paid Media / Media Planner':'📣',
-  'Manejo de Redes Sociales':'📱',
-  'Diseño y Creatividad':'🎨',
-  'Guiones y Contenido':'✍️',
-  'Filmmaker / Producción':'🎬',
-  'Edición de Video':'🎞️',
-  'Investigación de Mercado':'🔍',
-  'Automatización / CRM + IA':'⚙️',
-  'Gestión MercadoLibre':'🛒'
-};
-return`
-<hr class="divider">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-  <div class="section-title" style="margin:0">Propuesta generada</div>
-  <div style="display:flex;gap:6px">
-    <button class="btn-copy ${st.copiedBrief?'copied':''}" id="btn-copy-brief" style="margin:0;width:auto;padding:6px 10px">${st.copiedBrief?'✓':'📋'} Copiar</button>
-    <button class="btn-sm" id="btn-rebrief">↻</button>
-  </div>
-</div>
-
-<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
-  <div style="font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Diagnóstico</div>
-  <div style="font-size:13px;line-height:1.6;color:var(--text)">${pd.diagnostico||''}</div>
-</div>
-
-<div class="section-title">Módulos recomendados</div>
-<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-${(pd.modulos||[]).map(m=>`
-<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;border-left:3px solid ${faseColors[(m.fase||1)-1]}">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-    <div style="display:flex;align-items:center;gap:7px">
-      <span style="font-size:18px">${moduloIcons[m.nombre]||'📌'}</span>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${m.nombre}</div>
-        ${m.plataformas?.length?`<div style="font-size:10px;color:var(--gold);margin-top:1px">${m.plataformas.join(' · ')}</div>`:''}
+  return`<div class="filter-panel">
+    <div><div class="filter-label">Período — último contacto</div>
+      <div class="filter-row">
+        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Desde</span>
+        <input type="date" class="filter-input-sm" id="f-date-from" value="${f.dateFrom||''}">
+        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Hasta</span>
+        <input type="date" class="filter-input-sm" id="f-date-to" value="${f.dateTo||''}">
+        <button class="filter-chip" id="f-week">Semana</button>
+        <button class="filter-chip" id="f-month">Mes</button>
       </div>
     </div>
-    <span style="font-size:9px;font-weight:700;border-radius:4px;padding:2px 7px;background:${faseColors[(m.fase||1)-1]}22;color:${faseColors[(m.fase||1)-1]};white-space:nowrap">FASE ${m.fase||1}</span>
-  </div>
-  <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px">${m.descripcion||''}</div>
-  ${m.bullets?.length?`<ul style="padding-left:14px;display:flex;flex-direction:column;gap:3px">${m.bullets.map(b=>`<li style="font-size:11px;color:var(--text-muted)">${b}</li>`).join('')}</ul>`:''}
-</div>`).join('')}
-</div>
-
-<div class="section-title">Timeline de implementación</div>
-<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
-${(pd.timeline||[]).map((t,i)=>`
-<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;gap:10px;align-items:flex-start">
-  <div style="width:3px;align-self:stretch;border-radius:2px;background:${faseColors[i]||'#9b6dff'};flex-shrink:0"></div>
-  <div style="flex:1">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-      <div style="font-size:12px;font-weight:700;color:var(--text)">${t.titulo}</div>
-      <div style="font-size:10px;color:var(--text-muted);font-weight:600">${t.periodo}</div>
+    <div><div class="filter-label">Tipo de cliente</div>
+      <div class="filter-row">${['Abono','LC'].map(t=>`<button class="filter-chip ${f.tipo===t?'on':''}" data-ftipo="${t}">${t==='LC'?'LC — Línea de Crédito':t}</button>`).join('')}</div>
     </div>
-    <div style="font-size:11px;color:var(--text-muted)">${t.descripcion}</div>
-    ${t.modulos?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${t.modulos.map(m=>`<span style="font-size:9px;background:${faseColors[i]||'#9b6dff'}18;border:1px solid ${faseColors[i]||'#9b6dff'}35;color:${faseColors[i]||'#9b6dff'};border-radius:4px;padding:2px 6px;font-weight:600">${m}</span>`).join('')}</div>`:''}
-  </div>
-</div>`).join('')}
-</div>
-
-${pd.inversion?`<div style="background:var(--gold-dim);border:1px solid rgba(155,109,255,.3);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-  <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Inversión estimada</div>
-  <div style="font-size:15px;font-weight:700;color:var(--gold)">${pd.inversion}</div>
-</div>`:''}
-
-${pd.proximoPaso?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-  <div style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Próximo paso</div>
-  <div style="font-size:12px;color:var(--text)">${pd.proximoPaso}</div>
-</div>`:''}
-`;}
-
-function fmtPresByMoneda(val,moneda){
-  if(!val)return'';
-  const n=parseInt(val);
-  if(isNaN(n))return val;
-  const fmt=n.toLocaleString('es-AR');
-  return moneda==='ARS'?'$'+fmt:fmt;
+    <div><div class="filter-label">Plataforma</div>
+      <div class="filter-row">${PLATAFORMAS.map(p=>`<button class="filter-chip ${f.plataforma===p?'on':''}" data-fplat="${p}">${p}</button>`).join('')}</div>
+    </div>
+    <div><div class="filter-label">Modalidad de pago</div>
+      <div class="filter-row">${MODALIDADES.map(m=>`<button class="filter-chip ${f.modalidad===m?'on':''}" data-fmodal="${m}">${m}</button>`).join('')}</div>
+    </div>
+    <div><div class="filter-label">Moneda</div>
+      <div class="filter-row">${MONEDAS.map(m=>`<button class="filter-chip ${f.moneda===m?'on':''}" data-fmoneda="${m}">${m}</button>`).join('')}</div>
+    </div>
+    <div><div class="filter-label">Urgencia</div>
+      <div class="filter-row">
+        <button class="filter-chip ${f.urgencia==='urgente'?'on':''}" data-furg="urgente">🔴 Urgentes (+7d)</button>
+        <button class="filter-chip ${f.urgencia==='sin-contacto'?'on':''}" data-furg="sin-contacto">🟡 Sin contacto (+3d)</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end">
+      <button class="btn-sm" id="btn-clear-filters" style="color:var(--red);border-color:rgba(217,95,95,.3)">✕ Limpiar filtros</button>
+    </div>
+  </div>`;
 }
+
+function rReportBar(fl,totalMonto){
+  if(!fl.length&&!hasActiveFilters())return'';
+  const byEstado={};fl.forEach(c=>{byEstado[c.estado]=(byEstado[c.estado]||0)+1});
+  const hasF=hasActiveFilters();
+  return`<div class="report-bar">
+    <div class="report-stat"><div class="report-stat-n">${fl.length}</div><div class="report-stat-l">${hasF?'Filtrados':'Clientes'}</div></div>
+    ${totalMonto>0?`<div class="report-stat"><div class="report-stat-n" style="color:var(--green)">$${totalMonto.toLocaleString('es-AR')}</div><div class="report-stat-l">Monto total</div></div>`:''}
+    ${fl.filter(c=>c.tipo==='LC').length?`<div class="report-stat"><div class="report-stat-n" style="color:var(--blue)">${fl.filter(c=>c.tipo==='LC').length}</div><div class="report-stat-l">LC</div></div>`:''}
+    ${fl.filter(c=>c.tipo!=='LC').length?`<div class="report-stat"><div class="report-stat-n">${fl.filter(c=>c.tipo!=='LC').length}</div><div class="report-stat-l">Abonos</div></div>`:''}
+    ${Object.entries(byEstado).map(([e,n])=>`<div class="report-stat"><div class="report-stat-n" style="font-size:11px">${n}</div><div class="report-stat-l">${e}</div></div>`).join('')}
+  </div>`;
+}
+
+function rList(){
+  const fl=applyFilters(clients);
+  const sr=[...fl].sort((a,b)=>{const o={hot:0,warm:1,ok:2,none:3};return o[ul(ds(a.lastContact),a.estado)]-o[ul(ds(b.lastContact),b.estado)];});
+  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='hot').length};
+  const totalMonto=fl.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
+  const pc=['var(--blue)','var(--yellow)','var(--gold)','var(--green)'];
+  const haf=hasActiveFilters();
+  return`
+  <div class="header">
+    <div class="logo-wrap">
+      <img class="logo-img" src="https://avalonworldagency.com/wp-content/uploads/2024/06/logo-avalon-1.png" alt="Avalon" onerror="this.style.display='none';this.nextSibling.style.display='block'">
+      <span style="display:none;font-size:16px;font-weight:800;color:var(--gold);letter-spacing:1px">AVALON</span>
+      <div class="logo-sep"></div><div class="logo-sub">CRM</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn-sm" id="btn-export">⬇</button>
+      <input type="file" id="import-file" accept=".json" style="display:none">
+      <button class="btn-sm" id="btn-import">⬆</button>
+      <button class="btn-sm" id="btn-api-key" title="API Key">⚙</button>
+      <button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button>
+      <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters">⚡ Filtros${haf?' ●':''}</button>
+      <button class="btn-add" id="btn-open-new">+ Prospecto</button>
+    </div>
+  </div>
+  <div class="gold-bar"></div>
+  ${st.showFilters?rFilterPanel():''}
+  ${rReportBar(fl,totalMonto)}
+  <div class="stats">
+    <div class="stat"><div class="stat-n">${ct.total}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-n">${ct.abonos}</div><div class="stat-l">Abonos</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--gold)">${ct.lc}</div><div class="stat-l">LC</div></div>
+    <div class="stat"><div class="stat-n" style="color:${ct.urgentes>0?'var(--red)':'var(--text-muted)'}">${ct.urgentes}</div><div class="stat-l">Urgentes</div></div>
+  </div>
+  <div class="filters">${['Todos',...ESTADOS].map(f=>`<button class="filt ${st.filter===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div>
+  <div class="cards">${sr.length===0
+    ?`<div class="empty"><div class="empty-icon">🎯</div>${clients.length===0?'Agregá tu primer prospecto':'Sin clientes en este estado'}</div>`
+    :sr.map(c=>{
+      const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l),pr=sp(c);
+      return`<div class="card" data-id="${c.id}">
+        <div class="card-bar" style="background:${co}"></div>
+        <div class="card-top">
+          <div><div class="c-name">${c.name}</div>${c.company?`<div class="c-company">${c.company}</div>`:''}</div>
+          <span class="badge ${EC[c.estado]}">${c.estado}</span>
+        </div>
+        <div class="card-meta">
+          <div class="meta"><span class="dot" style="background:${co}"></span><b style="color:${co}">${ula(d,c.estado)}</b></div>
+          ${c.presupuesto?`<div class="meta">💰 <b>${fmtPresByMoneda(c.presupuesto,c.moneda)} ${c.moneda||'ARS'}</b></div>`:''}
+          ${c.modalidadPago?`<div class="meta">🧾 <b>${c.modalidadPago}</b></div>`:''}
+          ${c.service?`<div class="meta">📌 <b>${c.service}</b></div>`:''}
+        </div>
+        <div class="needs-chips">
+          ${c.tipo?`<span class="need-chip" style="${c.tipo==='LC'?'border-color:rgba(155,109,255,.5);color:var(--gold)':''}">${c.tipo}</span>`:''}
+          ${c.tipo==='LC'&&c.plataformas?.length?c.plataformas.map(p=>`<span class="need-chip">${p}</span>`).join(''):''}
+          ${c.canal?`<span class="need-chip" style="color:var(--blue)">${c.canal}</span>`:''}
+          ${c.needs?.map(n=>`<span class="need-chip">${n}</span>`).join('')||''}
+        </div>
+        <div class="card-stages">${pr.map((done,i)=>`<div class="stage-pip" style="background:${done?pc[i]:'var(--surface3)'}"></div>`).join('')}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function rNewModal(){
+  return`<div class="modal-overlay" id="modal-overlay"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-title">Nuevo Prospecto</div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Nombre *</label><input class="field-input" id="fn-name" placeholder="Ej: Martín López"></div>
+    <div class="field"><label class="field-label">Empresa / Marca</label><input class="field-input" id="fn-company" placeholder="Ej: Sakura Japan"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Web</label><input class="field-input" id="fn-web" placeholder="https://..."></div>
+    <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="fn-ig" placeholder="@usuario o URL"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Teléfono</label><input class="field-input" id="fn-phone" placeholder="11 5555-5555" type="tel"></div>
+    <div class="field"><label class="field-label">Email</label><input class="field-input" id="fn-email" placeholder="martin@empresa.com" type="email"></div>
+  </div>
+  <div class="field"><label class="field-label">Canal — ¿de dónde viene?</label>
+    <div class="needs-grid" id="fn-canal-grid">${CANALES.map(c=>`<div class="need-toggle" data-canal="${c}">${c}</div>`).join('')}</div>
+  </div>
+  <div class="field"><label class="field-label">¿Qué necesita? (multiselección)</label>
+    <div class="needs-grid" id="fn-needs-grid">${NEEDS.map(n=>`<div class="need-toggle" data-need="${n}">${n}</div>`).join('')}</div>
+  </div>
+  <div class="field"><label class="field-label">Tipo de cliente</label>
+    <div class="needs-grid" id="fn-tipo-grid">
+      <div class="need-toggle on" data-tipo="Abono">Abono</div>
+      <div class="need-toggle" data-tipo="LC">LC — Línea de Crédito</div>
+    </div>
+  </div>
+  <div id="fn-lc-fields" style="display:none">
+    <div class="field"><label class="field-label">Plataformas</label>
+      <div class="needs-grid" id="fn-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle" data-plat="${p}">${p}</div>`).join('')}</div>
+    </div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Presupuesto aprox.</label>
+      <input class="field-input" id="fn-presupuesto" placeholder="500.000" oninput="fmtPres(this)" inputmode="numeric">
+    </div>
+    <div class="field"><label class="field-label">Moneda</label>
+      <select class="field-select" id="fn-moneda">${MONEDAS.map(m=>`<option value="${m}">${m}</option>`).join('')}</select>
+    </div>
+  </div>
+  <div class="field"><label class="field-label">Modalidad de pago</label>
+    <div class="needs-grid" id="fn-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle" data-modal="${m}">${m}</div>`).join('')}</div>
+  </div>
+  <div class="field"><label class="field-label">Servicio / Descripción</label>
+    <input class="field-input" id="fn-service" placeholder="Estrategia + pauta">
+  </div>
+  <button class="btn-primary" id="btn-save-new">Crear prospecto</button>
+  <button class="btn-outline" id="btn-cancel-new">Cancelar</button>
+  </div></div>`;
+}
+
+function rDetail(){
+  const c=gc();if(!c){st.view='list';render();return'';}
+  const pr=sp(c);
+  return`
+  <div class="detail-header">
+    <button class="btn-back" id="btn-back">← Volver</button>
+    <div style="flex:1;min-width:0">
+      <div class="detail-name">${c.name}</div>
+      ${c.company?`<div class="detail-company">${c.company}</div>`:''}
+    </div>
+  </div>
+  <div class="gold-bar"></div>
+  <div class="tabs">
+    <div class="tab ${st.activeTab==='inv'?'active':''}" data-tab="inv">🔍 Research${pr[0]?'<span class="tab-done"></span>':''}</div>
+    <div class="tab ${st.activeTab==='reunion'?'active':''}" data-tab="reunion">📋 Reunión${pr[1]?'<span class="tab-done"></span>':''}</div>
+    <div class="tab ${st.activeTab==='propuesta'?'active':''}" data-tab="propuesta">📄 Propuesta${pr[2]?'<span class="tab-done"></span>':''}</div>
+    <div class="tab ${st.activeTab==='pipeline'?'active':''}" data-tab="pipeline">📊 Pipeline</div>
+  </div>
+  ${rInv(c)}${rReunion(c)}${rProp(c)}${rPipe(c)}`;
+}
+
+function rInv(c){
+  const inv=c.investigacion,show=st.activeTab==='inv',wl=wa(c.phone);
+  return`<div class="tab-content ${show?'active':''}" id="tab-inv">
+    ${(c.web||c.instagram||c.phone)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      ${c.web?`<div class="info-chip" onclick="window.open('${c.web.startsWith('http')?c.web:'https://'+c.web}','_blank')">🌐 ${c.web.replace(/https?:\/\//,'')}</div>`:''}
+      ${c.instagram?`<div class="info-chip" onclick="window.open('${igUrl(c.instagram)}','_blank')">📸 ${igLabel(c.instagram)}</div>`:''}
+      ${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}
+    </div>`:''}
+    ${c.needs?.length?`<div class="needs-chips" style="margin-bottom:12px">${c.needs.map(n=>`<span class="need-chip">${n}</span>`).join('')}</div>`:''}
+    <div class="field"><label class="field-label">Web del cliente</label><input class="field-input" id="inv-web" value="${c.web||''}" placeholder="https://..."></div>
+    <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="inv-ig" value="${c.instagram||''}" placeholder="@usuario o URL"></div>
+    <div class="field"><label class="field-label">Contexto adicional</label><textarea class="field-textarea" id="inv-contexto" placeholder="Rubro, qué te contactó, lo que encontraste, texto de la web/IG...">${inv.contexto||''}</textarea></div>
+    <button class="btn-primary" id="btn-analizar" ${st.loadingInv?'disabled':''}>${st.loadingInv?'Analizando...':'✦ Analizar cliente'}</button>
+    ${st.loadingInv?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando marca y detectando oportunidades...</div>`:''}
+    ${inv.resultado&&!st.loadingInv?`
+      <hr class="divider">
+      <div class="section-title">Análisis de marca</div>
+      <div class="ai-box">${fmt(inv.resultado)}</div>
+      <button class="btn-copy ${st.copiedInv?'copied':''}" id="btn-copy-inv">${st.copiedInv?'✓ Copiado':'📋 Copiar análisis'}</button>
+      <button class="btn-outline" id="btn-reanalizar">↻ Reanalizar</button>
+    `:''}
+  </div>`;
+}
+
+function rReunion(c){
+  const qs=c.investigacion?.preguntas||[],ch=c.reunion?.checkedQs||[],show=st.activeTab==='reunion';
+  return`<div class="tab-content ${show?'active':''}" id="tab-reunion">
+    ${qs.length===0
+      ?`<div class="empty" style="padding:40px 10px"><div class="empty-icon">💡</div><div style="font-size:12px">Primero analizá el cliente en <strong>Research</strong></div></div>`
+      :`<div class="section-title">Preguntas de discovery</div>
+       <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-weight:600">Tocá para tildar cada pregunta hecha</div>
+       <div class="questions-list">${qs.map((q,i)=>`<div class="question-item ${ch.includes(i)?'done':''}" data-qidx="${i}"><div class="question-num">Pregunta ${i+1}</div>${q}</div>`).join('')}</div>
+       <button class="btn-sm" id="btn-reset-qs">↺ Reiniciar</button>`}
+    <hr class="divider">
+    <div class="section-title">Notas en vivo</div>
+    <textarea class="field-textarea" id="reunion-notas" style="min-height:130px" placeholder="Respuestas clave, señales de presupuesto, objeciones...">${c.reunion?.notasVivo||''}</textarea>
+    <button class="btn-primary" id="btn-save-notas" style="margin-top:8px">Guardar notas</button>
+  </div>`;
+}
+
+function rProp(c){
+  const show=st.activeTab==='propuesta',pd=c.propuesta?.data;
+  return`<div class="tab-content ${show?'active':''}" id="tab-propuesta">
+    <div class="section-title">Transcripción de la reunión</div>
+    <textarea class="field-textarea" id="prop-transcripcion" style="min-height:100px" placeholder="Pegá la transcripción o resumen de la meet...">${c.propuesta?.transcripcion||''}</textarea>
+    <button class="btn-primary" id="btn-generar-brief" ${st.loadingPropuesta?'disabled':''}>${st.loadingPropuesta?'Generando propuesta...':'✦ Generar propuesta'}</button>
+    ${st.loadingPropuesta?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando reunión y armando propuesta...</div>`:''}
+    ${pd&&!st.loadingPropuesta?rPropuesta(pd,c):''}
+  </div>`;
+}
+
+function rPropuesta(pd,c){
+  const fc=['#9b6dff','#6aabe8','#4aab7a'];
+  const mi={'Estrategia de Comunicación':'🧭','Paid Media / Media Planner':'📣','Manejo de Redes Sociales':'📱','Diseño y Creatividad':'🎨','Guiones y Contenido':'✍️','Filmmaker / Producción':'🎬','Edición de Video':'🎞️','Investigación de Mercado':'🔍','Automatización / CRM + IA':'⚙️','Gestión MercadoLibre':'🛒'};
+  return`
+  <hr class="divider">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="section-title" style="margin:0">Propuesta generada</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn-copy ${st.copiedBrief?'copied':''}" id="btn-copy-brief" style="margin:0;width:auto;padding:6px 10px">${st.copiedBrief?'✓':'📋'} Copiar</button>
+      <button class="btn-sm" id="btn-rebrief">↻</button>
+    </div>
+  </div>
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Diagnóstico</div>
+    <div style="font-size:13px;line-height:1.6;color:var(--text)">${pd.diagnostico||''}</div>
+  </div>
+  <div class="section-title">Módulos recomendados</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+    ${(pd.modulos||[]).map(m=>`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;border-left:3px solid ${fc[(m.fase||1)-1]}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:18px">${mi[m.nombre]||'📌'}</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${m.nombre}</div>
+            ${m.plataformas?.length?`<div style="font-size:10px;color:var(--gold);margin-top:1px">${m.plataformas.join(' · ')}</div>`:''}
+          </div>
+        </div>
+        <span style="font-size:9px;font-weight:700;border-radius:4px;padding:2px 7px;background:${fc[(m.fase||1)-1]}22;color:${fc[(m.fase||1)-1]};white-space:nowrap">FASE ${m.fase||1}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px">${m.descripcion||''}</div>
+      ${m.bullets?.length?`<ul style="padding-left:14px;display:flex;flex-direction:column;gap:3px">${m.bullets.map(b=>`<li style="font-size:11px;color:var(--text-muted)">${b}</li>`).join('')}</ul>`:''}
+    </div>`).join('')}
+  </div>
+  <div class="section-title">Timeline</div>
+  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+    ${(pd.timeline||[]).map((t,i)=>`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;gap:10px;align-items:flex-start">
+      <div style="width:3px;align-self:stretch;border-radius:2px;background:${fc[i]||'#9b6dff'};flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${t.titulo}</div>
+          <div style="font-size:10px;color:var(--text-muted);font-weight:600">${t.periodo}</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">${t.descripcion}</div>
+        ${t.modulos?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${t.modulos.map(m=>`<span style="font-size:9px;background:${fc[i]||'#9b6dff'}18;border:1px solid ${fc[i]||'#9b6dff'}35;color:${fc[i]||'#9b6dff'};border-radius:4px;padding:2px 6px;font-weight:600">${m}</span>`).join('')}</div>`:''}
+      </div>
+    </div>`).join('')}
+  </div>
+  ${pd.inversion?`<div style="background:var(--gold-dim);border:1px solid rgba(155,109,255,.3);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Inversión estimada</div>
+    <div style="font-size:15px;font-weight:700;color:var(--gold)">${pd.inversion}</div>
+  </div>`:''}
+  ${pd.proximoPaso?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+    <div style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Próximo paso</div>
+    <div style="font-size:12px;color:var(--text)">${pd.proximoPaso}</div>
+  </div>`:''}`;
+}
+
 function notasHtml(notes){
   if(!notes||!notes.length)return'<div style="font-size:11px;color:var(--text-muted);font-style:italic">Sin notas aún</div>';
   const last=notes[notes.length-1];
@@ -523,427 +596,230 @@ function notasHtml(notes){
     <div style="font-size:9px;color:var(--gold);font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">${last.date} — Última</div>
     ${last.text}
   </div>
-  ${prev.length?`<details style="margin-bottom:6px"><summary style="font-size:10px;color:var(--text-muted);cursor:pointer;font-weight:600;padding:4px 0">Ver historial (${prev.length} nota${prev.length>1?'s':''})</summary><div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${[...prev].reverse().map(n=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:11px;color:var(--text2);line-height:1.5"><div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-bottom:2px">${n.date}</div>${n.text}</div>`).join('')}</div></details>`:''}`;
+  ${prev.length?`<details style="margin-bottom:6px"><summary style="font-size:10px;color:var(--text-muted);cursor:pointer;font-weight:600;padding:4px 0">Ver historial (${prev.length} nota${prev.length>1?'s':''})</summary>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+      ${[...prev].reverse().map(n=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:11px;color:var(--text2);line-height:1.5">
+        <div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-bottom:2px">${n.date}</div>${n.text}
+      </div>`).join('')}
+    </div>
+  </details>`:''}`;
 }
+
 function rPipe(c){
-const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l),fu=c.followupText||'',show=st.activeTab==='pipeline',wl=wa(c.phone);
-const presFormatted=fmtPresByMoneda(c.presupuesto,c.moneda);
-return`<div class="tab-content ${show?'active':''}" id="tab-pipeline">
-<div class="section-title">Estado del prospecto</div>
-<div class="field-row"><div class="field"><label class="field-label">Estado</label><select class="field-select" id="pip-estado">${ESTADOS.map(e=>`<option value="${e}" ${c.estado===e?'selected':''}>${e}</option>`).join('')}</select></div><div class="field"><label class="field-label">Último contacto</label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}"></div></div>
-<div class="field"><label class="field-label">Servicio</label><input class="field-input" id="pip-service" value="${c.service||''}" placeholder="Estrategia + pauta"></div>
-<div class="field-row"><div class="field"><label class="field-label">Teléfono</label><input class="field-input" id="pip-phone" value="${c.phone||''}" placeholder="11 5555-5555" type="tel">${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}</div><div class="field"><label class="field-label">Email</label><input class="field-input" id="pip-email" value="${c.email||''}" placeholder="correo@..." type="email"></div></div>
-<div class="field-row">
-<div class="field"><label class="field-label">Tipo</label><select class="field-select" id="pip-tipo"><option value="Abono" ${c.tipo==='Abono'?'selected':''}>Abono</option><option value="LC" ${c.tipo==='LC'?'selected':''}>LC — Línea de Crédito</option></select></div>
-<div class="field"><label class="field-label">Modalidad de pago</label><select class="field-select" id="pip-modalidad"><option value="">Sin definir</option>${MODALIDADES.map(m=>`<option value="${m}" ${c.modalidadPago===m?'selected':''}>${m}</option>`).join('')}</select></div>
-</div>
-<div class="field-row">
-<div class="field"><label class="field-label">Presupuesto aprox.</label><div style="position:relative"><span id="pip-pres-prefix" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-weight:700;pointer-events:none;display:${c.moneda==='ARS'?'block':'none'}">\$</span><input class="field-input" id="pip-presupuesto" value="${presFormatted.replace('$','')}" placeholder="800.000" style="padding-left:${c.moneda==='ARS'?'24px':'12px'}" inputmode="numeric" oninput="fmtPres(this)"></div></div>
-<div class="field"><label class="field-label">Moneda</label><select class="field-select" id="pip-moneda" onchange="updPresPrefix(this.value)">${MONEDAS.map(m=>`<option value="${m}" ${c.moneda===m?'selected':''}>${m}</option>`).join('')}</select></div>
-</div>
-<div id="pip-lc-fields" style="${c.tipo==='LC'?'':'display:none'}">
-<div class="field"><label class="field-label">Plataformas</label><div class="needs-grid" id="pip-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle ${c.plataformas?.includes(p)?'on':''}" data-plat="${p}">${p}</div>`).join('')}</div></div>
-</div>
-<hr class="divider">
-<div class="section-title">Historial de notas</div>
-${notasHtml(c.notes)}
-<textarea class="field-textarea" id="pip-note" style="min-height:55px;margin-top:8px" placeholder="Nueva nota de seguimiento..."></textarea>
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px">
-<button class="btn-sm btn-gold" id="btn-save-pip">💾 Guardar nota</button>
-<button class="btn-sm" id="btn-contacte-hoy">✓ Contacté hoy</button>
-<button class="btn-sm" id="btn-cycle-status">⟳ Estado</button>
-<button class="btn-sm" id="btn-delete-client" style="margin-left:auto;color:var(--red)">Eliminar</button>
-</div>
-<div style="background:${co}18;border:1px solid ${co}35;border-radius:8px;padding:9px 12px;font-size:11px;color:${co};margin-bottom:14px;display:flex;align-items:center;gap:6px;font-weight:600"><span class="dot" style="background:${co}"></span>${ula(d,c.estado)}</div>
-<hr class="divider"><div class="section-title">Redactar seguimiento</div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
-<div class="channel-btn ${c.followupChannel==='email'?'active':''}" data-ch="email"><div class="channel-icon">📧</div>Email</div>
-<div class="channel-btn ${c.followupChannel==='whatsapp'?'active':''}" data-ch="whatsapp"><div class="channel-icon">💬</div>WhatsApp</div>
-<div class="channel-btn ${c.followupChannel==='linkedin'?'active':''}" data-ch="linkedin"><div class="channel-icon">💼</div>LinkedIn</div>
-</div>
-${st.loadingFollowup
-  ?`<div class="ai-box loading"><div class="spinner"></div>Redactando...</div>`
-  :fu
-    ?`<div class="ai-box">${fu}</div>
-      <button class="btn-copy ${st.copiedFollowup?'copied':''}" id="btn-copy-fu">${st.copiedFollowup?'✓ Copiado':'📋 Copiar'}</button>
-      ${c.followupChannel==='whatsapp'&&wl?`<a class="wa-link" href="${wl}?text=${encodeURIComponent(fu)}" target="_blank" rel="noopener" style="display:flex;justify-content:center;width:100%;margin-bottom:8px">💬 Abrir WhatsApp con el mensaje</a>`:''}
-      <button class="btn-outline" id="btn-regen-fu">↻ Regenerar</button>`
-    :`<button class="btn-primary" id="btn-gen-followup">✦ Generar mensaje</button>`}
-</div>`}
-function updPresPrefix(moneda){
-  const pfx=document.getElementById('pip-pres-prefix');
-  const inp=document.getElementById('pip-presupuesto');
-  if(pfx)pfx.style.display=moneda==='ARS'?'block':'none';
-  if(inp)inp.style.paddingLeft=moneda==='ARS'?'24px':'12px';
+  const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l),fu=c.followupText||'',show=st.activeTab==='pipeline',wl=wa(c.phone);
+  const presFormatted=fmtPresByMoneda(c.presupuesto,c.moneda).replace('$','');
+  return`<div class="tab-content ${show?'active':''}" id="tab-pipeline">
+    <div class="section-title">Estado del prospecto</div>
+    <div class="field-row">
+      <div class="field"><label class="field-label">Estado</label><select class="field-select" id="pip-estado">${ESTADOS.map(e=>`<option value="${e}" ${c.estado===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label class="field-label">Último contacto</label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}"></div>
+    </div>
+    <div class="field"><label class="field-label">Servicio</label><input class="field-input" id="pip-service" value="${c.service||''}" placeholder="Estrategia + pauta"></div>
+    <div class="field-row">
+      <div class="field"><label class="field-label">Teléfono</label>
+        <input class="field-input" id="pip-phone" value="${c.phone||''}" placeholder="11 5555-5555" type="tel">
+        ${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}
+      </div>
+      <div class="field"><label class="field-label">Email</label><input class="field-input" id="pip-email" value="${c.email||''}" placeholder="correo@..." type="email"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="field-label">Tipo</label>
+        <select class="field-select" id="pip-tipo">
+          <option value="Abono" ${c.tipo==='Abono'?'selected':''}>Abono</option>
+          <option value="LC" ${c.tipo==='LC'?'selected':''}>LC — Línea de Crédito</option>
+        </select>
+      </div>
+      <div class="field"><label class="field-label">Modalidad de pago</label>
+        <select class="field-select" id="pip-modalidad">
+          <option value="">Sin definir</option>
+          ${MODALIDADES.map(m=>`<option value="${m}" ${c.modalidadPago===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="field-label">Presupuesto aprox.</label>
+        <div style="position:relative">
+          <span id="pip-pres-prefix" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-weight:700;pointer-events:none;display:${c.moneda==='ARS'?'block':'none'}">$</span>
+          <input class="field-input" id="pip-presupuesto" value="${presFormatted}" placeholder="800.000" style="padding-left:${c.moneda==='ARS'?'24px':'12px'}" inputmode="numeric" oninput="fmtPres(this)">
+        </div>
+      </div>
+      <div class="field"><label class="field-label">Moneda</label>
+        <select class="field-select" id="pip-moneda" onchange="updPresPrefix(this.value)">
+          ${MONEDAS.map(m=>`<option value="${m}" ${c.moneda===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div id="pip-lc-fields" style="${c.tipo==='LC'?'':'display:none'}">
+      <div class="field"><label class="field-label">Plataformas</label>
+        <div class="needs-grid" id="pip-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle ${c.plataformas?.includes(p)?'on':''}" data-plat="${p}">${p}</div>`).join('')}</div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="section-title">Historial de notas</div>
+    ${notasHtml(c.notes)}
+    <textarea class="field-textarea" id="pip-note" style="min-height:55px;margin-top:8px" placeholder="Nueva nota de seguimiento..."></textarea>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px">
+      <button class="btn-sm btn-gold" id="btn-save-pip">💾 Guardar nota</button>
+      <button class="btn-sm" id="btn-contacte-hoy">✓ Contacté hoy</button>
+      <button class="btn-sm" id="btn-cycle-status">⟳ Estado</button>
+      <button class="btn-sm" id="btn-delete-client" style="margin-left:auto;color:var(--red)">Eliminar</button>
+    </div>
+    <div style="background:${co}18;border:1px solid ${co}35;border-radius:8px;padding:9px 12px;font-size:11px;color:${co};margin-bottom:14px;display:flex;align-items:center;gap:6px;font-weight:600">
+      <span class="dot" style="background:${co}"></span>${ula(d,c.estado)}
+    </div>
+    <hr class="divider">
+    <div class="section-title">Redactar seguimiento</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="channel-btn ${c.followupChannel==='email'?'active':''}" data-ch="email"><div class="channel-icon">📧</div>Email</div>
+      <div class="channel-btn ${c.followupChannel==='whatsapp'?'active':''}" data-ch="whatsapp"><div class="channel-icon">💬</div>WhatsApp</div>
+      <div class="channel-btn ${c.followupChannel==='linkedin'?'active':''}" data-ch="linkedin"><div class="channel-icon">💼</div>LinkedIn</div>
+    </div>
+    ${st.loadingFollowup
+      ?`<div class="ai-box loading"><div class="spinner"></div>Redactando...</div>`
+      :fu
+        ?`<div class="ai-box">${fu}</div>
+          <button class="btn-copy ${st.copiedFollowup?'copied':''}" id="btn-copy-fu">${st.copiedFollowup?'✓ Copiado':'📋 Copiar'}</button>
+          ${c.followupChannel==='whatsapp'&&wl?`<a class="wa-link" href="${wl}?text=${encodeURIComponent(fu)}" target="_blank" rel="noopener" style="display:flex;justify-content:center;width:100%;margin-bottom:8px">💬 Abrir WhatsApp con el mensaje</a>`:''}
+          <button class="btn-outline" id="btn-regen-fu">↻ Regenerar</button>`
+        :`<button class="btn-primary" id="btn-gen-followup">✦ Generar mensaje</button>`}
+  </div>`;
 }
 
+// ── BIND ──
 function bind(){
-const $=s=>document.querySelector(s);
-const $$=s=>document.querySelectorAll(s);
-$('#btn-open-new')?.addEventListener('click',()=>{st.showNewModal=true;render()});
-$('#btn-export')?.addEventListener('click',exportData);
-$('#btn-import')?.addEventListener('click',()=>document.getElementById('import-file')?.click());
-document.getElementById('import-file')?.addEventListener('change',importData);
-$('#btn-save-new')?.addEventListener('click',saveNew);
-$('#btn-cancel-new')?.addEventListener('click',()=>{st.showNewModal=false;render()});
-$('#modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='modal-overlay'){st.showNewModal=false;render()}});
-$$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
-$$('.card').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
+  const $=s=>document.querySelector(s);
+  const $$=s=>document.querySelectorAll(s);
 
-$('#btn-back')?.addEventListener('click',()=>{st.view='list';render()});
-$$('.tab').forEach(t=>t.addEventListener('click',()=>{st.activeTab=t.dataset.tab;render()}));
-$('#btn-analizar')?.addEventListener('click',analizar);
-$('#btn-reanalizar')?.addEventListener('click',async()=>{const c=gc();c.investigacion.resultado='';c.investigacion.preguntas=[];await sv(c);analizar()});
-$('#btn-copy-inv')?.addEventListener('click',()=>{cpT(gc().investigacion.resultado,'copiedInv')});
-$$('.question-item').forEach(q=>q.addEventListener('click',()=>toggleQ(parseInt(q.dataset.qidx))));
-  // copy proposal as text
-  document.getElementById('btn-copy-brief')?.addEventListener('click',()=>{
-    const c=gc();if(!c?.propuesta?.data)return;
-    const pd=c.propuesta.data;
-    let txt=`PROPUESTA AVALON WORLD AGENCY\n${c.name}${c.company?' — '+c.company:''}\n\n`;
-    txt+=`DIAGNÓSTICO\n${pd.diagnostico}\n\n`;
-    txt+=`MÓDULOS RECOMENDADOS\n`;
-    (pd.modulos||[]).forEach(m=>{txt+=`\n• ${m.nombre}${m.plataformas?.length?' ('+m.plataformas.join(', ')+')':''}\n  ${m.descripcion}\n`;(m.bullets||[]).forEach(b=>txt+=`  - ${b}\n`)});
-    txt+=`\nTIMELINE\n`;
-    (pd.timeline||[]).forEach(t=>{txt+=`\n${t.titulo} (${t.periodo})\n${t.descripcion}\n`});
-    if(pd.inversion)txt+=`\nINVERSIÓN ESTIMADA: ${pd.inversion}\n`;
-    if(pd.proximoPaso)txt+=`\nPRÓXIMO PASO: ${pd.proximoPaso}`;
-    cpT(txt,'copiedBrief');
-  });
-$('#btn-reset-qs')?.addEventListener('click',async()=>{const c=gc();c.reunion.checkedQs=[];await sv(c);render()});
-$('#btn-save-notas')?.addEventListener('click',async()=>{const c=gc();c.reunion.notasVivo=$('#reunion-notas')?.value||'';await sv(c);toast('Notas guardadas ✓')});
-$('#btn-generar-brief')?.addEventListener('click',genBrief);
-$('#btn-rebrief')?.addEventListener('click',()=>{gc().propuesta.brief='';sv();genBrief()});
-
-$('#btn-save-pip')?.addEventListener('click',async()=>{await savePip();toast('Guardado ✓')});
-$('#btn-contacte-hoy')?.addEventListener('click',async()=>{gc().lastContact=new Date().toISOString().split('T')[0];await savePip();render()});
-$('#btn-cycle-status')?.addEventListener('click',async()=>{const c=gc();c.estado=ESTADOS[(ESTADOS.indexOf(c.estado)+1)%ESTADOS.length];await savePip();render()});
-$('#btn-delete-client')?.addEventListener('click',async()=>{if(!confirm('¿Eliminar?'))return;const id=st.activeClient;clients=clients.filter(x=>x.id!==id);await sbDelete(id);st.view='list';st.activeClient=null;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();});
-$$('.channel-btn').forEach(b=>b.addEventListener('click',()=>{const c=gc();c.followupChannel=b.dataset.ch;c.followupText='';sv();render()}));
-$('#btn-gen-followup')?.addEventListener('click',genFU);
-$('#btn-regen-fu')?.addEventListener('click',()=>{gc().followupText='';sv();genFU()});
-$('#btn-copy-fu')?.addEventListener('click',()=>{cpT(gc().followupText,'copiedFollowup')});
-['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-presupuesto','pip-moneda'].forEach(id=>$(`#${id}`)?.addEventListener('change',savePip));
-  // Supabase config modal
-  $('#btn-open-sb-setup')?.addEventListener('click',()=>{st.showSbModal=true;render()});
-  $('#btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render()});
-  document.getElementById('sb-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='sb-modal-overlay'){st.showSbModal=false;render()}});
-  $('#btn-cancel-sb')?.addEventListener('click',()=>{st.showSbModal=false;render()});
-  $('#btn-save-sb')?.addEventListener('click',async()=>{
-    const url=document.getElementById('sb-url-input')?.value.trim().replace(/\/$/,'');
-    const key=document.getElementById('sb-key-input')?.value.trim();
-    if(!url||!key){alert('Ingresá URL y key');return;}
-    setSbConfig(url,key);
-    st.showSbModal=false;st.sbLoading=true;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-    await loadC();
-    st.sbLoading=false;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-    toast('Conectado ✓');
-  });
-  // API key modal
+  // List
+  $('#btn-open-new')?.addEventListener('click',()=>{st.showNewModal=true;render()});
+  $('#btn-export')?.addEventListener('click',exportData);
+  $('#btn-import')?.addEventListener('click',()=>document.getElementById('import-file')?.click());
+  document.getElementById('import-file')?.addEventListener('change',importData);
   $('#btn-api-key')?.addEventListener('click',()=>{st.showApiModal=true;render()});
-  $('#btn-save-api-key')?.addEventListener('click',()=>{const k=document.getElementById('api-key-input')?.value.trim();if(k){setApiKey(k);st.showApiModal=false;toast('API key guardada ✓');// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();}});
-  $('#btn-cancel-api')?.addEventListener('click',()=>{st.showApiModal=false;render()});
-  document.getElementById('api-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='api-modal-overlay'){st.showApiModal=false;render()}});
-  // canal single-select in modal
-  $$('#fn-canal-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>{$$('#fn-canal-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.toggle('on')}));
-  // needs multi-select in modal  
-  $$('#fn-needs-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
-  // filter panel toggle
+  $('#btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render()});
   $('#btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render()});
-  $('#btn-clear-filters')?.addEventListener('click',()=>{st.filters={dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''};render()});
-  // date filters
-  $('#f-date-from')?.addEventListener('change',e=>{st.filters.dateFrom=e.target.value;render()});
-  $('#f-date-to')?.addEventListener('change',e=>{st.filters.dateTo=e.target.value;render()});
-  // quick period buttons
-  $('#f-week')?.addEventListener('click',()=>{
-    const now=new Date();const week=new Date(now-7*86400000);
-    st.filters.dateFrom=week.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
+  $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
+  $$('.card').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
+
+  // Modals close
+  $('#modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='modal-overlay'){st.showNewModal=false;render()}});
+  $('#api-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='api-modal-overlay'){st.showApiModal=false;render()}});
+  $('#sb-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='sb-modal-overlay'){st.showSbModal=false;render()}});
+  $('#btn-cancel-api')?.addEventListener('click',()=>{st.showApiModal=false;render()});
+  $('#btn-cancel-sb')?.addEventListener('click',()=>{st.showSbModal=false;render()});
+  $('#btn-cancel-new')?.addEventListener('click',()=>{st.showNewModal=false;render()});
+
+  // API key save
+  $('#btn-save-api-key')?.addEventListener('click',()=>{
+    const k=document.getElementById('api-key-input')?.value.trim();
+    if(k){setApiKey(k);st.showApiModal=false;toast('API key guardada ✓');render();}
   });
-  $('#f-month')?.addEventListener('click',()=>{
-    const now=new Date();const month=new Date(now.getFullYear(),now.getMonth(),1);
-    st.filters.dateFrom=month.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-  });
-  // toggle filters — tipo
-  $$('[data-ftipo]').forEach(b=>b.addEventListener('click',()=>{
-    st.filters.tipo=st.filters.tipo===b.dataset.ftipo?'':b.dataset.ftipo;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-  }));
-  // plataforma
-  $$('[data-fplat]').forEach(b=>b.addEventListener('click',()=>{
-    st.filters.plataforma=st.filters.plataforma===b.dataset.fplat?'':b.dataset.fplat;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-  }));
-  // modalidad
-  $$('[data-fmodal]').forEach(b=>b.addEventListener('click',()=>{
-    st.filters.modalidad=st.filters.modalidad===b.dataset.fmodal?'':b.dataset.fmodal;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-  }));
-  // moneda
-  $$('[data-fmoneda]').forEach(b=>b.addEventListener('click',()=>{
-    st.filters.moneda=st.filters.moneda===b.dataset.fmoneda?'':b.dataset.fmoneda;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-  }));
-  // urgencia
-  $$('[data-furg]').forEach(b=>b.addEventListener('click',()=>{
-    st.filters.urgencia=st.filters.urgencia===b.dataset.furg?'':b.dataset.furg;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-  }));
-  
-  // tipo toggle in modal
+
+  // New modal interactions
+  $('#btn-save-new')?.addEventListener('click',saveNew);
   $$('#fn-tipo-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>{
     $$('#fn-tipo-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.add('on');
     const lc=document.getElementById('fn-lc-fields');if(lc)lc.style.display=t.dataset.tipo==='LC'?'block':'none';
   }));
-  // single-select for modalidad in modal
+  $$('#fn-canal-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>{
+    $$('#fn-canal-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.toggle('on');
+  }));
+  $$('#fn-needs-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
   $$('#fn-modal-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>{
     $$('#fn-modal-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.toggle('on');
   }));
-  // pip tipo change show/hide platforms
+
+  // Detail
+  $('#btn-back')?.addEventListener('click',()=>{st.view='list';render()});
+  $$('.tab').forEach(t=>t.addEventListener('click',()=>{st.activeTab=t.dataset.tab;render()}));
+
+  // Research
+  $('#btn-analizar')?.addEventListener('click',analizar);
+  $('#btn-reanalizar')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.investigacion.resultado='';c.investigacion.preguntas=[];await sv(c);analizar();});
+  $('#btn-copy-inv')?.addEventListener('click',()=>{cpT(gc()?.investigacion?.resultado||'','copiedInv')});
+
+  // Reunion
+  $$('.question-item').forEach(q=>q.addEventListener('click',()=>toggleQ(parseInt(q.dataset.qidx))));
+  $('#btn-reset-qs')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.reunion.checkedQs=[];await sv(c);render()});
+  $('#btn-save-notas')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.reunion.notasVivo=gi('reunion-notas')||'';await sv(c);toast('Notas guardadas ✓')});
+
+  // Propuesta
+  $('#btn-generar-brief')?.addEventListener('click',genBrief);
+  $('#btn-rebrief')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.propuesta.brief='';c.propuesta.data=null;await sv(c);genBrief();});
+  $('#btn-copy-brief')?.addEventListener('click',()=>{
+    const c=gc();if(!c?.propuesta?.data)return;
+    const pd=c.propuesta.data;
+    let txt=`PROPUESTA AVALON WORLD AGENCY\n${c.name}${c.company?' — '+c.company:''}\n\nDIAGNÓSTICO\n${pd.diagnostico}\n\nMÓDULOS\n`;
+    (pd.modulos||[]).forEach(m=>{txt+=`\n• ${m.nombre}\n  ${m.descripcion}\n`;(m.bullets||[]).forEach(b=>txt+=`  - ${b}\n`)});
+    txt+=`\nTIMELINE\n`;(pd.timeline||[]).forEach(t=>{txt+=`\n${t.titulo} (${t.periodo})\n${t.descripcion}\n`});
+    if(pd.inversion)txt+=`\nINVERSIÓN: ${pd.inversion}\n`;
+    if(pd.proximoPaso)txt+=`\nPRÓXIMO PASO: ${pd.proximoPaso}`;
+    cpT(txt,'copiedBrief');
+  });
+
+  // Pipeline
+  $('#btn-save-pip')?.addEventListener('click',async()=>{await savePip();toast('Guardado ✓')});
+  $('#btn-contacte-hoy')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.lastContact=new Date().toISOString().split('T')[0];await savePip();render()});
+  $('#btn-cycle-status')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.estado=ESTADOS[(ESTADOS.indexOf(c.estado)+1)%ESTADOS.length];await savePip();render()});
+  $('#btn-delete-client')?.addEventListener('click',async()=>{
+    if(!confirm('¿Eliminar este prospecto?'))return;
+    const id=st.activeClient;
+    clients=clients.filter(x=>x.id!==id);
+    await sbDel(id);
+    st.view='list';st.activeClient=null;render();
+  });
+  $$('.channel-btn').forEach(b=>b.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;c.followupChannel=b.dataset.ch;c.followupText='';await sv(c);render();
+  }));
+  $('#btn-gen-followup')?.addEventListener('click',genFU);
+  $('#btn-regen-fu')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';await sv(c);genFU()});
+  $('#btn-copy-fu')?.addEventListener('click',()=>{cpT(gc()?.followupText||'','copiedFollowup')});
+  ['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda'].forEach(id=>
+    document.getElementById(id)?.addEventListener('change',savePip)
+  );
   $('#pip-tipo')?.addEventListener('change',()=>{
-    const lc=$('#pip-lc-fields');if(lc)lc.style.display=$('#pip-tipo').value==='LC'?'block':'none';savePip();
+    const lc=document.getElementById('pip-lc-fields');
+    if(lc)lc.style.display=document.getElementById('pip-tipo').value==='LC'?'block':'none';
+    savePip();
   });
   $$('#pip-plat-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+
+  // Filters
+  $('#btn-clear-filters')?.addEventListener('click',()=>{st.filters={dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''};render()});
+  $('#f-date-from')?.addEventListener('change',e=>{st.filters.dateFrom=e.target.value;render()});
+  $('#f-date-to')?.addEventListener('change',e=>{st.filters.dateTo=e.target.value;render()});
+  $('#f-week')?.addEventListener('click',()=>{
+    const now=new Date(),week=new Date(now-7*86400000);
+    st.filters.dateFrom=week.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];render();
+  });
+  $('#f-month')?.addEventListener('click',()=>{
+    const now=new Date(),month=new Date(now.getFullYear(),now.getMonth(),1);
+    st.filters.dateFrom=month.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];render();
+  });
+  $$('[data-ftipo]').forEach(b=>b.addEventListener('click',()=>{st.filters.tipo=st.filters.tipo===b.dataset.ftipo?'':b.dataset.ftipo;render()}));
+  $$('[data-fplat]').forEach(b=>b.addEventListener('click',()=>{st.filters.plataforma=st.filters.plataforma===b.dataset.fplat?'':b.dataset.fplat;render()}));
+  $$('[data-fmodal]').forEach(b=>b.addEventListener('click',()=>{st.filters.modalidad=st.filters.modalidad===b.dataset.fmodal?'':b.dataset.fmodal;render()}));
+  $$('[data-fmoneda]').forEach(b=>b.addEventListener('click',()=>{st.filters.moneda=st.filters.moneda===b.dataset.fmoneda?'':b.dataset.fmoneda;render()}));
+  $$('[data-furg]').forEach(b=>b.addEventListener('click',()=>{st.filters.urgencia=st.filters.urgencia===b.dataset.furg?'':b.dataset.furg;render()}));
 }
 
-async function analizar(){
-const c=gc();if(!c)return;
-const web=gi('inv-web'),ig=gi('inv-ig'),ctx=gi('inv-contexto');
-if(web)c.web=web;if(ig)c.instagram=ig;c.investigacion.contexto=ctx||'';sv();
-if(!web&&!ig&&!ctx){alert('Ingresá web, Instagram o contexto.');return}
-st.loadingInv=true;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
+// ── ACTIONS ──
+async function saveNew(){
+  const $=s=>document.querySelector(s);
+  const name=$('#fn-name')?.value.trim();if(!name){$('#fn-name')?.focus();return;}
+  const sn=[...document.querySelectorAll('#fn-needs-grid .need-toggle.on')].map(t=>t.dataset.need);
+  const tipo=document.querySelector('#fn-tipo-grid .need-toggle.on')?.dataset.tipo||'Abono';
+  const plataformas=tipo==='LC'?[...document.querySelectorAll('#fn-plat-grid .need-toggle.on')].map(t=>t.dataset.plat):[];
+  const modalidadPago=document.querySelector('#fn-modal-grid .need-toggle.on')?.dataset.modal||'';
+  const presupuesto=presRaw(document.getElementById('fn-presupuesto')?.value||'');
+  const moneda=document.getElementById('fn-moneda')?.value||'ARS';
+  const email=$('#fn-email')?.value.trim()||'';
+  const canal=document.querySelector('#fn-canal-grid .need-toggle.on')?.dataset.canal||'';
+  const c=nc({name,company:$('#fn-company')?.value.trim(),email,canal,web:$('#fn-web')?.value.trim(),instagram:$('#fn-ig')?.value.trim(),phone:$('#fn-phone')?.value.trim(),needs:sn,tipo,plataformas,presupuesto,moneda,modalidadPago,service:$('#fn-service')?.value.trim()});
+  clients.unshift(c);
+  await sv(c);
+  st.showNewModal=false;st.activeClient=c.id;st.view='detail';st.activeTab='inv';
   render();
-})();
-const nt=c.needs?.length?`\nNecesidades del cliente: ${c.needs.join(', ')}`:''
-const p=`Analizá este prospecto para Juan.\n\nCliente: ${c.name}${c.company?` — ${c.company}`:''}\nWeb: ${c.web||'no disponible'}\nInstagram: ${c.instagram||'no disponible'}${nt}\nContexto: ${c.investigacion.contexto||'ninguno'}\n\nRespondé en dos partes:\n\n### Análisis de la marca\nQué vende realmente, cómo está posicionada, qué contradicciones tiene, dónde están las oportunidades para Avalon. Evaluá el fit con el modelo de Juan (estrategia + pauta).\n\n### Preguntas de discovery\nListá exactamente 5 preguntas numeradas, específicas para este cliente. Para revelar el problema real, detectar presupuesto y posicionar a Juan como partner estratégico.`;
-try{const t=await claude([{role:'user',content:p}]);const m=t.match(/###\s*Preguntas de discovery\s*([\s\S]*)/i);let pqs=[];if(m){pqs=m[1].trim().split('\n').filter(l=>/^\d+[\.\)]/.test(l.trim())).map(l=>l.replace(/^\d+[\.\)]\s*/,'').trim()).filter(Boolean)}c.investigacion.resultado=t;c.investigacion.preguntas=pqs;sv()}catch(e){c.investigacion.resultado='Error al conectar. Intentá de nuevo.'}
-st.loadingInv=false;render()
-}
-
-async function genBrief(){
-const c=gc();if(!c)return;
-const tr=gi('prop-transcripcion');if(!tr){alert('Pegá la transcripción.');return}
-c.propuesta.transcripcion=tr;sv();st.loadingPropuesta=true;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-const nt=c.needs?.length?`\nNecesidades del cliente: ${c.needs.join(', ')}`:''
-const tipo=c.tipo==='LC'?`\nTipo: LC — Línea de Crédito (no incluir gestión de pauta a menos que se haya mencionado)`:'';
-const p=`Analizá esta reunión y generá una propuesta comercial completa para ${c.name}${c.company?` de ${c.company}`:''}. Rubro: ${c.company||'no especificado'}.${nt}${tipo}
-
-Análisis previo: ${c.investigacion.resultado?c.investigacion.resultado.substring(0,400)+'...':'no disponible'}
-Notas de reunión: ${c.reunion?.notasVivo||'no disponibles'}
-
-Transcripción:
-${tr}
-
-IMPORTANTE: Respondé ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después, sin backticks. Estructura exacta:
-
-{
-  "diagnostico": "2-3 oraciones sobre el problema real del cliente y por qué Avalon puede ayudar",
-  "modulos": [
-    {
-      "nombre": "nombre exacto del módulo de la lista",
-      "fase": 1,
-      "plataformas": ["Meta","TikTok"],
-      "descripcion": "descripción adaptada al rubro específico del cliente (2 oraciones)",
-      "bullets": ["bullet adaptado al nicho", "bullet adaptado al nicho", "bullet adaptado al nicho"]
-    }
-  ],
-  "timeline": [
-    {
-      "titulo": "Fase 1 — Nombre",
-      "periodo": "Mes 1-2",
-      "descripcion": "qué se implementa y por qué en este orden",
-      "modulos": ["Nombre módulo 1", "Nombre módulo 2"]
-    }
-  ],
-  "inversion": "rango estimado en ARS o USD según contexto",
-  "proximoPaso": "acción concreta que Juan propone como siguiente movimiento"
-}
-
-Reglas:
-- Recomendá entre 3 y 6 módulos, los más relevantes para ESTE cliente
-- Los módulos deben usar nombres EXACTOS de la lista del sistema
-- Todo el contenido debe estar adaptado al rubro y negocio específico del cliente
-- El timeline debe tener entre 2 y 3 fases lógicas
-- Si es LC, no incluir Paid Media salvo que se haya mencionado gestión`;
-
-try{
-  const t=await claude([{role:'user',content:p}]);
-  let clean=t.replace(/```json|```/g,'').trim();
-  const data=JSON.parse(clean);
-  c.propuesta.data=data;
-  c.propuesta.brief=JSON.stringify(data);
-  sv();
-}catch(e){
-  c.propuesta.data={diagnostico:'Error al generar. Intentá de nuevo.',modulos:[],timeline:[],inversion:'',proximoPaso:''};
-  sv();
-}
-st.loadingPropuesta=false;render()
-}
-
-async function genFU(){
-  const c=gc();if(!c)return;
-  st.loadingFollowup=true;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-  const d=ds(c.lastContact);
-  const historial=(c.notes||[]).map(n=>`${n.date}: ${n.text}`).join('\n')||c.note||'sin historial';
-  const chLabel={'email':'email formal (con asunto)','whatsapp':'WhatsApp (máx 4 líneas, directo)','linkedin':'LinkedIn (mensaje de conexión o seguimiento, tono profesional pero cercano)'}[c.followupChannel]||'email formal';
-  const instruccion={'email':'Escribí SOLO el email. Empezá con "Asunto:". Tono profesional y cercano.','whatsapp':'Escribí SOLO el mensaje de WhatsApp. Máximo 4 líneas. Sin saludos largos.','linkedin':'Escribí SOLO el mensaje de LinkedIn. Máximo 5 líneas. Tono profesional pero humano, sin sonar a bot.'}[c.followupChannel]||'';
-  const p=`Redactá un mensaje de seguimiento comercial para Juan de Avalon World Agency.
-Cliente: ${c.name}${c.company?' de '+c.company:''}
-Email: ${c.email||'no disponible'}
-Canal de origen: ${c.canal||'no especificado'}
-Servicio propuesto: ${c.service||'estrategia y pauta digital'}
-Presupuesto: ${c.presupuesto?fmtPresByMoneda(c.presupuesto,c.moneda):c.amount||'a definir'}
-Estado: ${c.estado}
-Días sin contacto: ${d===999?'desconocido':d}
-Necesidades: ${c.needs?.join(', ')||'no especificadas'}
-Historial de seguimiento:
-${historial}
-Canal para este mensaje: ${chLabel}
-${instruccion}`;
-  try{
-    const t=await claude([{role:'user',content:p}]);
-    c.followupText=t;await sv(c);
-  }catch(e){
-    c.followupText=e.message==='Sin API key'?'':('Error: '+e.message+'. Verificá tu API key en ⚙');
-    if(e.message==='Sin API key'){st.loadingFollowup=false;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();return;}
-  }
-  st.loadingFollowup=false;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
 }
 
 async function savePip(){
@@ -952,7 +828,6 @@ async function savePip(){
   if(g('pip-estado'))c.estado=g('pip-estado').value;
   if(g('pip-date'))c.lastContact=g('pip-date').value;
   if(g('pip-service'))c.service=g('pip-service').value.trim();
-  
   if(g('pip-phone'))c.phone=g('pip-phone').value.trim();
   if(g('pip-email'))c.email=g('pip-email').value.trim();
   if(g('pip-tipo'))c.tipo=g('pip-tipo').value;
@@ -972,54 +847,80 @@ async function savePip(){
   await sv(c);
 }
 
-async function saveNew(){const $=s=>document.querySelector(s);const name=$('#fn-name')?.value.trim();if(!name){$('#fn-name')?.focus();return}const sn=[...document.querySelectorAll('#fn-needs-grid .need-toggle.on')].map(t=>t.dataset.need);
-  const tipo=document.querySelector('#fn-tipo-grid .need-toggle.on')?.dataset.tipo||'Abono';
-  const plataformas=tipo==='LC'?[...document.querySelectorAll('#fn-plat-grid .need-toggle.on')].map(t=>t.dataset.plat):[];
-  const modalidadPago=document.querySelector('#fn-modal-grid .need-toggle.on')?.dataset.modal||'';
-  const presupuesto=presRaw(document.getElementById('fn-presupuesto')?.value||'');
-  const moneda=document.getElementById('fn-moneda')?.value||'ARS';const email=$('#fn-email')?.value.trim()||'';
-  const canal=document.querySelector('#fn-canal-grid .need-toggle.on')?.dataset.canal||'';
-  const c=nc({name,company:$('#fn-company')?.value.trim(),email,canal,web:$('#fn-web')?.value.trim(),instagram:$('#fn-ig')?.value.trim(),phone:$('#fn-phone')?.value.trim(),needs:sn,tipo,plataformas,presupuesto,moneda,modalidadPago,service:$('#fn-service')?.value.trim(),amount:''});clients.unshift(c);
+async function analizar(){
+  const c=gc();if(!c)return;
+  const web=gi('inv-web'),ig=gi('inv-ig'),ctx=gi('inv-contexto');
+  if(web)c.web=web;if(ig)c.instagram=ig;c.investigacion.contexto=ctx||'';
   await sv(c);
-  st.showNewModal=false;st.activeClient=c.id;st.view='detail';st.activeTab='inv';
-  // ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
+  if(!web&&!ig&&!ctx){alert('Ingresá web, Instagram o contexto del cliente.');return;}
+  st.loadingInv=true;render();
+  const nt=c.needs?.length?`\nNecesidades: ${c.needs.join(', ')}`:''
+  const p=`Analizá este prospecto para Juan.\n\nCliente: ${c.name}${c.company?` — ${c.company}`:''}\nWeb: ${c.web||'no disponible'}\nInstagram: ${c.instagram||'no disponible'}${nt}\nContexto: ${c.investigacion.contexto||'ninguno'}\n\nRespondé en dos partes:\n\n### Análisis de la marca\nQué vende realmente, cómo está posicionada, qué contradicciones tiene, dónde están las oportunidades para Avalon. Evaluá el fit (estrategia + pauta).\n\n### Preguntas de discovery\nListá exactamente 5 preguntas numeradas, específicas para este cliente. Para revelar el problema real, detectar presupuesto y posicionar a Juan como partner estratégico.`;
+  try{
+    const t=await claude([{role:'user',content:p}]);
+    const m=t.match(/###\s*Preguntas de discovery\s*([\s\S]*)/i);
+    let pqs=[];
+    if(m){pqs=m[1].trim().split('\n').filter(l=>/^\d+[\.\)]/.test(l.trim())).map(l=>l.replace(/^\d+[\.\)]\s*/,'').trim()).filter(Boolean);}
+    c.investigacion.resultado=t;c.investigacion.preguntas=pqs;
+    await sv(c);
+  }catch(e){
+    if(e.message==='Sin API key'){st.loadingInv=false;return;}
+    c.investigacion.resultado='Error: '+e.message+'. Verificá tu API key (⚙).';
+    await sv(c);
   }
-  render();
-})();}
-
-async function toggleQ(i){const c=gc();if(!c)return;const a=c.reunion.checkedQs,idx=a.indexOf(i);if(idx===-1)a.push(i);else a.splice(idx,1);await sv(c);render()}
-
-function cpT(text,flag){navigator.clipboard.writeText(text||'').then(()=>{st[flag]=true;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();setTimeout(()=>{st[flag]=false;render()},2000)})}
-
-function toast(msg){const t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;border:1px solid #9b6dff;color:#9b6dff;padding:8px 16px;border-radius:8px;font-size:11px;z-index:999;white-space:nowrap;font-family:Montserrat,sans-serif;font-weight:700';document.body.appendChild(t);setTimeout(()=>t.remove(),2000)}
-
-function gi(id){const el=document.getElementById(id);return el?el.value.trim():null}
-function fmtPres(el){const raw=el.value.replace(/[^\d]/g,'');el.value=raw?parseInt(raw,10).toLocaleString('es-AR'):'';}
-function presRaw(val){return val?val.replace(/\./g,'').replace(/,/g,'').trim():''}
-function fmtPres(el){
-  let raw=el.value.replace(/[^0-9]/g,'');
-  if(!raw){el.value='';return;}
-  el.value='$'+parseInt(raw,10).toLocaleString('es-AR');
+  st.loadingInv=false;render();
 }
+
+async function genBrief(){
+  const c=gc();if(!c)return;
+  const tr=gi('prop-transcripcion');if(!tr){alert('Pegá la transcripción.');return;}
+  c.propuesta.transcripcion=tr;await sv(c);
+  st.loadingPropuesta=true;render();
+  const nt=c.needs?.length?`\nNecesidades: ${c.needs.join(', ')}`:''
+  const tipo=c.tipo==='LC'?`\nTipo LC: no incluir Paid Media salvo que se haya mencionado gestión`:'';
+  const p=`Analizá esta reunión y generá una propuesta para ${c.name}${c.company?` de ${c.company}`:''}.${nt}${tipo}\nAnálisis previo: ${c.investigacion.resultado?c.investigacion.resultado.substring(0,400)+'...':'no disponible'}\nNotas: ${c.reunion?.notasVivo||'no disponibles'}\n\nTranscripción:\n${tr}\n\nRespondé SOLO con JSON válido sin backticks:\n{\n  "diagnostico": "2-3 oraciones",\n  "modulos": [{"nombre":"nombre exacto","fase":1,"plataformas":[],"descripcion":"2 oraciones adaptadas al rubro","bullets":["3 bullets específicos"]}],\n  "timeline": [{"titulo":"Fase 1 — Nombre","periodo":"Mes 1-2","descripcion":"qué se implementa","modulos":["Módulo 1"]}],\n  "inversion": "rango estimado",\n  "proximoPaso": "acción concreta"\n}\nReglas: 3-6 módulos, nombres exactos de la lista, contenido adaptado al rubro, 2-3 fases.`;
+  try{
+    const t=await claude([{role:'user',content:p}]);
+    const data=JSON.parse(t.replace(/```json|```/g,'').trim());
+    c.propuesta.data=data;c.propuesta.brief=JSON.stringify(data);
+    await sv(c);
+  }catch(e){
+    if(e.message==='Sin API key'){st.loadingPropuesta=false;return;}
+    c.propuesta.data={diagnostico:'Error al generar. Intentá de nuevo.',modulos:[],timeline:[],inversion:'',proximoPaso:''};
+    await sv(c);
+  }
+  st.loadingPropuesta=false;render();
+}
+
+async function genFU(){
+  const c=gc();if(!c)return;
+  st.loadingFollowup=true;render();
+  const d=ds(c.lastContact);
+  const historial=(c.notes||[]).map(n=>`${n.date}: ${n.text}`).join('\n')||c.note||'sin historial';
+  const chLabel={'email':'email formal (con asunto)','whatsapp':'WhatsApp (máx 4 líneas, directo)','linkedin':'LinkedIn (máx 5 líneas, profesional pero humano)'}[c.followupChannel]||'email formal';
+  const instruccion={'email':'Escribí SOLO el email. Empezá con "Asunto:".','whatsapp':'Escribí SOLO el WhatsApp. Máximo 4 líneas.','linkedin':'Escribí SOLO el mensaje de LinkedIn. Máximo 5 líneas.'}[c.followupChannel]||'';
+  const p=`Seguimiento comercial para Juan de Avalon World Agency.\nCliente: ${c.name}${c.company?' de '+c.company:''}\nEmail: ${c.email||'no disponible'}\nCanal origen: ${c.canal||'no especificado'}\nServicio: ${c.service||'estrategia y pauta digital'}\nPresupuesto: ${fmtPresByMoneda(c.presupuesto,c.moneda)||'a definir'}\nEstado: ${c.estado} — Días sin contacto: ${d===999?'desconocido':d}\nNecesidades: ${c.needs?.join(', ')||'no especificadas'}\nHistorial:\n${historial}\nCanal: ${chLabel}\n${instruccion}`;
+  try{
+    const t=await claude([{role:'user',content:p}]);
+    c.followupText=t;await sv(c);
+  }catch(e){
+    if(e.message==='Sin API key'){st.loadingFollowup=false;return;}
+    c.followupText='Error: '+e.message;
+    await sv(c);
+  }
+  st.loadingFollowup=false;render();
+}
+
+async function toggleQ(i){
+  const c=gc();if(!c)return;
+  const a=c.reunion.checkedQs,idx=a.indexOf(i);
+  if(idx===-1)a.push(i);else a.splice(idx,1);
+  await sv(c);render();
+}
+
 function exportData(){
   const blob=new Blob([JSON.stringify({v:1,clients,exported:new Date().toISOString()},null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='avalon_crm_'+new Date().toISOString().slice(0,10)+'.json';
   a.click();URL.revokeObjectURL(a.href);toast('Exportado ✓');
 }
@@ -1030,29 +931,11 @@ async function importData(e){
     try{
       const d=JSON.parse(ev.target.result);
       if(!d.clients||!Array.isArray(d.clients))throw new Error();
-      if(!confirm('Esto va a importar '+d.clients.length+' clientes a Supabase. ¿Continuar?'))return;
+      if(!confirm('Importar '+d.clients.length+' clientes a Supabase. ¿Continuar?'))return;
       clients=d.clients.map(x=>nc(x));
-      st.sbLoading=true;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
-      for(const c of clients)await sbUpsert(c);
-      st.sbLoading=false;// ── INIT ──
-(async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
-  render();
-})();
+      st.sbLoading=true;render();
+      for(const c of clients)await sbUp(c);
+      st.sbLoading=false;render();
       toast('Importado: '+clients.length+' clientes ✓');
     }catch(err){alert('Archivo inválido.');}
   };
@@ -1061,12 +944,10 @@ async function importData(e){
 
 // ── INIT ──
 (async()=>{
-  if(sbReady()){
-    st.sbLoading=true;
-    render();
-    await loadC();
-    st.sbLoading=false;
-  }
+  st.sbLoading=true;
+  render();
+  await loadC();
+  st.sbLoading=false;
   render();
 })();
 </script>
