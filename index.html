@@ -199,7 +199,7 @@ function nc(d={}){
 // ── STATE ──
 let st={
   view:'list',filter:'Todos',activeClient:null,activeTab:'inv',
-  showNewModal:false,showFilters:false,showApiModal:false,showSbModal:false,
+  showNewModal:false,showEditModal:false,showFilters:false,showApiModal:false,showSbModal:false,
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   copiedInv:false,copiedBrief:false,copiedFollowup:false,
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''}
@@ -260,6 +260,7 @@ async function render(){
   const app=document.getElementById('app');
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
   app.innerHTML=st.view==='list'?rList():rDetail();
+  if(st.showEditModal)app.insertAdjacentHTML('beforeend',rEditModal());
   if(st.showSbModal)app.insertAdjacentHTML('beforeend',rSbModal());
   if(st.showApiModal)app.insertAdjacentHTML('beforeend',rApiModal());
   if(st.showNewModal)app.insertAdjacentHTML('beforeend',rNewModal());
@@ -456,12 +457,64 @@ function rNewModal(){
   </div></div>`;
 }
 
+function rEditModal(){
+  const c=gc();if(!c)return'';
+  return`<div class="modal-overlay" id="edit-modal-overlay"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-title">✏️ Editar prospecto</div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Nombre *</label><input class="field-input" id="ed-name" placeholder="Ej: Martín López" value="${c.name||''}"></div>
+    <div class="field"><label class="field-label">Empresa / Marca</label><input class="field-input" id="ed-company" placeholder="Ej: Sakura Japan" value="${c.company||''}"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Web</label><input class="field-input" id="ed-web" placeholder="https://..." value="${c.web||''}"></div>
+    <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="ed-ig" placeholder="@usuario o URL" value="${c.instagram||''}"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Teléfono</label><input class="field-input" id="ed-phone" placeholder="11 5555-5555" type="tel" value="${c.phone||''}"></div>
+    <div class="field"><label class="field-label">Email</label><input class="field-input" id="ed-email" placeholder="martin@empresa.com" type="email" value="${c.email||''}"></div>
+  </div>
+  <div class="field"><label class="field-label">Canal — ¿de dónde viene?</label>
+    <div class="needs-grid" id="ed-canal-grid">${CANALES.map(ch=>`<div class="need-toggle ${c.canal===ch?'on':''}" data-canal="${ch}">${ch}</div>`).join('')}</div>
+  </div>
+  <div class="field"><label class="field-label">¿Qué necesita? (multiselección)</label>
+    <div class="needs-grid" id="ed-needs-grid">${NEEDS.map(n=>`<div class="need-toggle ${(c.needs||[]).includes(n)?'on':''}" data-need="${n}">${n}</div>`).join('')}</div>
+  </div>
+  <div class="field"><label class="field-label">Tipo de cliente</label>
+    <div class="needs-grid" id="ed-tipo-grid">
+      <div class="need-toggle ${c.tipo!=='LC'?'on':''}" data-tipo="Abono">Abono</div>
+      <div class="need-toggle ${c.tipo==='LC'?'on':''}" data-tipo="LC">LC — Línea de Crédito</div>
+    </div>
+  </div>
+  <div id="ed-lc-fields" style="${c.tipo==='LC'?'':'display:none'}">
+    <div class="field"><label class="field-label">Plataformas</label>
+      <div class="needs-grid" id="ed-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle ${(c.plataformas||[]).includes(p)?'on':''}" data-plat="${p}">${p}</div>`).join('')}</div>
+    </div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Presupuesto aprox.</label>
+      <input class="field-input" id="ed-presupuesto" placeholder="800.000" value="${c.presupuesto?parseInt(c.presupuesto).toLocaleString('es-AR'):''}" oninput="fmtPres(this)" inputmode="numeric">
+    </div>
+    <div class="field"><label class="field-label">Moneda</label>
+      <select class="field-select" id="ed-moneda">${MONEDAS.map(m=>`<option value="${m}" ${c.moneda===m?'selected':''}>${m}</option>`).join('')}</select>
+    </div>
+  </div>
+  <div class="field"><label class="field-label">Modalidad de pago</label>
+    <div class="needs-grid" id="ed-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle ${c.modalidadPago===m?'on':''}" data-modal="${m}">${m}</div>`).join('')}</div>
+  </div>
+  <div class="field"><label class="field-label">Servicio / Descripción</label>
+    <input class="field-input" id="ed-service" placeholder="Estrategia + pauta" value="${c.service||''}">
+  </div>
+  <button class="btn-primary" id="btn-save-edit">Guardar cambios</button>
+  <button class="btn-outline" id="btn-cancel-edit">Cancelar</button>
+  </div></div>`;
+}
 function rDetail(){
   const c=gc();if(!c){st.view='list';render();return'';}
   const pr=sp(c);
   return`
   <div class="detail-header">
     <button class="btn-back" id="btn-back">← Volver</button>
+    <button class="btn-sm" id="btn-open-edit" style="color:var(--gold);border-color:rgba(155,109,255,.4)">✏️ Editar</button>
     <div style="flex:1;min-width:0">
       <div class="detail-name">${c.name}</div>
       ${c.company?`<div class="detail-company">${c.company}</div>`:''}
@@ -729,6 +782,23 @@ function bind(){
     $$('#fn-modal-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.toggle('on');
   }));
 
+  // Edit modal
+  $('#btn-open-edit')?.addEventListener('click',()=>{st.showEditModal=true;render()});
+  $('#btn-cancel-edit')?.addEventListener('click',()=>{st.showEditModal=false;render()});
+  document.getElementById('edit-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='edit-modal-overlay'){st.showEditModal=false;render()}});
+  $('#btn-save-edit')?.addEventListener('click',saveEdit);
+  $$('#ed-tipo-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>{
+    $$('#ed-tipo-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+    const lc=document.getElementById('ed-lc-fields');if(lc)lc.style.display=t.dataset.tipo==='LC'?'block':'none';
+  }));
+  $$('#ed-canal-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>{
+    $$('#ed-canal-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.toggle('on');
+  }));
+  $$('#ed-needs-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+  $$('#ed-modal-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>{
+    $$('#ed-modal-grid .need-toggle').forEach(x=>x.classList.remove('on'));t.classList.toggle('on');
+  }));
+
   // Detail
   $('#btn-back')?.addEventListener('click',()=>{st.view='list';render()});
   $$('.tab').forEach(t=>t.addEventListener('click',()=>{st.activeTab=t.dataset.tab;render()}));
@@ -940,6 +1010,47 @@ async function importData(e){
     }catch(err){alert('Archivo inválido.');}
   };
   r.readAsText(file);e.target.value='';
+}
+
+// ── SAVE EDIT ──
+async function saveEdit(){
+  const c=gc();if(!c)return;
+  const $=s=>document.querySelector(s);
+  // Core fields
+  const name=$('#ed-name')?.value.trim();
+  if(!name){$('#ed-name')?.focus();return;}
+  c.name=name;
+  c.company=$('#ed-company')?.value.trim()||c.company;
+  c.web=$('#ed-web')?.value.trim()||'';
+  c.instagram=$('#ed-ig')?.value.trim()||'';
+  c.phone=$('#ed-phone')?.value.trim()||'';
+  c.email=$('#ed-email')?.value.trim()||'';
+  c.service=$('#ed-service')?.value.trim()||'';
+  // Canal (single select)
+  const canalSel=document.querySelector('#ed-canal-grid .need-toggle.on');
+  if(canalSel)c.canal=canalSel.dataset.canal;
+  // Needs (multi select)
+  c.needs=[...document.querySelectorAll('#ed-needs-grid .need-toggle.on')].map(t=>t.dataset.need);
+  // Tipo
+  const tipoSel=document.querySelector('#ed-tipo-grid .need-toggle.on');
+  if(tipoSel)c.tipo=tipoSel.dataset.tipo;
+  // Plataformas (LC)
+  if(c.tipo==='LC'){
+    c.plataformas=[...document.querySelectorAll('#ed-plat-grid .need-toggle.on')].map(t=>t.dataset.plat);
+  } else {
+    c.plataformas=[];
+  }
+  // Presupuesto + moneda
+  c.presupuesto=presRaw(document.getElementById('ed-presupuesto')?.value||'');
+  c.moneda=document.getElementById('ed-moneda')?.value||'ARS';
+  // Modalidad
+  const modalSel=document.querySelector('#ed-modal-grid .need-toggle.on');
+  if(modalSel)c.modalidadPago=modalSel.dataset.modal;
+  // Upsert to Supabase using existing client ID
+  await sv(c);
+  st.showEditModal=false;
+  toast('Cambios guardados ✓');
+  render();
 }
 
 // ── INIT ──
