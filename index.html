@@ -491,16 +491,8 @@ function rNewModal(){
   <div class="field"><label class="field-label">Modalidad de pago</label>
     <div class="needs-grid" id="fn-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle" data-modal="${m}">${m}</div>`).join('')}</div>
   </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Servicio</label>
-      <select class="field-select" id="fn-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
-    </div>
-    <div class="field"><label class="field-label">Mes de ingreso</label>
-      <input class="field-input" id="fn-mes" placeholder="Ej: Mayo 2026">
-    </div>
-  </div>
-  <div class="field"><label class="field-label">Detalle</label>
-    <textarea class="field-textarea" id="fn-detalle" placeholder="Contexto adicional, qué busca el cliente..." style="min-height:60px"></textarea>
+  <div class="field"><label class="field-label">Servicio</label>
+    <select class="field-select" id="fn-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
   </div>
   <button class="btn-primary" id="btn-save-new">Crear prospecto</button>
   <button class="btn-outline" id="btn-cancel-new">Cancelar</button>
@@ -551,16 +543,8 @@ function rEditModal(){
   <div class="field"><label class="field-label">Modalidad de pago</label>
     <div class="needs-grid" id="ed-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle ${c.modalidadPago===m?'on':''}" data-modal="${m}">${m}</div>`).join('')}</div>
   </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Servicio</label>
-      <select class="field-select" id="ed-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}" ${c.servicio===s?'selected':''}>${s}</option>`).join('')}</select>
-    </div>
-    <div class="field"><label class="field-label">Mes de ingreso</label>
-      <input class="field-input" id="ed-mes" placeholder="Ej: Mayo 2026" value="${c.mesIngreso||''}">
-    </div>
-  </div>
-  <div class="field"><label class="field-label">Detalle</label>
-    <textarea class="field-textarea" id="ed-detalle" placeholder="Contexto adicional..." style="min-height:60px">${c.detalle||''}</textarea>
+  <div class="field"><label class="field-label">Servicio</label>
+    <select class="field-select" id="ed-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}" ${c.servicio===s?'selected':''}>${s}</option>`).join('')}</select>
   </div>
   <button class="btn-primary" id="btn-save-edit">Guardar cambios</button>
   <button class="btn-outline" id="btn-cancel-edit">Cancelar</button>
@@ -981,7 +965,7 @@ async function saveNew(){
   const moneda=document.getElementById('fn-moneda')?.value||'ARS';
   const email=$('#fn-email')?.value.trim()||'';
   const canal=document.querySelector('#fn-canal-grid .need-toggle.on')?.dataset.canal||'';
-  const c=nc({name,company:$('#fn-company')?.value.trim(),email,canal,web:$('#fn-web')?.value.trim(),instagram:$('#fn-ig')?.value.trim(),phone:$('#fn-phone')?.value.trim(),needs:sn,tipo,plataformas,presupuesto,moneda,modalidadPago,servicio:document.getElementById('fn-servicio')?.value||'',detalle:$('#fn-detalle')?.value.trim()||'',mesIngreso:$('#fn-mes')?.value.trim()||''});
+  const c=nc({name,company:$('#fn-company')?.value.trim(),email,canal,web:$('#fn-web')?.value.trim(),instagram:$('#fn-ig')?.value.trim(),phone:$('#fn-phone')?.value.trim(),needs:sn,tipo,plataformas,presupuesto,moneda,modalidadPago,servicio:document.getElementById('fn-servicio')?.value||''});
   clients.unshift(c);
   await sv(c);
   st.showNewModal=false;st.activeClient=c.id;st.view='detail';st.activeTab='inv';
