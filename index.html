@@ -113,6 +113,24 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .modal-title{font-size:17px;font-weight:800;color:var(--gold);margin-bottom:14px;letter-spacing:-.3px}
 .divider{border:none;border-top:1px solid var(--border);margin:14px 0}
 .info-chip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:10px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px;margin-bottom:8px;font-weight:600;cursor:pointer}
+.meet-badge{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.meet-discovery{background:rgba(106,159,216,.12);border:1px solid rgba(106,159,216,.4);color:#6a9fd8}
+.meet-budget{background:rgba(155,109,255,.12);border:1px solid rgba(155,109,255,.4);color:var(--gold)}
+.meet-overdue{background:rgba(217,95,95,.15);border:1px solid rgba(217,95,95,.5);color:var(--red)}
+.airtable-badge{background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.35);color:#ffb800;border-radius:5px;padding:2px 7px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.card-v2{background:linear-gradient(135deg,var(--surface) 0%,#141414 100%);border:1px solid var(--border);border-radius:14px;padding:0;position:relative;cursor:pointer;overflow:hidden;transition:border-color .15s,transform .1s}
+.card-v2:hover{border-color:#3a3a3a;transform:translateY(-1px)}
+.card-v2-top{padding:14px 14px 10px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card-v2-body{padding:0 14px 12px 18px}
+.card-v2-footer{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:rgba(0,0,0,.2)}
+.progress-bar{height:3px;background:var(--surface3);border-radius:0 0 14px 14px;overflow:hidden}
+.progress-fill{height:100%;border-radius:0 0 14px 14px;transition:width .3s ease}
+.section-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.meets-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.meet-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 12px}
+.meet-box-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:6px}
+.meet-box-date{font-size:13px;font-weight:600;color:var(--text)}
+.meet-box-empty{font-size:11px;color:var(--text-muted);font-style:italic}
 </style>
 </head>
 <body>
@@ -126,6 +144,7 @@ const NEEDS=['Posicionamiento','Ventas','Comunidad','Nueva identidad','Rebrandin
 const PLATAFORMAS=['Meta','Google','TikTok','Pinterest','Otra'];
 const CANALES=['Meta','LinkedIn','Google','Referido','Nico','Ger','Caza'];
 const MODALIDADES=['Facturado','Financiera','En mano'];
+const SERVICIOS=['Paid Media','Estrategia y Paid Media','Estrategia y contenido','Servicio FULL 360'];
 const MONEDAS=['ARS','USD','USDT'];
 
 // ── SUPABASE ──
@@ -191,6 +210,12 @@ function nc(d={}){
     investigacion:d.investigacion||{contexto:'',resultado:'',preguntas:[]},
     reunion:d.reunion||{notasVivo:'',checkedQs:[]},
     propuesta:d.propuesta||{transcripcion:'',brief:'',data:null},
+    servicio:d.servicio||'',
+    detalle:d.detalle||'',
+    meetDiscovery:d.meetDiscovery||'',
+    meetBudget:d.meetBudget||'',
+    mesIngreso:d.mesIngreso||'',
+    fromAirtable:d.fromAirtable||false,
     followupChannel:d.followupChannel||'email',
     followupText:d.followupText||''
   };
@@ -216,6 +241,7 @@ function wa(p){if(!p)return null;const n=p.replace(/\D/g,'');const a=n.startsWit
 function igUrl(ig){if(!ig)return null;ig=ig.trim();if(ig.startsWith('http'))return ig;return'https://instagram.com/'+ig.replace(/^@/,'')}
 function igLabel(ig){if(!ig)return'';ig=ig.trim();if(ig.startsWith('http')){try{const u=new URL(ig);return u.pathname.replace(/\//g,'')||ig;}catch(e){return ig;}}return ig.replace(/^@/,'')}
 function fmt(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^###\s*(.+)$/gm,'<h3>$1</h3>').replace(/^##\s*(.+)$/gm,'<h3>$1</h3>').replace(/\n/g,'<br>')}
+function fmtDate(d){if(!d)return'';const p=d.split('-');if(p.length<3)return d;return`${p[2]}/${p[1]}`;}
 function gi(id){const el=document.getElementById(id);return el?el.value.trim():null}
 function fmtPres(el){let raw=el.value.replace(/[^0-9]/g,'');if(!raw){el.value='';return;}el.value=parseInt(raw,10).toLocaleString('es-AR');}
 function presRaw(val){return val?val.replace(/[^\d]/g,''):''}
@@ -347,7 +373,8 @@ function rReportBar(fl,totalMonto){
 function rList(){
   const fl=applyFilters(clients);
   const sr=[...fl].sort((a,b)=>{const o={hot:0,warm:1,ok:2,none:3};return o[ul(ds(a.lastContact),a.estado)]-o[ul(ds(b.lastContact),b.estado)];});
-  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='hot').length};
+  const today2=new Date().toISOString().split('T')[0];
+  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='hot').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length};
   const totalMonto=fl.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
   const pc=['var(--blue)','var(--yellow)','var(--gold)','var(--green)'];
   const haf=hasActiveFilters();
@@ -376,31 +403,46 @@ function rList(){
     <div class="stat"><div class="stat-n">${ct.abonos}</div><div class="stat-l">Abonos</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--gold)">${ct.lc}</div><div class="stat-l">LC</div></div>
     <div class="stat"><div class="stat-n" style="color:${ct.urgentes>0?'var(--red)':'var(--text-muted)'}">${ct.urgentes}</div><div class="stat-l">Urgentes</div></div>
+    <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">${ct.meets>0?`<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0"><span class="meet-badge meet-discovery">🔍 Meets próximas: ${ct.meets}</span></div>`:'<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px 0">Sin reuniones próximas</div>'}</div>
   </div>
   <div class="filters">${['Todos',...ESTADOS].map(f=>`<button class="filt ${st.filter===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div>
   <div class="cards">${sr.length===0
     ?`<div class="empty"><div class="empty-icon">🎯</div>${clients.length===0?'Agregá tu primer prospecto':'Sin clientes en este estado'}</div>`
     :sr.map(c=>{
       const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l),pr=sp(c);
-      return`<div class="card" data-id="${c.id}">
-        <div class="card-bar" style="background:${co}"></div>
-        <div class="card-top">
-          <div><div class="c-name">${c.name}</div>${c.company?`<div class="c-company">${c.company}</div>`:''}</div>
+      const progPct=Math.round(pr.filter(Boolean).length/pr.length*100);
+      const hasMeetD=c.meetDiscovery&&c.meetDiscovery>=today;
+      const hasMeetB=c.meetBudget&&c.meetBudget>=today;
+      const meetDOverdue=c.meetDiscovery&&c.meetDiscovery<today&&c.estado!=='Cerrada';
+      const meetBOverdue=c.meetBudget&&c.meetBudget<today&&c.estado!=='Cerrada';
+      const today=new Date().toISOString().split('T')[0];
+      return`<div class="card-v2" data-id="${c.id}">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${co};border-radius:14px 0 0 14px"></div>
+        <div class="card-v2-top" style="padding-left:18px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <div class="c-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+              ${c.fromAirtable?'<span class="airtable-badge">Form</span>':''}
+            </div>
+            ${c.company?`<div class="c-company">${c.company}</div>`:''}
+          </div>
           <span class="badge ${EC[c.estado]}">${c.estado}</span>
         </div>
-        <div class="card-meta">
-          <div class="meta"><span class="dot" style="background:${co}"></span><b style="color:${co}">${ula(d,c.estado)}</b></div>
-          ${c.presupuesto?`<div class="meta">💰 <b>${fmtPresByMoneda(c.presupuesto,c.moneda)} ${c.moneda||'ARS'}</b></div>`:''}
-          ${c.modalidadPago?`<div class="meta">🧾 <b>${c.modalidadPago}</b></div>`:''}
-          ${c.service?`<div class="meta">📌 <b>${c.service}</b></div>`:''}
+        <div class="card-v2-body">
+          <div class="card-meta" style="margin-bottom:6px">
+            <div class="meta"><span class="dot" style="background:${co}"></span><b style="color:${co}">${ula(d,c.estado)}</b></div>
+            ${c.presupuesto?`<div class="meta">💰 <b>${fmtPresByMoneda(c.presupuesto,c.moneda)}</b></div>`:''}
+            ${c.servicio?`<div class="meta">📌 <b>${c.servicio}</b></div>`:c.service?`<div class="meta">📌 <b>${c.service}</b></div>`:''}
+            ${c.mesIngreso?`<div class="meta">📅 <b>${c.mesIngreso}</b></div>`:''}
+          </div>
+          <div class="needs-chips">
+            ${c.tipo?`<span class="need-chip" style="${c.tipo==='LC'?'border-color:rgba(155,109,255,.5);color:var(--gold)':''}">${c.tipo}</span>`:''}
+            ${c.canal&&c.canal!=='Airtable Form'?`<span class="need-chip" style="color:var(--blue)">${c.canal}</span>`:''}
+            ${(meetDOverdue||hasMeetD)?`<span class="meet-badge ${meetDOverdue?'meet-overdue':'meet-discovery'}">🔍 Discovery ${meetDOverdue?'vencida':fmtDate(c.meetDiscovery)}</span>`:''}
+            ${(meetBOverdue||hasMeetB)?`<span class="meet-badge ${meetBOverdue?'meet-overdue':'meet-budget'}">💼 Budget ${meetBOverdue?'vencida':fmtDate(c.meetBudget)}</span>`:''}
+          </div>
         </div>
-        <div class="needs-chips">
-          ${c.tipo?`<span class="need-chip" style="${c.tipo==='LC'?'border-color:rgba(155,109,255,.5);color:var(--gold)':''}">${c.tipo}</span>`:''}
-          ${c.tipo==='LC'&&c.plataformas?.length?c.plataformas.map(p=>`<span class="need-chip">${p}</span>`).join(''):''}
-          ${c.canal?`<span class="need-chip" style="color:var(--blue)">${c.canal}</span>`:''}
-          ${c.needs?.map(n=>`<span class="need-chip">${n}</span>`).join('')||''}
-        </div>
-        <div class="card-stages">${pr.map((done,i)=>`<div class="stage-pip" style="background:${done?pc[i]:'var(--surface3)'}"></div>`).join('')}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${progPct}%;background:${co}"></div></div>
       </div>`;
     }).join('')}
   </div>`;
@@ -449,8 +491,16 @@ function rNewModal(){
   <div class="field"><label class="field-label">Modalidad de pago</label>
     <div class="needs-grid" id="fn-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle" data-modal="${m}">${m}</div>`).join('')}</div>
   </div>
-  <div class="field"><label class="field-label">Servicio / Descripción</label>
-    <input class="field-input" id="fn-service" placeholder="Estrategia + pauta">
+  <div class="field-row">
+    <div class="field"><label class="field-label">Servicio</label>
+      <select class="field-select" id="fn-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label class="field-label">Mes de ingreso</label>
+      <input class="field-input" id="fn-mes" placeholder="Ej: Mayo 2026">
+    </div>
+  </div>
+  <div class="field"><label class="field-label">Detalle</label>
+    <textarea class="field-textarea" id="fn-detalle" placeholder="Contexto adicional, qué busca el cliente..." style="min-height:60px"></textarea>
   </div>
   <button class="btn-primary" id="btn-save-new">Crear prospecto</button>
   <button class="btn-outline" id="btn-cancel-new">Cancelar</button>
@@ -501,8 +551,16 @@ function rEditModal(){
   <div class="field"><label class="field-label">Modalidad de pago</label>
     <div class="needs-grid" id="ed-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle ${c.modalidadPago===m?'on':''}" data-modal="${m}">${m}</div>`).join('')}</div>
   </div>
-  <div class="field"><label class="field-label">Servicio / Descripción</label>
-    <input class="field-input" id="ed-service" placeholder="Estrategia + pauta" value="${c.service||''}">
+  <div class="field-row">
+    <div class="field"><label class="field-label">Servicio</label>
+      <select class="field-select" id="ed-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}" ${c.servicio===s?'selected':''}>${s}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label class="field-label">Mes de ingreso</label>
+      <input class="field-input" id="ed-mes" placeholder="Ej: Mayo 2026" value="${c.mesIngreso||''}">
+    </div>
+  </div>
+  <div class="field"><label class="field-label">Detalle</label>
+    <textarea class="field-textarea" id="ed-detalle" placeholder="Contexto adicional..." style="min-height:60px">${c.detalle||''}</textarea>
   </div>
   <button class="btn-primary" id="btn-save-edit">Guardar cambios</button>
   <button class="btn-outline" id="btn-cancel-edit">Cancelar</button>
@@ -640,6 +698,23 @@ function rPropuesta(pd,c){
   </div>`:''}`;
 }
 
+function rMeetStatus(c){
+  const today=new Date().toISOString().split('T')[0];
+  const parts=[];
+  if(c.meetDiscovery){
+    const diff=Math.ceil((new Date(c.meetDiscovery)-new Date())/(86400000));
+    if(diff>0)parts.push(`<span class="meet-badge meet-discovery">🔍 Discovery en ${diff}d — ${fmtDate(c.meetDiscovery)}</span>`);
+    else if(diff===0)parts.push(`<span class="meet-badge meet-discovery">🔍 Discovery HOY</span>`);
+    else parts.push(`<span class="meet-badge meet-overdue">🔍 Discovery vencida — ${fmtDate(c.meetDiscovery)}</span>`);
+  }
+  if(c.meetBudget){
+    const diff=Math.ceil((new Date(c.meetBudget)-new Date())/(86400000));
+    if(diff>0)parts.push(`<span class="meet-badge meet-budget">💼 Budget en ${diff}d — ${fmtDate(c.meetBudget)}</span>`);
+    else if(diff===0)parts.push(`<span class="meet-badge meet-budget">💼 Budget HOY</span>`);
+    else parts.push(`<span class="meet-badge meet-overdue">💼 Budget vencida — ${fmtDate(c.meetBudget)}</span>`);
+  }
+  return`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${parts.join('')}</div>`;
+}
 function notasHtml(notes){
   if(!notes||!notes.length)return'<div style="font-size:11px;color:var(--text-muted);font-style:italic">Sin notas aún</div>';
   const last=notes[notes.length-1];
@@ -667,7 +742,15 @@ function rPipe(c){
       <div class="field"><label class="field-label">Estado</label><select class="field-select" id="pip-estado">${ESTADOS.map(e=>`<option value="${e}" ${c.estado===e?'selected':''}>${e}</option>`).join('')}</select></div>
       <div class="field"><label class="field-label">Último contacto</label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}"></div>
     </div>
-    <div class="field"><label class="field-label">Servicio</label><input class="field-input" id="pip-service" value="${c.service||''}" placeholder="Estrategia + pauta"></div>
+    <div class="field-row">
+      <div class="field"><label class="field-label">Servicio</label>
+        <select class="field-select" id="pip-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}" ${c.servicio===s?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label class="field-label">Mes de ingreso</label>
+        <input class="field-input" id="pip-mes" value="${c.mesIngreso||''}" placeholder="Ej: Mayo 2026">
+      </div>
+    </div>
+    ${c.detalle?`<div class="section-card" style="margin-bottom:12px"><div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Detalle</div><div style="font-size:12px;color:var(--text2);line-height:1.5">${c.detalle}</div></div>`:''}
     <div class="field-row">
       <div class="field"><label class="field-label">Teléfono</label>
         <input class="field-input" id="pip-phone" value="${c.phone||''}" placeholder="11 5555-5555" type="tel">
@@ -707,6 +790,19 @@ function rPipe(c){
         <div class="needs-grid" id="pip-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle ${c.plataformas?.includes(p)?'on':''}" data-plat="${p}">${p}</div>`).join('')}</div>
       </div>
     </div>
+    <hr class="divider">
+    <div class="section-title">Reuniones</div>
+    <div class="meets-grid">
+      <div class="meet-box">
+        <div class="meet-box-label" style="color:var(--blue)">🔍 Discovery Meet</div>
+        <input class="field-input" id="pip-meet-discovery" type="date" value="${c.meetDiscovery||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+      </div>
+      <div class="meet-box">
+        <div class="meet-box-label" style="color:var(--gold)">💼 Budget Meet</div>
+        <input class="field-input" id="pip-meet-budget" type="date" value="${c.meetBudget||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+      </div>
+    </div>
+    ${(c.meetDiscovery||c.meetBudget)?rMeetStatus(c):''}
     <hr class="divider">
     <div class="section-title">Historial de notas</div>
     ${notasHtml(c.notes)}
@@ -844,7 +940,7 @@ function bind(){
   $('#btn-gen-followup')?.addEventListener('click',genFU);
   $('#btn-regen-fu')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';await sv(c);genFU()});
   $('#btn-copy-fu')?.addEventListener('click',()=>{cpT(gc()?.followupText||'','copiedFollowup')});
-  ['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda'].forEach(id=>
+  ['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes','pip-meet-discovery','pip-meet-budget'].forEach(id=>
     document.getElementById(id)?.addEventListener('change',savePip)
   );
   $('#pip-tipo')?.addEventListener('change',()=>{
@@ -855,7 +951,7 @@ function bind(){
   $$('#pip-plat-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
 
   // Filters
-  $('#btn-clear-filters')?.addEventListener('click',()=>{st.filters={dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''};render()});
+  $('#btn-clear-filters')?.addEventListener('click',()=>{st.filters={dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:'',meets:''};render()});
   $('#f-date-from')?.addEventListener('change',e=>{st.filters.dateFrom=e.target.value;render()});
   $('#f-date-to')?.addEventListener('change',e=>{st.filters.dateTo=e.target.value;render()});
   $('#f-week')?.addEventListener('click',()=>{
@@ -885,7 +981,7 @@ async function saveNew(){
   const moneda=document.getElementById('fn-moneda')?.value||'ARS';
   const email=$('#fn-email')?.value.trim()||'';
   const canal=document.querySelector('#fn-canal-grid .need-toggle.on')?.dataset.canal||'';
-  const c=nc({name,company:$('#fn-company')?.value.trim(),email,canal,web:$('#fn-web')?.value.trim(),instagram:$('#fn-ig')?.value.trim(),phone:$('#fn-phone')?.value.trim(),needs:sn,tipo,plataformas,presupuesto,moneda,modalidadPago,service:$('#fn-service')?.value.trim()});
+  const c=nc({name,company:$('#fn-company')?.value.trim(),email,canal,web:$('#fn-web')?.value.trim(),instagram:$('#fn-ig')?.value.trim(),phone:$('#fn-phone')?.value.trim(),needs:sn,tipo,plataformas,presupuesto,moneda,modalidadPago,servicio:document.getElementById('fn-servicio')?.value||'',detalle:$('#fn-detalle')?.value.trim()||'',mesIngreso:$('#fn-mes')?.value.trim()||''});
   clients.unshift(c);
   await sv(c);
   st.showNewModal=false;st.activeClient=c.id;st.view='detail';st.activeTab='inv';
@@ -904,6 +1000,10 @@ async function savePip(){
   if(g('pip-modalidad'))c.modalidadPago=g('pip-modalidad').value;
   if(g('pip-presupuesto'))c.presupuesto=presRaw(g('pip-presupuesto').value);
   if(g('pip-moneda'))c.moneda=g('pip-moneda').value;
+  if(g('pip-servicio'))c.servicio=g('pip-servicio').value;
+  if(g('pip-mes'))c.mesIngreso=g('pip-mes').value.trim();
+  if(g('pip-meet-discovery'))c.meetDiscovery=g('pip-meet-discovery').value;
+  if(g('pip-meet-budget'))c.meetBudget=g('pip-meet-budget').value;
   const pp=[...document.querySelectorAll('#pip-plat-grid .need-toggle.on')].map(t=>t.dataset.plat);
   if(pp.length||c.tipo==='LC')c.plataformas=pp;
   const noteText=g('pip-note')?.value.trim();
