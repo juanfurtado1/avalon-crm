@@ -145,6 +145,14 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .card-v2:hover .card-act,.kanban-card:hover .card-act{opacity:.7}
 .card-act:hover{opacity:1!important;background:var(--surface3);border-color:var(--border)}
 .card-act.del:hover{background:rgba(217,95,95,.15);border-color:rgba(217,95,95,.4)}
+.kanban-col-drop{border:2px dashed transparent;border-radius:10px;transition:border-color .15s,background .15s;min-height:60px}
+.kanban-col-drop.drag-over{border-color:var(--gold);background:var(--gold-dim)}
+.kanban-card.dragging{opacity:.4;transform:scale(.97)}
+.heat-alert-bar{background:rgba(196,154,32,.1);border-bottom:1px solid rgba(196,154,32,.3);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.heat-alert-item{background:var(--surface2);border:1px solid rgba(196,154,32,.3);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:8px;font-size:11px}
+.heat-alert-btn{border:none;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:700}
+.drag-handle{cursor:grab;color:var(--text-muted);font-size:12px;padding:0 2px;user-select:none}
+.drag-handle:active{cursor:grabbing}
 </style>
 </head>
 <body>
@@ -231,7 +239,8 @@ function nc(d={}){
     mesIngreso:d.mesIngreso||'',
     fromAirtable:d.fromAirtable||false,
     followupChannel:d.followupChannel||'email',
-    followupText:d.followupText||''
+    followupText:d.followupText||'',
+    heatLevel:d.heatLevel||null  // null = auto, 'hot'/'warm'/'cold' = manual
   };
 }
 
@@ -242,14 +251,33 @@ let st={
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   copiedInv:false,copiedBrief:false,copiedFollowup:false,
   viewMode:'list',
+  dragClient:null,
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''}
 };
 
 // ── HELPERS ──
 function ds(d){if(!d)return 999;return Math.floor((new Date()-new Date(d))/86400000)}
-function ul(d,e){if(['Cerrada','Perdida'].includes(e))return'none';if(d>=7)return'hot';if(d>=3)return'warm';return'ok'}
-function uc(l){return{hot:'#d95f5f',warm:'#c49a20',ok:'#4aab7a',none:'#2e2e2e'}[l]}
+// HOT = 48hs o menos (d<=2) | WARM = 3-6 días | COLD = 7+ días
+function ul(d,e){if(['Cerrada','Perdida'].includes(e))return'none';if(d<=2)return'hot';if(d<=6)return'warm';return'cold'}
+// Get heat level: manual override or auto-calc
+function getHeat(c){
+  if(c.heatLevel)return c.heatLevel;
+  const auto=ul(ds(c.lastContact),c.estado);
+  return auto==='ok'?'cold':auto;  // normalize legacy 'ok' to 'cold'
+}
+function heatColor(h){return{hot:'#d95f5f',warm:'#c49a20',cold:'#6a9fd8',ok:'#6a9fd8',none:'#2e2e2e'}[h]||'#554f6e'}
+function uc(l){return{hot:'#d95f5f',warm:'#c49a20',cold:'#6a9fd8',ok:'#6a9fd8',none:'#2e2e2e'}[l]}
 function ula(d,e){if(e==='Cerrada')return'✓ Cerrada';if(e==='Perdida')return'✗ Perdida';if(d===999)return'Sin fecha';if(d===0)return'Hoy';return`Hace ${d}d`}
+// Check which clients need heat-level review (auto differs from manual)
+function getHeatAlerts(){
+  return clients.filter(c=>{
+    if(['Cerrada','Perdida'].includes(c.estado))return false;
+    if(!c.heatLevel)return false;  // no manual override, skip
+    const auto=ul(ds(c.lastContact),c.estado);
+    const autoNorm=auto==='ok'?'cold':auto; // map 'ok' to 'cold'
+    return c.heatLevel!==autoNorm;
+  });
+}
 function sp(c){return[!!c.investigacion?.resultado,!!(c.investigacion?.preguntas?.length),!!c.propuesta?.brief,!!c.lastContact]}
 function gc(){return clients.find(c=>c.id===st.activeClient)}
 function wa(p){if(!p)return null;const n=p.replace(/\D/g,'');const a=n.startsWith('54')?n:'549'+n.replace(/^0/,'').replace(/^11/,'11');return`https://wa.me/${a}`}
@@ -389,8 +417,8 @@ function rList(){
   const fl=applyFilters(clients);
   const sr=[...fl].sort((a,b)=>Number(b.id)-Number(a.id));
   const today2=new Date().toISOString().split('T')[0];
-  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='hot').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length};
-  // Monto total solo de calientes y tibios (activos urgentes)
+  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='cold').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length};
+  // Monto total solo de Hot y Warm (prospectos activos en los últimos 6 días)
   const hotWarm=fl.filter(c=>['hot','warm'].includes(ul(ds(c.lastContact),c.estado)));
   const totalMonto=hotWarm.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
   // Conversion rate: Cerradas / Enviadas — período: mes actual por defecto
@@ -431,7 +459,7 @@ function rList(){
     <div class="stat"><div class="stat-n">${ct.total}</div><div class="stat-l">Total</div></div>
     <div class="stat"><div class="stat-n">${ct.abonos}</div><div class="stat-l">Abonos</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--gold)">${ct.lc}</div><div class="stat-l">LC</div></div>
-    <div class="stat"><div class="stat-n" style="color:${ct.urgentes>0?'var(--red)':'var(--text-muted)'}">${ct.urgentes}</div><div class="stat-l">Urgentes</div></div>
+    <div class="stat"><div class="stat-n" style="color:${ct.urgentes>0?'var(--blue)':'var(--text-muted)'}">${ct.urgentes}</div><div class="stat-l">Sin contacto</div></div>
     <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">% Conversión · ${convMes}</div>
@@ -495,20 +523,53 @@ function rList(){
 
 function rKanbanCols(sr){
   const today=new Date().toISOString().split('T')[0];
-  // Solo prospectos activos en el kanban (excluir Cerrada/Perdida)
   const active=sr.filter(c=>!['Cerrada','Perdida'].includes(c.estado));
-  const hot=active.filter(c=>ul(ds(c.lastContact),c.estado)==='hot');
-  const warm=active.filter(c=>ul(ds(c.lastContact),c.estado)==='warm');
-  const cool=active.filter(c=>ul(ds(c.lastContact),c.estado)==='ok');
+
+  // Bucket by heatLevel (manual) or auto
+  const hot=active.filter(c=>getHeat(c)==='hot');
+  const warm=active.filter(c=>getHeat(c)==='warm');
+  const cold=active.filter(c=>['ok','cold'].includes(getHeat(c)));
+
+  // Alerts: clients where auto-heat differs from manual heatLevel
+  const alerts=active.filter(c=>{
+    if(!c.heatLevel)return false;
+    const auto=ul(ds(c.lastContact),c.estado);
+    const autoNorm=auto==='ok'?'cold':auto;
+    return c.heatLevel!==autoNorm;
+  });
+
+  function alertBar(){
+    if(!alerts.length)return'';
+    return`<div class="heat-alert-bar">
+      <span style="font-size:10px;font-weight:700;color:#c49a20;text-transform:uppercase;letter-spacing:.5px">⚠️ ${alerts.length} prospecto${alerts.length>1?'s':''} para revisar:</span>
+      ${alerts.map(c=>{
+        const auto=ul(ds(c.lastContact),c.estado);
+        const autoNorm=auto==='ok'?'cold':auto;
+        const labels={hot:'🔴 Hot',warm:'🟡 Warm',cold:'🔵 Cold'};
+        const colors={hot:'#d95f5f',warm:'#c49a20',cold:'#6a9fd8'};
+        return`<div class="heat-alert-item">
+          <span style="font-weight:700">${c.name}</span>
+          <span style="color:var(--text-muted)">→ debería ser</span>
+          <span style="color:${colors[autoNorm]};font-weight:700">${labels[autoNorm]}</span>
+          <span style="color:var(--text-muted);font-size:9px">(${ula(ds(c.lastContact),c.estado)})</span>
+          <button class="heat-alert-btn" data-alert-move="${c.id}" data-heat="${autoNorm}" style="background:${colors[autoNorm]}22;color:${colors[autoNorm]};border:1px solid ${colors[autoNorm]}44">Mover</button>
+          <button class="heat-alert-btn" data-alert-dismiss="${c.id}" style="background:var(--surface3);color:var(--text-muted);border:1px solid var(--border)">Ignorar</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
 
   function kCard(c){
-    const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l);
+    const d=ds(c.lastContact),heat=getHeat(c),co=heatColor(heat);
     const hasMeetD=c.meetDiscovery&&c.meetDiscovery>=today;
     const hasMeetB=c.meetBudget&&c.meetBudget>=today;
-    return`<div class="kanban-card" data-id="${c.id}">
+    return`<div class="kanban-card" data-id="${c.id}" draggable="true">
       <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${co};border-radius:10px 0 0 10px"></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:3px;margin-bottom:2px">
-        <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;letter-spacing:-.2px">${c.name}</div>
+        <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">
+          <span class="drag-handle">⠿</span>
+          <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px">${c.name}</div>
+        </div>
         <div class="card-actions" style="gap:2px">
           <button class="card-act" data-action="edit" data-id="${c.id}" title="Editar">✏️</button>
           <button class="card-act del" data-action="del" data-id="${c.id}" title="Eliminar">🗑️</button>
@@ -522,24 +583,27 @@ function rKanbanCols(sr){
         ${c.tipo?`<span style="font-size:8px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 4px;color:var(--text-muted);font-weight:600">${c.tipo}</span>`:''}
         ${hasMeetD?`<span style="font-size:8px;color:var(--blue);font-weight:700">🔍${fmtDate(c.meetDiscovery)}</span>`:''}
         ${hasMeetB?`<span style="font-size:8px;color:var(--gold);font-weight:700">💼${fmtDate(c.meetBudget)}</span>`:''}
+        ${c.heatLevel?`<span style="font-size:8px;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-weight:600">manual</span>`:''}
       </div>
     </div>`;
   }
 
-  function col(label,color,bg,items){
+  function col(label,colId,color,bg,items){
     return`<div class="kanban-col-wrap">
       <div class="kanban-col-header" style="background:${bg};border:1px solid ${color}33">
         <span style="color:${color}">${label}</span>
         <span class="kanban-col-count" style="color:${color}">${items.length}</span>
       </div>
-      <div class="kanban-col">${items.length?items.map(kCard).join(''):`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:18px 6px;font-style:italic">Sin prospectos</div>`}</div>
+      <div class="kanban-col kanban-col-drop" data-col="${colId}">
+        ${items.length?items.map(kCard).join(''):`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:18px 6px;font-style:italic">Sin prospectos</div>`}
+      </div>
     </div>`;
   }
 
-  return`<div class="kanban-board">
-    ${col('🔴 Calientes','#d95f5f','rgba(217,95,95,.08)',hot)}
-    ${col('🟡 Tibios','#c49a20','rgba(196,154,32,.08)',warm)}
-    ${col('🟢 Fríos','#4aab7a','rgba(74,171,122,.08)',cool)}
+  return`${alertBar()}<div class="kanban-board">
+    ${col('🔴 Hot','hot','#d95f5f','rgba(217,95,95,.08)',hot)}
+    ${col('🟡 Warm','warm','#c49a20','rgba(196,154,32,.08)',warm)}
+    ${col('🔵 Cold','cold','#6a9fd8','rgba(106,159,216,.08)',cold)}
   </div>`;
 }
 
@@ -931,6 +995,53 @@ function bind(){
   $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
   $$('.card-v2').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
   $$('.kanban-card').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
+
+  // Drag & drop between kanban columns
+  $$('.kanban-card[draggable]').forEach(card=>{
+    card.addEventListener('dragstart',e=>{
+      st.dragClient=card.dataset.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',card.dataset.id);
+    });
+    card.addEventListener('dragend',()=>{
+      card.classList.remove('dragging');
+      $$('.kanban-col-drop').forEach(col=>col.classList.remove('drag-over'));
+    });
+  });
+  $$('.kanban-col-drop').forEach(col=>{
+    col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drag-over');});
+    col.addEventListener('dragleave',()=>col.classList.remove('drag-over'));
+    col.addEventListener('drop',async e=>{
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      const id=e.dataTransfer.getData('text/plain')||st.dragClient;
+      const targetHeat=col.dataset.col; // 'hot','warm','cold'
+      const c=clients.find(x=>x.id===id);
+      if(c&&targetHeat){
+        c.heatLevel=targetHeat;
+        await sv(c);
+        toast(`${c.name} movido a ${targetHeat==='hot'?'🔴 Hot':targetHeat==='warm'?'🟡 Warm':'🔵 Cold'}`);
+        render();
+      }
+      st.dragClient=null;
+    });
+  });
+
+  // Heat alert buttons (dismiss = keep manual but acknowledge)
+  $$('[data-alert-move]').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const c=clients.find(x=>x.id===b.dataset.alertMove);
+    if(c){c.heatLevel=b.dataset.heat;await sv(c);toast('✓ Movido');render();}
+  }));
+  $$('[data-alert-dismiss]').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const c=clients.find(x=>x.id===b.dataset.alertDismiss);
+    if(c){
+      // Reset heatLevel to null so it goes back to auto-calc
+      c.heatLevel=null;await sv(c);render();
+    }
+  }));
 
   // Card action buttons (edit/delete from card)
   $$('[data-action="edit"]').forEach(b=>b.addEventListener('click',e=>{
