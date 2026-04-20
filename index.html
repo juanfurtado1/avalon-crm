@@ -165,6 +165,7 @@ const EC={'Enviada':'s-enviada','En negociación':'s-negociacion','Sin respuesta
 const NEEDS=['Posicionamiento','Ventas','Comunidad','Nueva identidad','Rebranding','Pauta digital','Contenido','Estrategia','E-commerce','Awareness'];
 const PLATAFORMAS=['Meta','Google','TikTok','Pinterest','Otra'];
 const CANALES=['Meta','LinkedIn','Google','Referido','Nico','Ger','Caza'];
+const CANAL_COLOR={'Meta':'#1877f2','LinkedIn':'#0a66c2','Google':'#ea4335','Referido':'#4aab7a','Nico':'#9b6dff','Ger':'#9b6dff','Caza':'#c49a20','Airtable Form':'#ffb800'};
 const MODALIDADES=['Facturado','Financiera','En mano'];
 const SERVICIOS=['Paid Media','Estrategia y Paid Media','Estrategia y contenido','Servicio FULL 360'];
 const MONEDAS=['ARS','USD','USDT'];
@@ -240,7 +241,8 @@ function nc(d={}){
     fromAirtable:d.fromAirtable||false,
     followupChannel:d.followupChannel||'email',
     followupText:d.followupText||'',
-    heatLevel:d.heatLevel||null  // null = auto, 'hot'/'warm'/'cold' = manual
+    heatLevel:d.heatLevel||null,      // null=auto, 'hot'/'warm'/'cold'=manual
+    heatIgnored:d.heatIgnored||false   // true = user dismissed the alert
   };
 }
 
@@ -487,7 +489,8 @@ function rList(){
       const meetBOverdue=c.meetBudget&&c.meetBudget<today&&c.estado!=='Cerrada';
       return`<div class="card-v2" data-id="${c.id}">
         <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${co};border-radius:14px 0 0 14px"></div>
-        <div class="card-v2-top" style="padding-left:18px">
+        ${c.canal?`<div style="position:absolute;top:0;right:0;background:${CANAL_COLOR[c.canal]||'#554f6e'};color:#fff;font-size:8px;font-weight:800;padding:2px 7px;border-radius:0 14px 0 6px;letter-spacing:.4px;text-transform:uppercase;opacity:.9">${c.canal}</div>`:''}
+        <div class="card-v2-top" style="padding-left:18px;padding-top:${c.canal?'18px':'14px'}">
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
               <div class="c-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
@@ -530,9 +533,9 @@ function rKanbanCols(sr){
   const warm=active.filter(c=>getHeat(c)==='warm');
   const cold=active.filter(c=>['ok','cold'].includes(getHeat(c)));
 
-  // Alerts: clients where auto-heat differs from manual heatLevel
+  // Alerts: clients where auto-heat differs from manual heatLevel AND not dismissed
   const alerts=active.filter(c=>{
-    if(!c.heatLevel)return false;
+    if(!c.heatLevel||c.heatIgnored)return false;
     const auto=ul(ds(c.lastContact),c.estado);
     const autoNorm=auto==='ok'?'cold':auto;
     return c.heatLevel!==autoNorm;
@@ -1020,6 +1023,7 @@ function bind(){
       const c=clients.find(x=>x.id===id);
       if(c&&targetHeat){
         c.heatLevel=targetHeat;
+        c.heatIgnored=false;  // reset so future drift is detected
         await sv(c);
         toast(`${c.name} movido a ${targetHeat==='hot'?'🔴 Hot':targetHeat==='warm'?'🟡 Warm':'🔵 Cold'}`);
         render();
@@ -1038,8 +1042,8 @@ function bind(){
     e.stopPropagation();
     const c=clients.find(x=>x.id===b.dataset.alertDismiss);
     if(c){
-      // Reset heatLevel to null so it goes back to auto-calc
-      c.heatLevel=null;await sv(c);render();
+      c.heatIgnored=true;  // dismiss alert, keep manual position
+      await sv(c);render();
     }
   }));
 
