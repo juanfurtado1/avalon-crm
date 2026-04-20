@@ -478,13 +478,13 @@ function rList(){
   ${st.viewMode==='kanban'?rKanbanCols(sr):`<div class="cards">${sr.length===0
     ?`<div class="empty"><div class="empty-icon">🎯</div>${clients.length===0?'Agregá tu primer prospecto':'Sin clientes en este estado'}</div>`
     :sr.map(c=>{
+      const today=new Date().toISOString().split('T')[0];
       const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l),pr=sp(c);
       const progPct=Math.round(pr.filter(Boolean).length/pr.length*100);
       const hasMeetD=c.meetDiscovery&&c.meetDiscovery>=today;
       const hasMeetB=c.meetBudget&&c.meetBudget>=today;
       const meetDOverdue=c.meetDiscovery&&c.meetDiscovery<today&&c.estado!=='Cerrada';
       const meetBOverdue=c.meetBudget&&c.meetBudget<today&&c.estado!=='Cerrada';
-      const today=new Date().toISOString().split('T')[0];
       return`<div class="card-v2" data-id="${c.id}">
         <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${co};border-radius:14px 0 0 14px"></div>
         <div class="card-v2-top" style="padding-left:18px">
