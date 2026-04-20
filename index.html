@@ -390,8 +390,21 @@ function rList(){
   const sr=[...fl].sort((a,b)=>Number(b.id)-Number(a.id));
   const today2=new Date().toISOString().split('T')[0];
   const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='hot').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length};
-  const totalMonto=fl.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
-  const pc=['var(--blue)','var(--yellow)','var(--gold)','var(--green)'];
+  // Monto total solo de calientes y tibios (activos urgentes)
+  const hotWarm=fl.filter(c=>['hot','warm'].includes(ul(ds(c.lastContact),c.estado)));
+  const totalMonto=hotWarm.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
+  // Conversion rate: Cerradas / Enviadas — período: mes actual por defecto
+  const now=new Date();
+  const f=st.filters;
+  const convFrom=f.dateFrom||`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  const convTo=f.dateTo||today2;
+  const convPool=clients.filter(c=>c.lastContact>=convFrom&&c.lastContact<=convTo);
+  const convCerradas=convPool.filter(c=>c.estado==='Cerrada').length;
+  const convEnviadas=convPool.filter(c=>c.estado==='Enviada').length;
+  const convTotal=convCerradas+convEnviadas;
+  const convRate=convTotal>0?Math.round(convCerradas/convTotal*100):0;
+  const convColor=convRate>=30?'var(--green)':convRate>=15?'var(--yellow)':'var(--red)';
+  const convMes=new Date(convFrom).toLocaleString('es-AR',{month:'long',year:'numeric'});
   const haf=hasActiveFilters();
   return`
   <div class="header">
@@ -419,6 +432,18 @@ function rList(){
     <div class="stat"><div class="stat-n">${ct.abonos}</div><div class="stat-l">Abonos</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--gold)">${ct.lc}</div><div class="stat-l">LC</div></div>
     <div class="stat"><div class="stat-n" style="color:${ct.urgentes>0?'var(--red)':'var(--text-muted)'}">${ct.urgentes}</div><div class="stat-l">Urgentes</div></div>
+    <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">% Conversión · ${convMes}</div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span style="font-size:20px;font-weight:800;color:${convColor};line-height:1">${convRate}%</span>
+          <span style="font-size:9px;color:var(--text-muted);font-weight:600">${convCerradas} cerradas / ${convEnviadas} enviadas</span>
+        </div>
+      </div>
+      <div style="background:var(--surface3);border-radius:4px;height:5px;overflow:hidden">
+        <div style="width:${Math.min(convRate,100)}%;background:${convColor};height:100%;border-radius:4px;transition:width .4s ease"></div>
+      </div>
+    </div>
     <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">${ct.meets>0?`<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0"><span class="meet-badge meet-discovery">🔍 Meets próximas: ${ct.meets}</span></div>`:'<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px 0">Sin reuniones próximas</div>'}</div>
   </div>
   <div class="filters">${['Todos',...ESTADOS].map(f=>`<button class="filt ${st.filter===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div>
@@ -470,9 +495,11 @@ function rList(){
 
 function rKanbanCols(sr){
   const today=new Date().toISOString().split('T')[0];
-  const hot=sr.filter(c=>ul(ds(c.lastContact),c.estado)==='hot');
-  const warm=sr.filter(c=>ul(ds(c.lastContact),c.estado)==='warm');
-  const cool=sr.filter(c=>['ok','none'].includes(ul(ds(c.lastContact),c.estado)));
+  // Solo prospectos activos en el kanban (excluir Cerrada/Perdida)
+  const active=sr.filter(c=>!['Cerrada','Perdida'].includes(c.estado));
+  const hot=active.filter(c=>ul(ds(c.lastContact),c.estado)==='hot');
+  const warm=active.filter(c=>ul(ds(c.lastContact),c.estado)==='warm');
+  const cool=active.filter(c=>ul(ds(c.lastContact),c.estado)==='ok');
 
   function kCard(c){
     const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l);
@@ -625,6 +652,7 @@ function rDetail(){
   <div class="detail-header">
     <button class="btn-back" id="btn-back">← Volver</button>
     <button class="btn-sm" id="btn-open-edit" style="color:var(--gold);border-color:rgba(155,109,255,.4)">✏️ Editar</button>
+    <button class="btn-sm" id="btn-delete-client-hdr" style="color:var(--red);border-color:rgba(217,95,95,.3)">🗑️</button>
     <div style="flex:1;min-width:0">
       <div class="detail-name">${c.name}</div>
       ${c.company?`<div class="detail-company">${c.company}</div>`:''}
@@ -996,6 +1024,13 @@ function bind(){
   $('#btn-contacte-hoy')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.lastContact=new Date().toISOString().split('T')[0];await savePip();render()});
   $('#btn-cycle-status')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.estado=ESTADOS[(ESTADOS.indexOf(c.estado)+1)%ESTADOS.length];await savePip();render()});
   $('#btn-delete-client')?.addEventListener('click',async()=>{
+    if(!confirm('¿Eliminar este prospecto?'))return;
+    const id=st.activeClient;
+    clients=clients.filter(x=>x.id!==id);
+    await sbDel(id);
+    st.view='list';st.activeClient=null;render();
+  });
+  $('#btn-delete-client-hdr')?.addEventListener('click',async()=>{
     if(!confirm('¿Eliminar este prospecto?'))return;
     const id=st.activeClient;
     clients=clients.filter(x=>x.id!==id);
