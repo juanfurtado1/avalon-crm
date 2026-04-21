@@ -537,8 +537,8 @@ function rList(){
   const sr=[...fl].sort((a,b)=>Number(b.id)-Number(a.id));
   const today2=new Date().toISOString().split('T')[0];
   const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='cold').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length};
-  // Monto total solo de Hot y Warm (prospectos activos en los últimos 6 días)
-  const hotWarm=fl.filter(c=>['hot','warm'].includes(ul(ds(c.lastContact),c.estado)));
+  // Monto total solo de Hot o Warm con estado Enviada
+  const hotWarm=fl.filter(c=>['hot','warm'].includes(ul(ds(c.lastContact),c.estado))&&c.estado==='Enviada');
   const totalMonto=hotWarm.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
   // Conversion rate: Cerradas / Enviadas — período: mes actual por defecto
   const now=new Date();
