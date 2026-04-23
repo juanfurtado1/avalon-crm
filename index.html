@@ -153,6 +153,35 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .heat-alert-btn{border:none;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:700}
 .drag-handle{cursor:grab;color:var(--text-muted);font-size:12px;padding:0 2px;user-select:none}
 .drag-handle:active{cursor:grabbing}
+/* ── CLIENTES NUEVOS ── */
+.nc-hero{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px 32px;text-align:center;gap:14px}
+.nc-hero-icon{font-size:40px;line-height:1}
+.nc-hero-title{font-size:22px;font-weight:800;color:var(--gold);letter-spacing:-.5px}
+.nc-hero-sub{font-size:11px;color:var(--text-muted);font-weight:500;max-width:260px;line-height:1.6}
+.btn-nc-enter{background:var(--gold);color:#000;border:none;border-radius:12px;padding:14px 28px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;box-shadow:0 0 24px rgba(155,109,255,.35)}
+.btn-nc-enter:hover{background:var(--gold2);box-shadow:0 0 32px rgba(155,109,255,.5)}
+.nc-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.nc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 14px 0}
+.nc-cards{padding:12px 14px 120px;display:flex;flex-direction:column;gap:12px}
+.nc-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;position:relative;cursor:pointer;transition:border-color .15s,transform .1s}
+.nc-card:hover{border-color:#3a3a3a;transform:translateY(-1px)}
+.nc-card-top{padding:14px 14px 10px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.nc-card-body{padding:0 14px 10px 18px}
+.nc-card-footer{padding:8px 14px;border-top:1px solid var(--border);background:rgba(0,0,0,.2);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ob-steps{display:flex;gap:4px;flex-wrap:wrap}
+.ob-step{display:flex;align-items:center;gap:4px;border-radius:5px;padding:3px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all .12s;user-select:none}
+.ob-step.done{background:rgba(74,171,122,.12);border-color:rgba(74,171,122,.4);color:var(--green)}
+.ob-step .ob-check{width:12px;height:12px;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
+.pm-badge{display:inline-flex;align-items:center;gap:4px;border-radius:5px;padding:3px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:var(--gold-dim);border:1px solid rgba(155,109,255,.4);color:var(--gold)}
+.scope-chip{display:inline-flex;align-items:center;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted)}
+.scope-toggle-btn{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 11px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.3px;transition:all .12s;display:flex;align-items:center;gap:5px}
+.scope-toggle-btn.on{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+.nc-section{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;margin-bottom:12px}
+.nc-section-title{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:10px;font-weight:700;display:flex;align-items:center;gap:6px}
+.nc-progress{height:3px;background:var(--surface3);border-radius:0 0 14px 14px;overflow:hidden}
+.nc-progress-fill{height:100%;border-radius:0 0 14px 14px;transition:width .4s ease}
+.ready-badge{background:rgba(74,171,122,.12);border:1px solid rgba(74,171,122,.4);color:var(--green);border-radius:6px;padding:3px 9px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.nc-divider{border:none;border-top:1px solid var(--border);margin:14px 0}
 </style>
 </head>
 <body>
@@ -169,6 +198,21 @@ const CANAL_COLOR={'Meta':'#1877f2','LinkedIn':'#0a66c2','Google':'#ea4335','Ref
 const MODALIDADES=['Facturado','Financiera','En mano'];
 const SERVICIOS=['Paid Media','Estrategia y Paid Media','Estrategia y contenido','Servicio FULL 360'];
 const MONEDAS=['ARS','USD','USDT'];
+
+// ── CLIENTES NUEVOS CONSTANTS ──
+const NC_SCOPE=['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn','CM y Diseño','Filmmaker','CRM'];
+const NC_PMS=['Salma','Lucas','Caro'];
+const NC_PM_TEAMS={
+  'Salma':['Mica','Tizi','Eli','May','Martu'],
+  'Lucas':['Mica','Noe','Pili','Martu'],
+  'Caro':['Tizi','Eli','Noe','May']
+};
+const NC_OB_STEPS=[
+  {key:'contrato',label:'Contrato'},
+  {key:'oc',label:'OC firmada'},
+  {key:'altaAdmin',label:'Alta Admin'},
+  {key:'mailPresentacion',label:'Mail equipo'}
+];
 
 // ── SUPABASE ──
 const SB_URL='https://jbfpwrkcyhoclqxvxuqq.supabase.co';
@@ -200,6 +244,51 @@ async function sbDel(id){
   try{await fetch(SB_URL+'/rest/v1/clients?id=eq.'+id,{method:'DELETE',headers:sbH()});}
   catch(e){console.error('Delete error',e);}
 }
+
+// ── NUEVOS CLIENTES — SUPABASE ──
+let nuevos=[];
+async function loadNC(){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/new_clients?select=data&order=created_at.desc',{headers:sbH()});
+    const rows=await r.json();
+    if(Array.isArray(rows))nuevos=rows.map(row=>ncNew(row.data));
+  }catch(e){console.error('Load NC error',e);}
+}
+async function svNC(c){
+  try{
+    await fetch(SB_URL+'/rest/v1/new_clients',{
+      method:'POST',
+      headers:{...sbH(),'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({id:c.id,data:c,updated_at:new Date().toISOString()})
+    });
+  }catch(e){console.error('NC upsert error',e);}
+}
+async function sbDelNC(id){
+  try{await fetch(SB_URL+'/rest/v1/new_clients?id=eq.'+id,{method:'DELETE',headers:sbH()});}
+  catch(e){console.error('NC delete error',e);}
+}
+function ncNew(d={}){
+  return{
+    id:d.id||Date.now().toString(),
+    name:d.name||'',company:d.company||'',
+    phone:d.phone||'',email:d.email||'',
+    web:d.web||'',instagram:d.instagram||'',tiktok:d.tiktok||'',
+    rubro:d.rubro||'',
+    pm:d.pm||'',
+    equipo:d.equipo||'',
+    fechaInicio:d.fechaInicio||new Date().toISOString().split('T')[0],
+    scope:d.scope||[],
+    onboarding:d.onboarding||{contrato:false,oc:false,altaAdmin:false,mailPresentacion:false},
+    mision:d.mision||'',vision:d.vision||'',
+    diferenciales:d.diferenciales||'',
+    objetivos:d.objetivos||'',
+    contexto:d.contexto||'',
+    emailGenerado:d.emailGenerado||'',
+    crmClientId:d.crmClientId||null,
+    fromCRM:d.fromCRM||false
+  };
+}
+function gnc(){return nuevos.find(c=>c.id===st.activeNuevo);}
 
 // ── ANTHROPIC ──
 function getApiKey(){return localStorage.getItem('avalon_api_key')||''}
@@ -254,7 +343,10 @@ let st={
   copiedInv:false,copiedBrief:false,copiedFollowup:false,
   viewMode:'list',
   dragClient:null,
-  filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''}
+  filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
+  searchQuery:'',
+  // Clientes Nuevos
+  activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false
 };
 
 // ── HELPERS ──
@@ -300,6 +392,7 @@ function updPresPrefix(moneda){
 function hasActiveFilters(){const f=st.filters;return f.tipo||f.modalidad||f.plataforma||f.moneda||f.urgencia||f.dateFrom||f.dateTo;}
 function applyFilters(list){
   const f=st.filters;
+  const q=(st.searchQuery||'').toLowerCase().trim();
   return list.filter(c=>{
     if(st.filter!=='Todos'&&c.estado!==st.filter)return false;
     if(f.tipo&&c.tipo!==f.tipo)return false;
@@ -310,6 +403,7 @@ function applyFilters(list){
     if(f.urgencia==='sin-contacto'&&ds(c.lastContact)<3)return false;
     if(f.dateFrom){const d=new Date(c.lastContact);if(d<new Date(f.dateFrom))return false;}
     if(f.dateTo){const d=new Date(c.lastContact);if(d>new Date(f.dateTo))return false;}
+    if(q&&!( (c.name||'').toLowerCase().includes(q)||(c.company||'').toLowerCase().includes(q) ))return false;
     return true;
   });
 }
@@ -330,6 +424,8 @@ function toast(msg){
 async function render(){
   const app=document.getElementById('app');
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
+  if(st.view==='nuevos'){app.innerHTML=rNuevosList();if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());bind();bindNuevos();return;}
+  if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
   app.innerHTML=st.view==='list'?rList():rDetail();
   if(st.showEditModal)app.insertAdjacentHTML('beforeend',rEditModal());
   if(st.showSbModal)app.insertAdjacentHTML('beforeend',rSbModal());
@@ -408,7 +504,7 @@ function rReportBar(fl,totalMonto){
   const hasF=hasActiveFilters();
   return`<div class="report-bar">
     <div class="report-stat"><div class="report-stat-n">${fl.length}</div><div class="report-stat-l">${hasF?'Filtrados':'Clientes'}</div></div>
-    ${totalMonto>0?`<div class="report-stat"><div class="report-stat-n" style="color:var(--green)">$${totalMonto.toLocaleString('es-AR')}</div><div class="report-stat-l">Monto total</div></div>`:''}
+    ${totalMonto>0?`<div class="report-stat"><div class="report-stat-n" style="color:var(--green)">$${totalMonto.toLocaleString('es-AR')}</div><div class="report-stat-l">Proyectado Pipeline 🔴</div></div>`:''}
     ${fl.filter(c=>c.tipo==='LC').length?`<div class="report-stat"><div class="report-stat-n" style="color:var(--blue)">${fl.filter(c=>c.tipo==='LC').length}</div><div class="report-stat-l">LC</div></div>`:''}
     ${fl.filter(c=>c.tipo!=='LC').length?`<div class="report-stat"><div class="report-stat-n">${fl.filter(c=>c.tipo!=='LC').length}</div><div class="report-stat-l">Abonos</div></div>`:''}
     ${Object.entries(byEstado).map(([e,n])=>`<div class="report-stat"><div class="report-stat-n" style="font-size:11px">${n}</div><div class="report-stat-l">${e}</div></div>`).join('')}
@@ -420,9 +516,9 @@ function rList(){
   const sr=[...fl].sort((a,b)=>Number(b.id)-Number(a.id));
   const today2=new Date().toISOString().split('T')[0];
   const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='cold').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length};
-  // Monto total solo de Hot y Warm (prospectos activos en los últimos 6 días)
-  const hotWarm=fl.filter(c=>['hot','warm'].includes(ul(ds(c.lastContact),c.estado)));
-  const totalMonto=hotWarm.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
+  // Proyectado Pipeline: solo HOT leads
+  const hotOnly=fl.filter(c=>getHeat(c)==='hot');
+  const totalMonto=hotOnly.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
   // Conversion rate: Cerradas / Enviadas — período: mes actual por defecto
   const now=new Date();
   const f=st.filters;
@@ -443,7 +539,13 @@ function rList(){
       <span style="display:none;font-size:16px;font-weight:800;color:var(--gold);letter-spacing:1px">AVALON</span>
       <div class="logo-sep"></div><div class="logo-sub">CRM</div>
     </div>
-    <div style="display:flex;gap:6px;align-items:center">
+    <div style="display:flex;gap:6px;align-items:center;flex:1;justify-content:flex-end;flex-wrap:wrap">
+      <div style="position:relative;flex-shrink:0">
+        <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;pointer-events:none">🔍</span>
+        <input id="search-input" type="text" placeholder="Buscar cliente..." value="${st.searchQuery||''}"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px 6px 28px;color:var(--text);font-family:'Montserrat',sans-serif;font-size:11px;outline:none;width:160px;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
       <button class="btn-sm" id="btn-export">⬇</button>
       <input type="file" id="import-file" accept=".json" style="display:none">
       <button class="btn-sm" id="btn-import">⬆</button>
@@ -451,6 +553,7 @@ function rList(){
       <button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button>
       <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
       <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters">⚡ Filtros${haf?' ●':''}</button>
+      <button class="btn-sm" id="btn-go-nuevos" style="background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Clientes Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
       <button class="btn-add" id="btn-open-new">+ Prospecto</button>
     </div>
   </div>
@@ -986,6 +1089,7 @@ function bind(){
 
   // List
   $('#btn-open-new')?.addEventListener('click',()=>{st.showNewModal=true;render()});
+  document.getElementById('search-input')?.addEventListener('input',e=>{st.searchQuery=e.target.value;render()});
   $('#btn-export')?.addEventListener('click',exportData);
   $('#btn-import')?.addEventListener('click',()=>document.getElementById('import-file')?.click());
   document.getElementById('import-file')?.addEventListener('change',importData);
@@ -993,6 +1097,7 @@ function bind(){
   $('#btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render()});
   $('#btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render()});
   $('#btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render()});
+  $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
   $$('.card-v2').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
   $$('.kanban-card').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
@@ -1369,11 +1474,423 @@ async function saveEdit(){
   render();
 }
 
+// ── CLIENTES NUEVOS — RENDER ──
+function rNuevosList(){
+  const listo=nuevos.filter(c=>Object.values(c.onboarding).every(Boolean)).length;
+  const enProceso=nuevos.filter(c=>!Object.values(c.onboarding).every(Boolean)).length;
+  // Auto-sync cerrados del CRM que aún no están en nuevos
+  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id));
+  return`
+  <div class="nc-header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn-back" id="btn-nc-back">← Volver</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:15px;font-weight:800;color:var(--green);letter-spacing:-.3px">Clientes Nuevos</div>
+        <span style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px">/ Onboarding</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      ${synceable.length?`<button class="btn-sm" id="btn-sync-cerrados" style="color:var(--green);border-color:rgba(74,171,122,.4)">↓ Importar cerrados (${synceable.length})</button>`:''}
+      <button class="btn-add" id="btn-open-nuevo" style="background:var(--green)">+ Cliente</button>
+    </div>
+  </div>
+  <div class="gold-bar" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div>
+  <div class="nc-stats">
+    <div class="stat"><div class="stat-n" style="color:var(--green)">${nuevos.length}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--yellow)">${enProceso}</div><div class="stat-l">En proceso</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--green)">${listo}</div><div class="stat-l">Listos para PM</div></div>
+  </div>
+  <div class="nc-cards" style="margin-top:12px">
+    ${nuevos.length===0
+      ?`<div class="empty"><div class="empty-icon">🚀</div><div style="font-size:12px;margin-bottom:8px">Sin clientes nuevos aún</div><div style="font-size:11px;color:var(--text-muted)">Los clientes con estado <strong>Cerrada</strong> del CRM aparecen acá automáticamente</div></div>`
+      :nuevos.map(c=>{
+        const ob=c.onboarding||{};
+        const done=Object.values(ob).filter(Boolean).length;
+        const total=NC_OB_STEPS.length;
+        const pct=Math.round(done/total*100);
+        const ready=done===total;
+        const scopeList=(c.scope||[]).slice(0,4);
+        return`<div class="nc-card" data-ncid="${c.id}">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${ready?'var(--green)':'var(--gold)'};border-radius:14px 0 0 14px"></div>
+          <div class="nc-card-top">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.3px;margin-bottom:3px">${c.name}${c.company?`<span style="color:var(--border2);font-weight:300;margin:0 6px">|</span><span style="font-size:12px;font-weight:600;color:var(--text2)">${c.company}</span>`:''}</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+                ${c.pm?`<span class="pm-badge">👤 ${c.pm}</span>`:'<span style="font-size:9px;color:var(--text-muted);font-weight:600">Sin PM</span>'}
+                ${c.fechaInicio?`<span style="font-size:9px;color:var(--text-muted);font-weight:600">📅 ${fmtDate(c.fechaInicio)}</span>`:''}
+                ${ready?'<span class="ready-badge">✓ Listo para PM</span>':''}
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:18px;font-weight:800;color:${ready?'var(--green)':'var(--gold)'};line-height:1">${done}/${total}</div>
+              <div style="font-size:8px;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-top:1px">pasos</div>
+            </div>
+          </div>
+          <div class="nc-card-body">
+            <div class="ob-steps" style="margin-bottom:8px">
+              ${NC_OB_STEPS.map(s=>`<div class="ob-step ${ob[s.key]?'done':''}"><div class="ob-check">${ob[s.key]?'✓':''}</div>${s.label}</div>`).join('')}
+            </div>
+            ${scopeList.length?`<div style="display:flex;gap:4px;flex-wrap:wrap">${scopeList.map(s=>`<span class="scope-chip">${s}</span>`).join('')}${c.scope.length>4?`<span class="scope-chip">+${c.scope.length-4}</span>`:''}</div>`:'' }
+          </div>
+          <div class="nc-progress"><div class="nc-progress-fill" style="width:${pct}%;background:${ready?'var(--green)':'var(--gold)'}"></div></div>
+        </div>`;
+      }).join('')}
+  </div>`;
+}
+
+function rNuevoModal(){
+  return`<div class="modal-overlay" id="nuevo-modal-overlay"><div class="modal"><div class="modal-handle"></div>
+  <div class="modal-title">🚀 Nuevo cliente</div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Nombre contacto *</label><input class="field-input" id="nm-name" placeholder="Ej: Diego Kong"></div>
+    <div class="field"><label class="field-label">Empresa / Marca *</label><input class="field-input" id="nm-company" placeholder="Ej: TIFBA"></div>
+  </div>
+  <div class="field"><label class="field-label">Rubro</label><input class="field-input" id="nm-rubro" placeholder="Ej: Indumentaria mayorista — sastrería"></div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">Web</label><input class="field-input" id="nm-web" placeholder="https://..."></div>
+    <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="nm-ig" placeholder="@usuario"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">TikTok</label><input class="field-input" id="nm-tiktok" placeholder="@usuario"></div>
+    <div class="field"><label class="field-label">Teléfono</label><input class="field-input" id="nm-phone" placeholder="11 5555-5555" type="tel"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label class="field-label">PM asignado</label>
+      <select class="field-select" id="nm-pm"><option value="">Sin asignar</option>${NC_PMS.map(p=>`<option value="${p}">${p}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label class="field-label">Fecha de inicio</label><input class="field-input" id="nm-fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+  </div>
+  <div class="field"><label class="field-label">Scope / Servicios contratados</label>
+    <div class="needs-grid" id="nm-scope-grid">${NC_SCOPE.map(s=>`<div class="need-toggle" data-scope="${s}">${s}</div>`).join('')}</div>
+  </div>
+  <button class="btn-primary" id="btn-save-nuevo">Crear cliente</button>
+  <button class="btn-outline" id="btn-cancel-nuevo">Cancelar</button>
+  </div></div>`;
+}
+
+function rNuevoDetail(){
+  const c=gnc();if(!c){st.view='nuevos';render();return'';}
+  const ob=c.onboarding||{};
+  const done=Object.values(ob).filter(Boolean).length;
+  const ready=done===NC_OB_STEPS.length;
+  const wl=wa(c.phone);
+  return`
+  <div class="nc-header">
+    <button class="btn-back" id="btn-nd-back">← Volver</button>
+    <button class="btn-sm" id="btn-nd-delete" style="color:var(--red);border-color:rgba(217,95,95,.3)">🗑️</button>
+    <div style="flex:1;min-width:0;padding:0 8px">
+      <div style="font-size:15px;font-weight:800;color:var(--green);letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}${c.company?` | ${c.company}`:''}</div>
+      ${c.rubro?`<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600">${c.rubro}</div>`:''}
+    </div>
+    ${ready?'<span class="ready-badge" style="flex-shrink:0">✓ Listo para PM</span>':''}
+  </div>
+  <div class="gold-bar" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div>
+  <div style="padding:14px 14px 120px">
+    <!-- ONBOARDING STEPS -->
+    <div class="nc-section">
+      <div class="nc-section-title">📋 Onboarding checklist <span style="margin-left:auto;font-size:10px;color:${ready?'var(--green)':'var(--gold)'};font-weight:800">${done}/${NC_OB_STEPS.length}</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${NC_OB_STEPS.map(s=>`
+        <div class="ob-step ${ob[s.key]?'done':''}" style="font-size:11px;padding:10px 12px;border-radius:8px;cursor:pointer;user-select:none" data-ob="${s.key}">
+          <div class="ob-check" style="width:16px;height:16px;border-radius:4px;font-size:10px">${ob[s.key]?'✓':''}</div>
+          <span style="font-weight:700;text-transform:none;letter-spacing:0">${{contrato:'Contrato firmado',oc:'OC (Orden de Compra) firmada',altaAdmin:'Formulario de alta administrativa',mailPresentacion:'Mail de presentación al equipo interno'}[s.key]}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- DATOS DEL CLIENTE -->
+    <div class="nc-section">
+      <div class="nc-section-title">👤 Datos del cliente</div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Nombre</label><input class="field-input" id="nd-name" value="${c.name||''}"></div>
+        <div class="field"><label class="field-label">Empresa</label><input class="field-input" id="nd-company" value="${c.company||''}"></div>
+      </div>
+      <div class="field"><label class="field-label">Rubro</label><input class="field-input" id="nd-rubro" value="${c.rubro||''}" placeholder="Ej: Indumentaria mayorista"></div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Web</label><input class="field-input" id="nd-web" value="${c.web||''}" placeholder="https://..."></div>
+        <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="nd-ig" value="${c.instagram||''}" placeholder="@usuario"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">TikTok</label><input class="field-input" id="nd-tiktok" value="${c.tiktok||''}" placeholder="@usuario"></div>
+        <div class="field"><label class="field-label">Teléfono</label>
+          <input class="field-input" id="nd-phone" value="${c.phone||''}" type="tel">
+          ${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}
+        </div>
+      </div>
+    </div>
+
+    <!-- PM Y FECHA -->
+    <div class="nc-section">
+      <div class="nc-section-title">⚙️ Configuración del proyecto</div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">PM asignado</label>
+          <select class="field-select" id="nd-pm">
+            <option value="">Sin asignar</option>
+            ${NC_PMS.map(p=>`<option value="${p}" ${c.pm===p?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label class="field-label">Fecha de inicio</label><input class="field-input" id="nd-fecha" type="date" value="${c.fechaInicio||''}"></div>
+      </div>
+      <div class="field"><label class="field-label">Equipo asignado (uno por línea)</label>
+        <textarea class="field-textarea" id="nd-equipo" style="min-height:70px" placeholder="Mica\nTizi\nEli...">${c.equipo||''}</textarea>
+      </div>
+    </div>
+
+    <!-- SCOPE -->
+    <div class="nc-section">
+      <div class="nc-section-title">📌 Scope — Servicios contratados</div>
+      <div class="needs-grid" id="nd-scope-grid">
+        ${NC_SCOPE.map(s=>`<div class="scope-toggle-btn ${(c.scope||[]).includes(s)?'on':''}" data-scope="${s}">${s}</div>`).join('')}
+      </div>
+    </div>
+
+    <!-- ESENCIA DE MARCA (para el mail) -->
+    <div class="nc-section">
+      <div class="nc-section-title">✨ Esencia de marca <span style="color:var(--text-muted);font-size:8px;font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· para generar el mail</span></div>
+      <div class="field"><label class="field-label">Misión</label><textarea class="field-textarea" id="nd-mision" style="min-height:55px" placeholder="Ej: Ofrecer indumentaria de sastrería moderna para el canal mayorista...">${c.mision||''}</textarea></div>
+      <div class="field"><label class="field-label">Visión</label><textarea class="field-textarea" id="nd-vision" style="min-height:55px" placeholder="Ej: Posicionarse como referente en sastrería mayorista...">${c.vision||''}</textarea></div>
+      <div class="field"><label class="field-label">Diferenciales</label><textarea class="field-textarea" id="nd-diferenciales" style="min-height:70px" placeholder="Un diferencial por línea...">${c.diferenciales||''}</textarea></div>
+      <div class="field"><label class="field-label">Objetivos principales</label><textarea class="field-textarea" id="nd-objetivos" style="min-height:70px" placeholder="Un objetivo por línea...">${c.objetivos||''}</textarea></div>
+      <div class="field"><label class="field-label">Contexto adicional</label><textarea class="field-textarea" id="nd-contexto" style="min-height:70px" placeholder="Información extra para el equipo...">${c.contexto||''}</textarea></div>
+    </div>
+
+    <button class="btn-sm btn-gold" id="btn-nd-save" style="width:100%;justify-content:center;padding:10px;margin-bottom:14px;font-size:11px">💾 Guardar datos</button>
+
+    <hr class="nc-divider">
+
+    <!-- MAIL DE PRESENTACION -->
+    <div class="section-title">📧 Mail de presentación al equipo</div>
+    ${st.loadingEmail
+      ?`<div class="ai-box loading"><div class="spinner"></div>Generando mail de presentación...</div>`
+      :c.emailGenerado
+        ?`<div class="ai-box" style="white-space:pre-wrap;font-size:11px;line-height:1.8">${c.emailGenerado}</div>
+           <button class="btn-copy ${st.copiedEmail?'copied':''}" id="btn-copy-email">${st.copiedEmail?'✓ Copiado':'📋 Copiar mail'}</button>
+           <button class="btn-outline" id="btn-regen-email">↻ Regenerar</button>`
+        :`<button class="btn-primary" id="btn-gen-email">✦ Generar mail de presentación</button>`}
+  </div>`;
+}
+
+// ── CLIENTES NUEVOS — ACTIONS ──
+async function saveNuevoFromModal(){
+  const name=gi('nm-name');const company=gi('nm-company');
+  if(!name||!company){toast('Completá nombre y empresa');return;}
+  const scope=[...document.querySelectorAll('#nm-scope-grid .need-toggle.on')].map(t=>t.dataset.scope);
+  const c=ncNew({
+    name,company,
+    rubro:gi('nm-rubro')||'',
+    web:gi('nm-web')||'',instagram:gi('nm-ig')||'',tiktok:gi('nm-tiktok')||'',
+    phone:gi('nm-phone')||'',
+    pm:document.getElementById('nm-pm')?.value||'',
+    fechaInicio:document.getElementById('nm-fecha')?.value||'',
+    scope
+  });
+  nuevos.unshift(c);
+  await svNC(c);
+  st.showNuevoModal=false;st.activeNuevo=c.id;st.view='nuevoDetail';
+  toast('Cliente creado ✓');render();
+}
+
+async function saveNuevoDetail(){
+  const c=gnc();if(!c)return;
+  c.name=gi('nd-name')||c.name;
+  c.company=gi('nd-company')||c.company;
+  c.rubro=gi('nd-rubro')||'';
+  c.web=gi('nd-web')||'';
+  c.instagram=gi('nd-ig')||'';
+  c.tiktok=gi('nd-tiktok')||'';
+  c.phone=gi('nd-phone')||'';
+  c.pm=document.getElementById('nd-pm')?.value||'';
+  c.fechaInicio=document.getElementById('nd-fecha')?.value||'';
+  c.equipo=gi('nd-equipo')||'';
+  c.scope=[...document.querySelectorAll('#nd-scope-grid .scope-toggle-btn.on')].map(t=>t.dataset.scope);
+  c.mision=gi('nd-mision')||'';
+  c.vision=gi('nd-vision')||'';
+  c.diferenciales=gi('nd-diferenciales')||'';
+  c.objetivos=gi('nd-objetivos')||'';
+  c.contexto=gi('nd-contexto')||'';
+  await svNC(c);
+  toast('Guardado ✓');
+}
+
+async function toggleOb(key){
+  const c=gnc();if(!c)return;
+  c.onboarding[key]=!c.onboarding[key];
+  await svNC(c);render();
+}
+
+async function syncCerrados(){
+  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id));
+  if(!synceable.length){toast('Sin cerrados nuevos para importar');return;}
+  for(const cr of synceable){
+    const n=ncNew({
+      name:cr.name,company:cr.company,phone:cr.phone||'',email:cr.email||'',
+      web:cr.web||'',instagram:cr.instagram||'',
+      rubro:'',pm:'',fechaInicio:cr.mesIngreso||'',
+      scope:cr.plataformas||[],
+      contexto:cr.investigacion?.resultado?cr.investigacion.resultado.substring(0,500):'',
+      crmClientId:cr.id,fromCRM:true
+    });
+    nuevos.unshift(n);
+    await svNC(n);
+  }
+  toast(`${synceable.length} cliente${synceable.length>1?'s':''} importado${synceable.length>1?'s':''} ✓`);
+  render();
+}
+
+async function genEmail(){
+  const c=gnc();if(!c)return;
+  // Save current fields first
+  await saveNuevoDetail();
+  st.loadingEmail=true;render();
+  const fecha=c.fechaInicio?new Date(c.fechaInicio).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'hoy';
+  const equipo=c.equipo?c.equipo.split('\n').filter(Boolean):(c.pm&&NC_PM_TEAMS[c.pm]?NC_PM_TEAMS[c.pm]:[]);
+  const scopeSecciones=c.scope.filter(s=>['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn'].includes(s));
+  const scopeContenido=c.scope.filter(s=>['CM y Diseño','Filmmaker','CRM'].includes(s));
+  const p=`Generá un mail interno de presentación de nuevo cliente para el equipo de Avalon World Agency, exactamente con este formato y estructura.
+
+DATOS DEL CLIENTE:
+- Nombre del contacto: ${c.name}
+- Marca/Empresa: ${c.company||''}
+- Rubro: ${c.rubro||'no especificado'}
+- Fecha de alta: ${fecha}
+- Web: ${c.web||'no disponible'}
+- Instagram: ${c.instagram||'no disponible'}
+- TikTok: ${c.tiktok||'no disponible'}
+- WhatsApp contacto: ${c.phone||'no disponible'}
+- PM asignado: ${c.pm||'a definir'}
+- Equipo: ${equipo.join(', ')||'a definir'}
+- Scope: ${c.scope.join(', ')||'a definir'}
+- Misión: ${c.mision||''}
+- Visión: ${c.vision||''}
+- Diferenciales: ${c.diferenciales||''}
+- Objetivos: ${c.objetivos||''}
+- Contexto: ${c.contexto||''}
+
+FORMATO EXACTO A SEGUIR:
+
+Asunto: NUEVO CLIENTE: [MARCA EN MAYÚSCULAS]
+
+---
+
+Descripción general y contexto
+
+Este nuevo cliente que le damos el alta a partir de HOY [FECHA].
+La marca se llama [MARCA] y pertenece al rubro [RUBRO].
+
+[MARCA] | [tagline creativa que sintetiza la propuesta de valor]
+
+[2 párrafos: qué es la marca, qué busca, por qué viene a Avalon]
+
+📍 Contacto principal
+
+[Nombre contacto]
+WhatsApp: [teléfono]
+
+Web
+[url web]
+
+Instagram
+[url instagram]
+${c.tiktok?'TikTok\n[url tiktok]':''}
+
+🎯 Esencia de marca
+
+Misión
+[misión]
+
+Visión
+[visión]
+
+✨ Diferenciales
+
+[lista de diferenciales, uno por párrafo separado]
+
+📊 Objetivos principales
+
+[lista de objetivos, uno por párrafo]
+
+🔧 Estado operativo y próximos pasos
+
+${scopeSecciones.length?`Paid Media – Publicidad Digital
+
+Plataformas a trabajar:
+${scopeSecciones.join('\n')}
+
+Inversión: a definir`:''}
+${scopeContenido.includes('CM y Diseño')?'\nRedes y contenido\n[descripción breve del alcance de CM y Diseño]':''}
+${scopeContenido.includes('Filmmaker')?'\nFilmmaker / Producción\n[descripción breve]':''}
+${scopeContenido.includes('CRM')?'\nAutomatización / CRM + IA\n[descripción breve]':''}
+
+👥 Equipo asignado
+
+${equipo.length?equipo.join('\n'):'[equipo a definir]'}
+
+📅 Meet de brief
+
+${fecha} — a confirmar horario
+
+💬 Grupo de WhatsApp
+
+A crear @${c.pm||'PM'}
+
+🗒️ Contexto adicional
+
+[1-2 párrafos de contexto estratégico para el equipo: de dónde viene el cliente, qué desafío tiene, cómo Avalon puede agregar valor]
+
+---
+
+Respondé SOLO con el mail completo, empezando por "Asunto:". Sin explicaciones adicionales. En español. Tono profesional y directo.`;
+  try{
+    const t=await claude([{role:'user',content:p}]);
+    c.emailGenerado=t;
+    await svNC(c);
+  }catch(e){
+    if(e.message!=='Sin API key')c.emailGenerado='Error al generar: '+e.message;
+    await svNC(c);
+  }
+  st.loadingEmail=false;render();
+}
+
+// ── BIND NUEVOS ──
+function bindNuevos(){
+  const $=s=>document.querySelector(s);
+  const $$=s=>document.querySelectorAll(s);
+
+  // List
+  $('#btn-nc-back')?.addEventListener('click',()=>{st.view='list';render()});
+  $('#btn-open-nuevo')?.addEventListener('click',()=>{st.showNuevoModal=true;render()});
+  $('#btn-sync-cerrados')?.addEventListener('click',syncCerrados);
+  $$('.nc-card[data-ncid]').forEach(c=>c.addEventListener('click',()=>{st.activeNuevo=c.dataset.ncid;st.view='nuevoDetail';render()}));
+
+  // Modal nuevo
+  $('#nuevo-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='nuevo-modal-overlay'){st.showNuevoModal=false;render()}});
+  $('#btn-cancel-nuevo')?.addEventListener('click',()=>{st.showNuevoModal=false;render()});
+  $('#btn-save-nuevo')?.addEventListener('click',saveNuevoFromModal);
+  $$('#nm-scope-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+
+  // Detail
+  $('#btn-nd-back')?.addEventListener('click',()=>{st.view='nuevos';render()});
+  $('#btn-nd-delete')?.addEventListener('click',async()=>{
+    if(!confirm('¿Eliminar este cliente del onboarding?'))return;
+    const id=st.activeNuevo;nuevos=nuevos.filter(x=>x.id!==id);await sbDelNC(id);
+    st.view='nuevos';st.activeNuevo=null;render();
+  });
+  $('#btn-nd-save')?.addEventListener('click',async()=>{await saveNuevoDetail();render();toast('Guardado ✓')});
+  $$('[data-ob]').forEach(b=>b.addEventListener('click',()=>toggleOb(b.dataset.ob)));
+  $$('#nd-scope-grid .scope-toggle-btn').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+
+  // Email
+  $('#btn-gen-email')?.addEventListener('click',genEmail);
+  $('#btn-regen-email')?.addEventListener('click',async()=>{const c=gnc();if(!c)return;c.emailGenerado='';await svNC(c);genEmail()});
+  $('#btn-copy-email')?.addEventListener('click',()=>cpT(gnc()?.emailGenerado||'','copiedEmail'));
+}
+
 // ── INIT ──
 (async()=>{
   st.sbLoading=true;
   render();
   await loadC();
+  await loadNC();
   st.sbLoading=false;
   render();
 })();
