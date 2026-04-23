@@ -87,11 +87,38 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .channel-btn{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px;text-align:center;cursor:pointer;font-size:11px;color:var(--text-muted);font-family:'Montserrat',sans-serif;font-weight:600}
 .channel-btn.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
 .channel-icon{font-size:20px;margin-bottom:3px}
+.s-sin-definir{background:rgba(85,79,110,.15);color:#7a738f}
 .s-enviada{background:rgba(80,144,200,.12);color:#5090c8}
 .s-negociacion{background:rgba(196,154,32,.12);color:#c49a20}
+.s-pendiente{background:rgba(230,130,40,.12);color:#e6823a}
+.s-pendiente-meet{background:rgba(155,109,255,.12);color:#9b6dff}
 .s-sin-respuesta{background:rgba(217,95,95,.12);color:#d95f5f}
 .s-cerrada{background:rgba(74,171,122,.12);color:#4aab7a}
 .s-perdida{background:rgba(100,100,100,.12);color:#666}
+/* Calendar popup */
+.cal-overlay{position:fixed;inset:0;z-index:500;background:transparent}
+.cal-popup{position:absolute;background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:12px;width:240px;box-shadow:0 8px 32px rgba(0,0,0,.7);z-index:501;animation:fadeIn .12s}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cal-month-lbl{font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.cal-nav{background:var(--surface3);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif}
+.cal-nav:hover{background:var(--border2);color:var(--text)}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.cal-wd{font-size:8px;color:var(--text-muted);text-align:center;font-weight:700;text-transform:uppercase;padding:2px 0}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day{font-size:11px;text-align:center;padding:5px 2px;border-radius:5px;cursor:pointer;color:var(--text2);font-weight:500;border:1px solid transparent}
+.cal-day:hover{background:var(--surface3);color:var(--text)}
+.cal-day.today{color:var(--gold);font-weight:700}
+.cal-day.selected{background:var(--gold);color:#000;font-weight:800}
+.cal-day.empty{cursor:default;pointer-events:none}
+.cal-clear{width:100%;margin-top:8px;background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:600}
+.cal-clear:hover{border-color:#555;color:var(--text)}
+.cal-trigger{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:12px;color:var(--text);width:100%;justify-content:space-between;transition:border-color .15s;margin-top:4px}
+.cal-trigger:hover{border-color:var(--gold)}
+/* Followup options */
+.fu-option{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;font-size:12px;line-height:1.6;color:var(--text);cursor:pointer;transition:border-color .15s,background .15s;white-space:pre-wrap}
+.fu-option:hover{border-color:var(--gold);background:var(--gold-dim)}
+.fu-option-num{font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.fu-selected{background:var(--gold-dim);border:1px solid rgba(155,109,255,.4);border-radius:10px;padding:13px 14px;font-size:12px;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:8px}
 .filter-panel{background:var(--surface);border-bottom:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px}
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .filter-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700;width:100%;margin-bottom:2px}
@@ -160,8 +187,8 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 <script>
 // ── CONSTANTS ──
 const SP=`Sos un asistente estratégico-comercial para Juan, ejecutivo de Avalon World Agency, agencia de marketing y comunicación (Buenos Aires, Miami, Dubai, Barcelona, San Pablo). Modelo de negocio: servicio principal estrategia + pauta (Meta Ads, Google Ads). Complementario: redes, contenido, diseño, branding. Juan NO vende redes aisladas. Analizar marcas: leer negocio real, detectar contradicciones, evaluar fit con Avalon. Preguntas discovery: específicas al negocio, nunca genéricas, revelan problema real y presupuesto, posicionan a Juan como partner estratégico. 5 preguntas máximo. Propuestas: partir del negocio real, eje estrategia + pauta. Módulos disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre. Estilo: español rioplatense (vos), directo, comercial, sin paja.`;
-const ESTADOS=['Enviada','En negociación','Sin respuesta','Cerrada','Perdida'];
-const EC={'Enviada':'s-enviada','En negociación':'s-negociacion','Sin respuesta':'s-sin-respuesta','Cerrada':'s-cerrada','Perdida':'s-perdida'};
+const ESTADOS=['Sin definir','Sin respuesta','Pendiente meet','Pendiente cotización','Enviada','En negociación','Cerrada','Perdida'];
+const EC={'Sin definir':'s-sin-definir','Sin respuesta':'s-sin-respuesta','Pendiente meet':'s-pendiente-meet','Pendiente cotización':'s-pendiente','Enviada':'s-enviada','En negociación':'s-negociacion','Cerrada':'s-cerrada','Perdida':'s-perdida'};
 const NEEDS=['Posicionamiento','Ventas','Comunidad','Nueva identidad','Rebranding','Pauta digital','Contenido','Estrategia','E-commerce','Awareness'];
 const PLATAFORMAS=['Meta','Google','TikTok','Pinterest','Otra'];
 const CANALES=['Meta','LinkedIn','Google','Referido','Nico','Ger','Caza'];
@@ -226,7 +253,7 @@ function nc(d={}){
     needs:d.needs||[],service:d.service||'',
     tipo:d.tipo||'Abono',plataformas:d.plataformas||[],
     presupuesto:d.presupuesto||'',modalidadPago:d.modalidadPago||'',moneda:d.moneda||'ARS',
-    estado:d.estado||'Enviada',
+    estado:d.estado||'Pendiente meet',
     lastContact:d.lastContact||new Date().toISOString().split('T')[0],
     note:d.note||'',
     notes:d.notes||(d.note?[{date:d.lastContact||new Date().toISOString().split('T')[0],text:d.note}]:[]),
@@ -241,6 +268,7 @@ function nc(d={}){
     fromAirtable:d.fromAirtable||false,
     followupChannel:d.followupChannel||'email',
     followupText:d.followupText||'',
+    followupOptions:d.followupOptions||[],
     heatLevel:d.heatLevel||null,      // null=auto, 'hot'/'warm'/'cold'=manual
     heatIgnored:d.heatIgnored||false   // true = user dismissed the alert
   };
@@ -326,288 +354,56 @@ function toast(msg){
   document.body.appendChild(t);setTimeout(()=>t.remove(),2000);
 }
 
-// ── GENERAR INFORME ──
-function generarInforme(){
-  const fl=applyFilters(clients);
-  if(!fl.length){toast('No hay clientes para generar el informe');return;}
-
-  const f=st.filters;
+// ── CALENDAR ──
+const MESES_CAL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_CAL=['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+let calState={field:null,year:0,month:0,anchor:null};
+function openCal(fieldId,anchorEl){
+  closeCal();
+  const val=document.getElementById(fieldId)?.value||'';
   const now=new Date();
-  const mesActual=now.toLocaleString('es-AR',{month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
-  const periodoLabel=(f.dateFrom||f.dateTo)
-    ?(f.dateFrom?fmtDate(f.dateFrom):'inicio')+' — '+(f.dateTo?fmtDate(f.dateTo):'hoy')
-    :mesActual;
-  const generadoEn=now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-
-  const total=fl.length;
-  const abonos=fl.filter(c=>c.tipo!=='LC').length;
-  const lc=fl.filter(c=>c.tipo==='LC').length;
-  const cerradas=fl.filter(c=>c.estado==='Cerrada');
-  const perdidas=fl.filter(c=>c.estado==='Perdida');
-  const enviadas=fl.filter(c=>c.estado==='Enviada').length;
-  const enNeg=fl.filter(c=>c.estado==='En negociación');
-  const pendCot=fl.filter(c=>c.estado==='Pendiente cotización');
-  const pendMeet=fl.filter(c=>c.estado==='Pendiente meet');
-  const sinResp=fl.filter(c=>c.estado==='Sin respuesta');
-  const convBase=cerradas.length+enviadas;
-  const convRate=convBase>0?Math.round(cerradas.length/convBase*100):0;
-  const convColor=convRate>=30?'#4ade80':convRate>=15?'#fb923c':'#ef4444';
-  const montoTotal=fl.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
-  const montoHot=fl.filter(c=>ul(ds(c.lastContact),c.estado)==='hot'&&c.estado==='Enviada').reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
-  const montoCerradas=cerradas.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
-  const montoPerdidas=perdidas.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
-  const diferencia=montoCerradas-montoPerdidas;
-  const hotC=fl.filter(c=>ul(ds(c.lastContact),c.estado)==='hot'&&!['Cerrada','Perdida'].includes(c.estado));
-  const warmC=fl.filter(c=>ul(ds(c.lastContact),c.estado)==='warm'&&!['Cerrada','Perdida'].includes(c.estado));
-  const coldC=fl.filter(c=>['ok','cold'].includes(ul(ds(c.lastContact),c.estado))&&!['Cerrada','Perdida'].includes(c.estado));
-  const byCanal={};fl.forEach(c=>{if(c.canal)byCanal[c.canal]=(byCanal[c.canal]||0)+1});
-  const fmtM=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
-
-  // Build HTML using array join — avoids nested template literal issues
-  const S=[];const p=x=>S.push(x);
-
-  p('<!DOCTYPE html><html lang="es"><head>');
-  p('<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">');
-  p('<title>Informe Comercial · '+periodoLabel+' · Avalon</title>');
-  p('<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">');
-  p('<style>');
-  p('*{margin:0;padding:0;box-sizing:border-box}');
-  p(':root{--p:#9333ea;--accent:#a78bfa;--success:#4ade80;--danger:#ef4444;--warn:#fb923c}');
-  p('body{font-family:Montserrat,sans-serif;background:#0a0a0a;color:#fff;overflow:hidden}');
-  p('.presentation{width:100vw;height:100vh;display:flex;flex-direction:column}');
-  p('.slides-container{flex:1;position:relative;overflow:hidden}');
-  p('.slide{width:100%;height:100%;position:absolute;opacity:0;transition:opacity .6s ease;padding:50px 60px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#0a0a0a 0%,#1a0f2e 100%)}');
-  p('.slide.active{opacity:1;z-index:10}');
-  p('.slide-1{justify-content:center;align-items:center;text-align:center}');
-  p('h1{font-size:60px;font-weight:800;margin:24px 0;color:#fff;letter-spacing:-1px}');
-  p('.subtitle{font-size:22px;color:var(--accent);margin-top:16px;font-weight:600}');
-  p('.date-footer{position:absolute;bottom:40px;right:60px;font-size:12px;color:#333}');
-  p('.divider-line{width:80px;height:4px;background:var(--p);margin:18px auto;border-radius:2px}');
-  p('.logo-lbl{font-size:26px;font-weight:800;color:var(--p);letter-spacing:2px}');
-  p('.slide-hd{display:flex;align-items:center;margin-bottom:24px;flex-shrink:0}');
-  p('.slide-tag{margin-left:auto;font-size:10px;color:#333;font-weight:700;text-transform:uppercase;letter-spacing:1px}');
-  p('.logo-sm{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1.5px;font-weight:700}');
-  p('h2{font-size:38px;font-weight:800;margin-bottom:28px;color:#fff;border-left:6px solid var(--p);padding-left:20px;letter-spacing:-.5px;flex-shrink:0}');
-  p('.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:20px}');
-  p('.ccard{background:rgba(147,51,234,.08);border:1px solid var(--p);padding:20px;border-radius:4px}');
-  p('.clabel{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-weight:600}');
-  p('.crow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.1)}');
-  p('.crow:last-child{border-bottom:none}');
-  p('.cperiod{font-size:14px;color:#bbb;font-weight:600}');
-  p('.camount{font-size:15px;color:var(--p);font-weight:700}');
-  p('.pos{background:rgba(74,222,128,.2);color:#4ade80;font-size:12px;padding:2px 8px;border-radius:3px;font-weight:700}');
-  p('.neg{background:rgba(239,68,68,.2);color:#ef4444;font-size:12px;padding:2px 8px;border-radius:3px;font-weight:700}');
-  p('.metric{background:rgba(147,51,234,.08);border:1px solid var(--p);padding:22px;border-radius:4px}');
-  p('.metric-n{font-size:42px;font-weight:800;color:var(--p);margin:10px 0}');
-  p('.metric-l{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px;font-weight:600}');
-  p('.pgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px;flex:1}');
-  p('.psec{background:rgba(147,51,234,.05);border:1px solid rgba(147,51,234,.3);padding:22px;border-radius:4px;overflow:hidden;display:flex;flex-direction:column}');
-  p('.psec h3{font-size:12px;color:var(--p);margin-bottom:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;flex-shrink:0}');
-  p('.psec-inner{overflow-y:auto;flex:1}');
-  p('.pi{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}');
-  p('.pi:last-child{border-bottom:none}');
-  p('.pname{font-weight:600}');
-  p('.ps{font-size:9px;padding:3px 8px;border-radius:2px;text-transform:uppercase;font-weight:700;flex-shrink:0}');
-  p('.shot{background:rgba(217,95,95,.2);color:#d95f5f}');
-  p('.swarm{background:rgba(196,154,32,.2);color:#c49a20}');
-  p('.scold{background:rgba(107,114,128,.2);color:#9ca3af}');
-  p('.ptotal{margin-top:14px;padding-top:12px;border-top:2px solid var(--p);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}');
-  p('.tlabel{font-size:10px;text-transform:uppercase;color:#999;font-weight:700}');
-  p('.tvalue{font-size:20px;color:var(--p);font-weight:800}');
-  p('.cgrid2{display:grid;grid-template-columns:1fr 1fr;gap:32px;flex:1}');
-  p('.altas h3{color:var(--success);font-size:17px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}');
-  p('.bajas h3{color:var(--danger);font-size:17px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}');
-  p('.cl{list-style:none}');
-  p('.ci{padding:10px;margin-bottom:7px;background:rgba(255,255,255,.03);border-left:3px solid;border-radius:2px;font-size:14px}');
-  p('.ci .val{color:var(--p);font-weight:600;display:block;font-size:11px;margin-top:3px}');
-  p('.dtable{width:100%;border-collapse:collapse}');
-  p('.dtable th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--p);font-size:11px;text-transform:uppercase;color:#555;font-weight:700}');
-  p('.dtable td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;color:#bbb}');
-  p('.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:32px;flex:1}');
-  p('.rcard{background:rgba(147,51,234,.08);border:1px solid var(--p);padding:32px;border-radius:4px;text-align:center}');
-  p('.rval{font-size:52px;font-weight:800;color:var(--p);margin:16px 0}');
-  p('.rlabel{font-size:12px;color:#999;text-transform:uppercase;letter-spacing:1px;font-weight:600}');
-  p('.rdesc{font-size:13px;color:#666;margin-top:8px}');
-  p('.pri{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:14px;color:#bbb}');
-  p('.pri:last-child{border-bottom:none}');
-  p('.prinum{color:var(--p);font-weight:700}');
-  p('.navigation{display:flex;align-items:center;justify-content:space-between;padding:16px 60px;background:rgba(0,0,0,.4);border-top:1px solid rgba(147,51,234,.2);flex-shrink:0}');
-  p('.nav-buttons{display:flex;gap:14px}');
-  p('button{background:rgba(147,51,234,.1);border:1px solid var(--p);color:var(--p);padding:9px 18px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:600;font-size:11px;border-radius:2px;transition:all .25s;text-transform:uppercase;letter-spacing:1px}');
-  p('button:hover{background:var(--p);color:#0a0a0a} button:disabled{opacity:.3;cursor:not-allowed}');
-  p('.slide-counter{font-size:12px;color:#555;font-weight:600;letter-spacing:1px}');
-  p('.slide-indicator{display:flex;gap:7px;align-items:center}');
-  p('.dot{width:8px;height:8px;border-radius:50%;background:rgba(147,51,234,.3);cursor:pointer;transition:all .3s}');
-  p('.dot.active{background:var(--p);width:22px;border-radius:4px}');
-  p('@media print{.navigation{display:none!important} body{overflow:visible} .presentation{height:auto} .slides-container{height:auto;overflow:visible;position:static} .slide{position:relative;opacity:1!important;height:100vh;page-break-after:always}}');
-  p('</style></head><body><div class="presentation"><div class="slides-container">');
-
-  // SLIDE 1 — PORTADA
-  p('<div class="slide slide-1 active">');
-  p('<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center">');
-  p('<div class="logo-lbl">&#x2B22; AVALON</div>');
-  p('<div style="font-size:10px;color:#555;letter-spacing:3px;font-weight:700;text-transform:uppercase;margin-top:4px">WORLD AGENCY</div>');
-  p('<div class="divider-line"></div>');
-  p('<h1>Informe Comercial</h1>');
-  p('<p class="subtitle">'+periodoLabel+'</p>');
-  p('<div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;justify-content:center">');
-  p('<span style="background:rgba(147,51,234,.12);border:1px solid rgba(147,51,234,.4);border-radius:3px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--accent)">'+total+' prospectos</span>');
-  if(cerradas.length) p('<span style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:3px;padding:6px 14px;font-size:12px;font-weight:700;color:#4ade80">&#x2713; '+cerradas.length+' cerrada'+(cerradas.length>1?'s':'')+'</span>');
-  if(montoHot) p('<span style="background:rgba(147,51,234,.12);border:1px solid rgba(147,51,234,.4);border-radius:3px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--p)">'+fmtM(montoHot)+' pipeline activo</span>');
-  p('</div></div>');
-  p('<div class="date-footer">Area Comercial · '+generadoEn+'</div></div>');
-
-  // SLIDE 2 — RESUMEN EJECUTIVO
-  p('<div class="slide">');
-  p('<div class="slide-hd"><span class="logo-sm">Avalon World Agency</span><span class="slide-tag">Resumen Ejecutivo</span></div>');
-  p('<h2>Performance del Período</h2>');
-  p('<div class="cgrid">');
-  p('<div class="ccard"><div class="clabel">&#x1F4CA; Total prospectos</div>');
-  p('<div class="crow"><span class="cperiod">Abonos</span><span class="camount">'+abonos+'</span></div>');
-  p('<div class="crow"><span class="cperiod">LC</span><span class="camount">'+lc+'</span></div>');
-  p('<div class="crow"><span class="cperiod">Total</span><span class="camount" style="font-size:18px">'+total+'</span></div></div>');
-  p('<div class="ccard"><div class="clabel">&#x1F3AF; Conversión</div>');
-  p('<div class="crow"><span class="cperiod">Cerradas</span><span class="camount" style="color:#4ade80">'+cerradas.length+'</span></div>');
-  p('<div class="crow"><span class="cperiod">Perdidas</span><span class="camount" style="color:#ef4444">'+perdidas.length+'</span></div>');
-  p('<div class="crow"><span class="cperiod">Tasa</span><span class="camount" style="color:'+convColor+';font-size:18px">'+convRate+'%</span></div></div>');
-  p('<div class="ccard"><div class="clabel">&#x1F525; Pipeline activo</div>');
-  p('<div class="crow"><span class="cperiod">Hot (&#x2264;2d)</span><span class="camount" style="color:#d95f5f">'+hotC.length+'</span></div>');
-  p('<div class="crow"><span class="cperiod">Warm (3-6d)</span><span class="camount" style="color:#c49a20">'+warmC.length+'</span></div>');
-  p('<div class="crow"><span class="cperiod">Cold (+7d)</span><span class="camount" style="color:#6a9fd8">'+coldC.length+'</span></div></div>');
-  p('<div class="ccard"><div class="clabel">&#x1F4B0; Montos</div>');
-  p('<div class="crow"><span class="cperiod">Cerradas</span><span class="camount" style="color:#4ade80">'+fmtM(montoCerradas)+'</span></div>');
-  p('<div class="crow"><span class="cperiod">Perdidas</span><span class="camount" style="color:#ef4444">'+fmtM(montoPerdidas)+'</span></div>');
-  p('<div class="crow"><span class="cperiod">Diferencia</span><span class="'+(diferencia>=0?'pos':'neg')+'">'+(diferencia>=0?'+':'')+fmtM(Math.abs(diferencia))+'</span></div></div>');
-  p('</div>');
-  p('<div class="metric"><div class="metric-l">Pipeline activo estimado (Hot + Warm · Enviada)</div>');
-  p('<div class="metric-n">'+(montoHot?fmtM(montoHot):'Sin presupuestos cargados')+'</div>');
-  const canalesStr=Object.keys(byCanal).length?'Canales: '+Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).map(function(e){return e[0]+' ('+e[1]+')'}).join(' · '):'';
-  p('<div style="font-size:12px;color:#555;margin-top:6px">'+canalesStr+(lc?' · '+lc+' LC en pipeline':'')+'</div></div></div>');
-
-  // SLIDE 3 — PIPELINE
-  p('<div class="slide">');
-  p('<div class="slide-hd"><span class="logo-sm">Avalon World Agency</span><span class="slide-tag">Pipeline</span></div>');
-  p('<h2>Pipeline Activo ('+(hotC.length+warmC.length+coldC.length)+' prospectos)</h2>');
-  p('<div class="pgrid">');
-  // Hot col
-  p('<div class="psec"><h3>&#x1F534; Hot — contacto reciente</h3><div class="psec-inner">');
-  if(hotC.length){hotC.forEach(function(c){p('<div class="pi"><span class="pname">'+c.name+(c.company?' <span style="font-weight:400;color:#777;font-size:12px">· '+c.company+'</span>':'')+'</span><div style="display:flex;align-items:center;gap:8px">'+(c.presupuesto?'<span style="font-size:13px;color:#d95f5f;font-weight:700">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'<span class="ps shot">'+ula(ds(c.lastContact),c.estado)+'</span></div></div>');});}
-  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:20px 0;text-align:center">Sin prospectos hot</div>');
-  p('</div>');
-  const hotMonto=hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0);
-  if(hotMonto) p('<div class="ptotal"><span class="tlabel">Valor est.</span><span class="tvalue">'+fmtM(hotMonto)+'</span></div>');
-  p('</div>');
-  // Warm col
-  p('<div class="psec"><h3>&#x1F7E1; Warm — seguimiento</h3><div class="psec-inner">');
-  if(warmC.length){warmC.forEach(function(c){p('<div class="pi"><span class="pname">'+c.name+(c.company?' <span style="font-weight:400;color:#777;font-size:12px">· '+c.company+'</span>':'')+'</span><div style="display:flex;align-items:center;gap:8px">'+(c.presupuesto?'<span style="font-size:13px;color:#c49a20;font-weight:700">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'<span class="ps swarm">'+ula(ds(c.lastContact),c.estado)+'</span></div></div>');});}
-  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:20px 0;text-align:center">Sin prospectos warm</div>');
-  p('</div>');
-  const warmMonto=warmC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0);
-  if(warmMonto) p('<div class="ptotal"><span class="tlabel">Valor est.</span><span class="tvalue">'+fmtM(warmMonto)+'</span></div>');
-  p('</div>');
-  // Cold + pendientes col
-  const coldAll=[].concat(coldC,enNeg,pendCot,pendMeet);
-  p('<div class="psec"><h3>&#x1F535; Cold + Pendientes</h3><div class="psec-inner">');
-  if(coldAll.length){coldAll.forEach(function(c){p('<div class="pi"><span class="pname">'+c.name+(c.company?' <span style="font-weight:400;color:#777;font-size:12px">· '+c.company+'</span>':'')+'</span><span class="ps scold">'+c.estado+'</span></div>');});}
-  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:20px 0;text-align:center">Sin prospectos</div>');
-  p('</div></div></div>');
-  if(montoTotal) p('<div style="margin-top:10px;background:rgba(147,51,234,.07);border:1px solid rgba(147,51,234,.2);border-radius:6px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0"><span style="font-size:11px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Valor estimado total pipeline</span><span style="font-size:18px;font-weight:800;color:var(--p)">'+fmtM(montoTotal)+'</span></div>');
-  p('</div>');
-
-  // SLIDE 4 — CERRADAS & PERDIDAS
-  p('<div class="slide">');
-  p('<div class="slide-hd"><span class="logo-sm">Avalon World Agency</span><span class="slide-tag">Movimiento</span></div>');
-  p('<h2>Cerradas &amp; Perdidas</h2>');
-  p('<div class="cgrid2">');
-  p('<div class="altas"><h3><span>&#x2713;</span> Cerradas ('+cerradas.length+')'+(montoCerradas?' — '+fmtM(montoCerradas):'')+'</h3><ul class="cl">');
-  if(cerradas.length){cerradas.forEach(function(c){p('<li class="ci" style="border-left-color:#4ade80"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.presupuesto?'<span class="val">'+fmtM(parseInt(c.presupuesto))+' '+(c.moneda||'ARS')+(c.mesIngreso?' · '+c.mesIngreso:'')+'</span>':'')+'</li>');});}
-  else p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic">Sin cierres en el período</li>');
-  p('</ul></div>');
-  p('<div class="bajas"><h3><span>&#x2715;</span> Perdidas ('+perdidas.length+')'+(montoPerdidas?' — '+fmtM(montoPerdidas):'')+'</h3><ul class="cl">');
-  if(perdidas.length){perdidas.forEach(function(c){p('<li class="ci" style="border-left-color:#ef4444"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.presupuesto?'<span class="val">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</li>');});}
-  else p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic">Sin perdidas en el período</li>');
-  if(montoCerradas||montoPerdidas) p('<div style="margin-top:16px;padding:14px;background:rgba(147,51,234,.05);border-radius:3px;font-size:15px;color:var(--p);font-weight:700">Resultado neto: <span style="color:'+(diferencia>=0?'#4ade80':'#ef4444')+'">'+(diferencia>=0?'+':'')+fmtM(Math.abs(diferencia))+'</span><span style="font-size:11px;color:#555;font-weight:600;display:block;margin-top:4px">'+fmtM(montoCerradas)+' cerradas — '+fmtM(montoPerdidas)+' perdidas</span></div>');
-  p('</ul></div></div></div>');
-
-  // SLIDE 5 — DETALLE
-  p('<div class="slide">');
-  p('<div class="slide-hd"><span class="logo-sm">Avalon World Agency</span><span class="slide-tag">Detalle</span></div>');
-  p('<h2>Detalle de Prospectos</h2>');
-  p('<div style="overflow-y:auto;flex:1">');
-  p('<table class="dtable"><thead><tr><th>Prospecto</th><th>Estado</th><th>Tipo</th><th>Presupuesto</th><th>Servicio</th><th>Canal</th><th>Último contacto</th></tr></thead><tbody>');
-  const order={'Cerrada':0,'En negociación':1,'Enviada':2,'Pendiente cotización':3,'Pendiente meet':4,'Sin respuesta':5,'Sin definir':6,'Perdida':7};
-  const sorted=[].concat(fl).sort(function(a,b){return(order[a.estado]||5)-(order[b.estado]||5);});
-  sorted.forEach(function(c){
-    const d=ds(c.lastContact),heat=ul(d,c.estado);
-    const dot=heat==='hot'?'&#x1F534;':heat==='warm'?'&#x1F7E1;':heat==='cold'?'&#x1F535;':'&#x26AA;';
-    p('<tr>');
-    p('<td><strong style="color:#fff">'+c.name+'</strong>'+(c.company?'<br><span style="font-size:11px;color:#444;text-transform:uppercase">'+c.company+'</span>':'')+'</td>');
-    p('<td><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:2px;background:rgba(147,51,234,.15);color:var(--accent)">'+c.estado+'</span></td>');
-    p('<td style="color:#666">'+(c.tipo||'—')+'</td>');
-    p('<td style="color:#9333ea;font-weight:700">'+(c.presupuesto?fmtM(parseInt(c.presupuesto)):'-')+' <span style="font-size:10px;color:#333">'+(c.moneda||'')+'</span></td>');
-    p('<td style="color:#555;font-size:12px">'+(c.servicio||c.service||'—')+'</td>');
-    p('<td style="color:#444;font-size:12px">'+(c.canal||'—')+'</td>');
-    p('<td>'+dot+' <span style="font-size:12px;color:#444">'+ula(d,c.estado)+'</span></td>');
-    p('</tr>');
-  });
-  p('</tbody></table></div></div>');
-
-  // SLIDE 6 — CONVERSIÓN
-  p('<div class="slide">');
-  p('<div class="slide-hd"><span class="logo-sm">Avalon World Agency</span><span class="slide-tag">Conversión</span></div>');
-  p('<h2>Tasas de Conversión &amp; Proyección</h2>');
-  p('<div class="rgrid">');
-  p('<div>');
-  p('<div class="rcard" style="margin-bottom:18px"><div class="rlabel">Tasa de conversión</div><div class="rval" style="color:'+convColor+'">'+convRate+'%</div><div class="rdesc">'+cerradas.length+' cerradas / '+enviadas+' enviadas</div></div>');
-  p('<div style="background:rgba(147,51,234,.05);border:1px solid rgba(147,51,234,.3);padding:18px;border-radius:4px">');
-  p('<div style="font-size:11px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Distribución por estado</div>');
-  [['En negociación',enNeg.length,'#5090c8'],['Pendiente cotización',pendCot.length,'#e6823a'],['Pendiente meet',pendMeet.length,'#9b6dff'],['Sin respuesta',sinResp.length,'#d95f5f']].forEach(function(row){
-    if(row[1]>0) p('<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:13px;color:#888">'+row[0]+'</span><span style="font-size:14px;font-weight:700;color:'+row[2]+'">'+row[1]+'</span></div>');
-  });
-  p('</div></div>');
-  p('<div>');
-  p('<div style="background:rgba(147,51,234,.05);border-left:5px solid var(--p);padding:24px;border-radius:2px;margin-bottom:18px">');
-  p('<div style="font-size:12px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Proyección Pipeline</div>');
-  if(hotC.length) p('<div class="pri"><span class="prinum">&#x1F534;</span> '+hotC.length+' hot — potencial '+fmtM(hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
-  if(warmC.length) p('<div class="pri"><span class="prinum">&#x1F7E1;</span> '+warmC.length+' warm — potencial '+fmtM(warmC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
-  if(enNeg.length) p('<div class="pri"><span class="prinum">&#x1F4BC;</span> '+enNeg.length+' en negociación activa</div>');
-  if(pendCot.length) p('<div class="pri"><span class="prinum">&#x1F4CB;</span> '+pendCot.length+' pendientes de cotización</div>');
-  p('<div class="pri" style="border-top:2px solid var(--p);margin-top:10px;padding-top:10px"><span class="prinum">Total estimado: </span><strong style="color:var(--p)">'+fmtM(montoTotal)+'</strong></div></div>');
-  if(Object.keys(byCanal).length){
-    p('<div style="background:rgba(0,0,0,.3);border:1px solid #1a1a1a;padding:18px;border-radius:4px">');
-    p('<div style="font-size:11px;color:#333;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Origen de prospectos</div>');
-    Object.entries(byCanal).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
-      p('<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #111;font-size:13px"><span style="color:#777;font-weight:600">'+e[0]+'</span><span style="color:var(--p);font-weight:700">'+e[1]+'</span></div>');
-    });
-    p('</div>');
-  }
-  p('</div></div></div>');
-
-  // NAVIGATION
-  p('</div>');// slides-container
-  p('<div class="navigation"><div class="nav-buttons">');
-  p('<button id="prevBtn" onclick="changeSlide(-1)" disabled>&#x2190; Anterior</button>');
-  p('<button onclick="changeSlide(1)" id="nextBtn">Siguiente &#x2192;</button>');
-  p('<button onclick="window.print()" style="background:rgba(74,222,128,.1);border-color:#4ade80;color:#4ade80">&#x1F4E5; Exportar PDF</button>');
-  p('</div>');
-  p('<div class="slide-counter"><span id="cur">1</span> / 6</div>');
-  p('<div class="slide-indicator" id="dots"></div></div>');
-  p('</div>');// presentation
-  p('<script>');
-  p('var cur=0;var slides=document.querySelectorAll(".slide");');
-  p('function goTo(n){slides[cur].classList.remove("active");cur=Math.max(0,Math.min(n,5));slides[cur].classList.add("active");document.getElementById("cur").textContent=cur+1;document.getElementById("prevBtn").disabled=cur===0;document.getElementById("nextBtn").disabled=cur===5;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===cur?" active":"");});}');
-  p('function changeSlide(n){goTo(cur+n);}');
-  p('var dc=document.getElementById("dots");for(var i=0;i<6;i++){var d=document.createElement("div");d.className="dot"+(i===0?" active":"");d.setAttribute("data-i",i);d.onclick=function(){goTo(parseInt(this.getAttribute("data-i")));};dc.appendChild(d);}');
-  p('document.addEventListener("keydown",function(e){if(e.key==="ArrowLeft")changeSlide(-1);if(e.key==="ArrowRight")changeSlide(1);});');
-  p('<'+'/script></body></html>');
-
-  const win=window.open('','_blank');
-  if(!win){toast('Habilitá las ventanas emergentes en el browser');return;}
-  win.document.open();
-  win.document.write(S.join(''));
-  win.document.close();
+  calState={field:fieldId,year:val?parseInt(val.split('-')[0]):now.getFullYear(),month:val?parseInt(val.split('-')[1])-1:now.getMonth(),anchor:anchorEl};
+  const overlay=document.createElement('div');
+  overlay.className='cal-overlay';overlay.id='cal-overlay';
+  overlay.addEventListener('click',closeCal);
+  document.body.appendChild(overlay);
+  renderCalPopup();
 }
-
+function renderCalPopup(){
+  document.getElementById('cal-popup')?.remove();
+  const {year,month,field,anchor}=calState;
+  const selected=document.getElementById(field)?.value||'';
+  const todayStr=new Date().toISOString().split('T')[0];
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  let days='';
+  for(let i=0;i<firstDay;i++)days+='<div class="cal-day empty"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const ds2=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    days+=`<div class="cal-day${ds2===selected?' selected':''}${ds2===todayStr&&ds2!==selected?' today':''}" data-cal-date="${ds2}">${d}</div>`;
+  }
+  const popup=document.createElement('div');
+  popup.className='cal-popup';popup.id='cal-popup';
+  popup.innerHTML=`<div class="cal-header"><button class="cal-nav" id="cal-prev">‹</button><span class="cal-month-lbl">${MESES_CAL[month]} ${year}</span><button class="cal-nav" id="cal-next">›</button></div><div class="cal-weekdays">${DIAS_CAL.map(d=>`<div class="cal-wd">${d}</div>`).join('')}</div><div class="cal-days">${days}</div><button class="cal-clear" id="cal-clear-btn">✕ Limpiar fecha</button>`;
+  const rect=anchor.getBoundingClientRect();
+  popup.style.cssText=`top:${rect.bottom+window.scrollY+4}px;left:${Math.min(rect.left,window.innerWidth-256)}px`;
+  document.body.appendChild(popup);
+  popup.addEventListener('click',e=>e.stopPropagation());
+  document.getElementById('cal-prev')?.addEventListener('click',()=>{calState.month--;if(calState.month<0){calState.month=11;calState.year--;}renderCalPopup();});
+  document.getElementById('cal-next')?.addEventListener('click',()=>{calState.month++;if(calState.month>11){calState.month=0;calState.year++;}renderCalPopup();});
+  document.getElementById('cal-clear-btn')?.addEventListener('click',()=>{setCalDate(field,'');closeCal();});
+  popup.querySelectorAll('[data-cal-date]').forEach(el=>el.addEventListener('click',()=>{setCalDate(field,el.dataset.calDate);closeCal();}));
+}
+function setCalDate(fieldId,dateStr){
+  const inp=document.getElementById(fieldId);
+  if(inp){inp.value=dateStr;inp.dispatchEvent(new Event('change',{bubbles:true}));}
+  const lbl=document.getElementById('cal-lbl-'+fieldId);
+  if(lbl)lbl.textContent=dateStr?fmtDate(dateStr):'Seleccionar fecha';
+}
+function closeCal(){
+  document.getElementById('cal-overlay')?.remove();
+  document.getElementById('cal-popup')?.remove();
+}
 
 // ── RENDER ──
 async function render(){
@@ -732,7 +528,6 @@ function rList(){
       <button class="btn-sm" id="btn-import">⬆</button>
       <button class="btn-sm" id="btn-api-key" title="API Key">⚙</button>
       <button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button>
-      <button class="btn-sm" id="btn-generar-informe" style="color:var(--gold);border-color:rgba(155,109,255,.4);background:var(--gold-dim)" title="Generar informe">📊 Informe</button>
       <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
       <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters">⚡ Filtros${haf?' ●':''}</button>
       <button class="btn-add" id="btn-open-new">+ Prospecto</button>
@@ -1170,7 +965,22 @@ function rPipe(c){
   return`<div class="tab-content ${show?'active':''}" id="tab-pipeline">
     <div class="section-title">Estado del prospecto</div>
     <div class="field-row">
-      <div class="field"><label class="field-label">Estado</label><select class="field-select" id="pip-estado">${ESTADOS.map(e=>`<option value="${e}" ${c.estado===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label class="field-label">Estado</label><select class="field-select" id="pip-estado">
+        <optgroup label="── Sueltas ──" style="color:#554f6e">
+          <option value="Sin definir" ${c.estado==='Sin definir'?'selected':''}>Sin definir</option>
+          <option value="Sin respuesta" ${c.estado==='Sin respuesta'?'selected':''}>Sin respuesta</option>
+        </optgroup>
+        <optgroup label="── Estado del cliente ──" style="color:#554f6e">
+          <option value="Pendiente meet" ${c.estado==='Pendiente meet'?'selected':''}>🔴 Pendiente meet</option>
+          <option value="Pendiente cotización" ${c.estado==='Pendiente cotización'?'selected':''}>🟡 Pendiente cotización</option>
+          <option value="Enviada" ${c.estado==='Enviada'?'selected':''}>🟢 Enviada</option>
+        </optgroup>
+        <optgroup label="── Estado de la propuesta ──" style="color:#554f6e">
+          <option value="En negociación" ${c.estado==='En negociación'?'selected':''}>🟡 En negociación</option>
+          <option value="Cerrada" ${c.estado==='Cerrada'?'selected':''}>🟢 Cerrada</option>
+          <option value="Perdida" ${c.estado==='Perdida'?'selected':''}>🔴 Perdida</option>
+        </optgroup>
+      </select></div>
       <div class="field"><label class="field-label">Último contacto</label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}"></div>
     </div>
     <div class="field-row">
@@ -1226,11 +1036,19 @@ function rPipe(c){
     <div class="meets-grid">
       <div class="meet-box">
         <div class="meet-box-label" style="color:var(--blue)">🔍 Discovery Meet</div>
-        <input class="field-input" id="pip-meet-discovery" type="date" value="${c.meetDiscovery||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+        <button class="cal-trigger" data-cal-field="pip-meet-discovery">
+          <span id="cal-lbl-pip-meet-discovery">${c.meetDiscovery?fmtDate(c.meetDiscovery):'Seleccionar fecha'}</span>
+          <span style="font-size:14px;opacity:.6">📅</span>
+        </button>
+        <input type="hidden" id="pip-meet-discovery" value="${c.meetDiscovery||''}">
       </div>
       <div class="meet-box">
         <div class="meet-box-label" style="color:var(--gold)">💼 Budget Meet</div>
-        <input class="field-input" id="pip-meet-budget" type="date" value="${c.meetBudget||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+        <button class="cal-trigger" data-cal-field="pip-meet-budget">
+          <span id="cal-lbl-pip-meet-budget">${c.meetBudget?fmtDate(c.meetBudget):'Seleccionar fecha'}</span>
+          <span style="font-size:14px;opacity:.6">📅</span>
+        </button>
+        <input type="hidden" id="pip-meet-budget" value="${c.meetBudget||''}">
       </div>
     </div>
     ${(c.meetDiscovery||c.meetBudget)?rMeetStatus(c):''}
@@ -1255,13 +1073,23 @@ function rPipe(c){
       <div class="channel-btn ${c.followupChannel==='linkedin'?'active':''}" data-ch="linkedin"><div class="channel-icon">💼</div>LinkedIn</div>
     </div>
     ${st.loadingFollowup
-      ?`<div class="ai-box loading"><div class="spinner"></div>Redactando...</div>`
-      :fu
-        ?`<div class="ai-box">${fu}</div>
-          <button class="btn-copy ${st.copiedFollowup?'copied':''}" id="btn-copy-fu">${st.copiedFollowup?'✓ Copiado':'📋 Copiar'}</button>
-          ${c.followupChannel==='whatsapp'&&wl?`<a class="wa-link" href="${wl}?text=${encodeURIComponent(fu)}" target="_blank" rel="noopener" style="display:flex;justify-content:center;width:100%;margin-bottom:8px">💬 Abrir WhatsApp con el mensaje</a>`:''}
-          <button class="btn-outline" id="btn-regen-fu">↻ Regenerar</button>`
-        :`<button class="btn-primary" id="btn-gen-followup">✦ Generar mensaje</button>`}
+      ?`<div class="ai-box loading"><div class="spinner"></div>Generando 3 opciones...</div>`
+      :c.followupOptions?.length&&!c.followupText
+        ?`<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+            ${c.followupOptions.map((opt,i)=>`
+            <div class="fu-option" data-fuopt="${i}">
+              <div class="fu-option-num">Opción ${i+1} ${['· Directa/urgente','· Cálida/relacional','· Propuesta de valor'][i]||''}</div>
+              ${opt}
+            </div>`).join('')}
+          </div>
+          <button class="btn-outline" id="btn-regen-fu" style="margin-top:0">↻ Regenerar opciones</button>`
+        :c.followupText
+          ?`<div class="fu-selected">${c.followupText}</div>
+            <button class="btn-copy ${st.copiedFollowup?'copied':''}" id="btn-copy-fu">${st.copiedFollowup?'✓ Copiado':'📋 Copiar'}</button>
+            ${c.followupChannel==='whatsapp'&&wl?`<a class="wa-link" href="${wl}?text=${encodeURIComponent(c.followupText)}" target="_blank" rel="noopener" style="display:flex;justify-content:center;width:100%;margin-bottom:8px">💬 Abrir WhatsApp con el mensaje</a>`:''}
+            <button class="btn-outline" id="btn-back-opts" style="margin-bottom:6px">← Volver a opciones</button>
+            <button class="btn-outline" id="btn-regen-fu">↻ Regenerar todo</button>`
+          :`<button class="btn-primary" id="btn-gen-followup">✦ Generar 3 opciones</button>`}
   </div>`;
 }
 
@@ -1277,7 +1105,6 @@ function bind(){
   document.getElementById('import-file')?.addEventListener('change',importData);
   $('#btn-api-key')?.addEventListener('click',()=>{st.showApiModal=true;render()});
   $('#btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render()});
-  $('#btn-generar-informe')?.addEventListener('click',generarInforme);
   $('#btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render()});
   $('#btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render()});
   $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
@@ -1438,14 +1265,24 @@ function bind(){
     st.view='list';st.activeClient=null;render();
   });
   $$('.channel-btn').forEach(b=>b.addEventListener('click',async()=>{
-    const c=gc();if(!c)return;c.followupChannel=b.dataset.ch;c.followupText='';await sv(c);render();
+    const c=gc();if(!c)return;c.followupChannel=b.dataset.ch;c.followupText='';c.followupOptions=[];await sv(c);render();
   }));
   $('#btn-gen-followup')?.addEventListener('click',genFU);
-  $('#btn-regen-fu')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';await sv(c);genFU()});
+  $('#btn-regen-fu')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';c.followupOptions=[];await sv(c);genFU();});
+  $('#btn-back-opts')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';await sv(c);render();});
+  $$('[data-fuopt]').forEach(card=>card.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    c.followupText=c.followupOptions[parseInt(card.dataset.fuopt)]||'';
+    await sv(c);render();
+  }));
   $('#btn-copy-fu')?.addEventListener('click',()=>{cpT(gc()?.followupText||'','copiedFollowup')});
-  ['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes','pip-meet-discovery','pip-meet-budget'].forEach(id=>
-    document.getElementById(id)?.addEventListener('change',savePip)
-  );
+  // Calendar triggers
+  $$('[data-cal-field]').forEach(btn=>{
+    btn.addEventListener('click',e=>{e.stopPropagation();openCal(btn.dataset.calField,btn);});
+  });
+  ['pip-estado','pip-date','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes','pip-meet-discovery','pip-meet-budget'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('change',()=>savePip());
+  });
   $('#pip-tipo')?.addEventListener('change',()=>{
     const lc=document.getElementById('pip-lc-fields');
     if(lc)lc.style.display=document.getElementById('pip-tipo').value==='LC'?'block':'none';
@@ -1554,7 +1391,10 @@ async function genBrief(){
   const p=`Analizá esta reunión y generá una propuesta para ${c.name}${c.company?` de ${c.company}`:''}.${nt}${tipo}\nAnálisis previo: ${c.investigacion.resultado?c.investigacion.resultado.substring(0,400)+'...':'no disponible'}\nNotas: ${c.reunion?.notasVivo||'no disponibles'}\n\nTranscripción:\n${tr}\n\nRespondé SOLO con JSON válido sin backticks:\n{\n  "diagnostico": "2-3 oraciones",\n  "modulos": [{"nombre":"nombre exacto","fase":1,"plataformas":[],"descripcion":"2 oraciones adaptadas al rubro","bullets":["3 bullets específicos"]}],\n  "timeline": [{"titulo":"Fase 1 — Nombre","periodo":"Mes 1-2","descripcion":"qué se implementa","modulos":["Módulo 1"]}],\n  "inversion": "rango estimado",\n  "proximoPaso": "acción concreta"\n}\nReglas: 3-6 módulos, nombres exactos de la lista, contenido adaptado al rubro, 2-3 fases.`;
   try{
     const t=await claude([{role:'user',content:p}]);
-    const data=JSON.parse(t.replace(/```json|```/g,'').trim());
+    const cleaned=t.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+    const jsonMatch=cleaned.match(/\{[\s\S]*\}/);
+    if(!jsonMatch)throw new Error('No JSON en respuesta');
+    const data=JSON.parse(jsonMatch[0]);
     c.propuesta.data=data;c.propuesta.brief=JSON.stringify(data);
     await sv(c);
   }catch(e){
@@ -1571,14 +1411,17 @@ async function genFU(){
   const d=ds(c.lastContact);
   const historial=(c.notes||[]).map(n=>`${n.date}: ${n.text}`).join('\n')||c.note||'sin historial';
   const chLabel={'email':'email formal (con asunto)','whatsapp':'WhatsApp (máx 4 líneas, directo)','linkedin':'LinkedIn (máx 5 líneas, profesional pero humano)'}[c.followupChannel]||'email formal';
-  const instruccion={'email':'Escribí SOLO el email. Empezá con "Asunto:".','whatsapp':'Escribí SOLO el WhatsApp. Máximo 4 líneas.','linkedin':'Escribí SOLO el mensaje de LinkedIn. Máximo 5 líneas.'}[c.followupChannel]||'';
-  const p=`Seguimiento comercial para Juan de Avalon World Agency.\nCliente: ${c.name}${c.company?' de '+c.company:''}\nEmail: ${c.email||'no disponible'}\nCanal origen: ${c.canal||'no especificado'}\nServicio: ${c.service||'estrategia y pauta digital'}\nPresupuesto: ${fmtPresByMoneda(c.presupuesto,c.moneda)||'a definir'}\nEstado: ${c.estado} — Días sin contacto: ${d===999?'desconocido':d}\nNecesidades: ${c.needs?.join(', ')||'no especificadas'}\nHistorial:\n${historial}\nCanal: ${chLabel}\n${instruccion}`;
+  const instruccion={'email':'Cada opción empezá con "Asunto:". Máx 120 palabras.','whatsapp':'Cada opción máximo 4 líneas. Sin saludos largos.','linkedin':'Cada opción máximo 5 líneas. Profesional pero humano.'}[c.followupChannel]||'';
+  const p=`Generá 3 variantes de seguimiento comercial para Juan de Avalon World Agency.\nCliente: ${c.name}${c.company?' de '+c.company:''}\nCanal: ${c.canal||'no especificado'}\nServicio: ${c.service||c.servicio||'estrategia y pauta digital'}\nPresupuesto: ${fmtPresByMoneda(c.presupuesto,c.moneda)||'a definir'}\nEstado: ${c.estado} — Días sin contacto: ${d===999?'desconocido':d}\nNecesidades: ${c.needs?.join(', ')||'no especificadas'}\nHistorial:\n${historial}\nCanal envío: ${chLabel}\n${instruccion}\n\nLas 3 variantes deben tener TONO DIFERENTE: directa/urgente, cálida/relacional, propuesta de valor.\nSepará cada una EXACTAMENTE así:\n===OPCIÓN 1===\n[texto]\n===OPCIÓN 2===\n[texto]\n===OPCIÓN 3===\n[texto]\nNada fuera de ese formato.`;
   try{
     const t=await claude([{role:'user',content:p}]);
-    c.followupText=t;await sv(c);
+    const parts=t.split(/===OPCIÓN \d+===/).map(s=>s.trim()).filter(Boolean);
+    c.followupOptions=parts.slice(0,3);
+    c.followupText='';
+    await sv(c);
   }catch(e){
     if(e.message==='Sin API key'){st.loadingFollowup=false;return;}
-    c.followupText='Error: '+e.message;
+    c.followupOptions=[];c.followupText='Error: '+e.message;
     await sv(c);
   }
   st.loadingFollowup=false;render();
