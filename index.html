@@ -188,14 +188,14 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .cal-trigger:hover{border-color:var(--border2)}
 .cal-trigger.cal-has{border-color:var(--gold)}
 .cal-backdrop{position:fixed;inset:0;z-index:198;background:transparent;cursor:default}
-.cal-popup{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:199;background:#161616;border:1px solid var(--border2);border-radius:12px;padding:14px;box-shadow:0 10px 36px rgba(0,0,0,.7)}
+.cal-popup{position:absolute;top:calc(100% + 6px);left:0;z-index:199;background:#161616;border:1px solid var(--border2);border-radius:12px;padding:12px;box-shadow:0 10px 36px rgba(0,0,0,.7);width:252px}
 .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .cal-month-lbl{font-size:12px;font-weight:700;color:var(--text);text-transform:capitalize;letter-spacing:.3px}
 .cal-nav{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--text2);font-size:16px;font-family:'Montserrat',sans-serif;line-height:1.3;transition:border-color .12s}
 .cal-nav:hover{border-color:#555;color:var(--text)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:8px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,32px);gap:2px;margin-bottom:8px}
 .cal-dow{font-size:8px;color:var(--text-muted);text-align:center;padding:4px 0;font-weight:700;text-transform:uppercase}
-.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text2);min-height:28px;transition:background .1s}
+.cal-day{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text2);transition:background .1s}
 .cal-day:hover:not(.cal-empty){background:var(--surface3);color:var(--text)}
 .cal-today{color:var(--gold)!important;font-weight:800!important}
 .cal-sel{background:var(--gold)!important;color:#000!important;font-weight:800!important;border-radius:8px!important}
@@ -922,7 +922,7 @@ function rReunion(c){
     <hr class="divider">
     <div class="section-title" style="margin-bottom:6px">📄 Propuesta</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:500">Transcripción de la reunión</div>
-    <textarea class="field-textarea" id="prop-transcripcion" style="min-height:100px" placeholder="Pegá la transcripción o resumen de la meet...">${c.propuesta?.transcripcion||''}</textarea>
+    <textarea class="field-textarea" id="prop-transcripcion" style="min-height:100px;overflow:hidden;resize:none" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" placeholder="Pegá la transcripción o resumen de la meet...">${c.propuesta?.transcripcion||''}</textarea>
     <button class="btn-primary" id="btn-generar-brief" ${st.loadingPropuesta?'disabled':''}>${st.loadingPropuesta?'Generando propuesta...':'✦ Generar propuesta'}</button>
     ${st.loadingPropuesta?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando reunión y armando propuesta...</div>`:''}
     ${pd&&!st.loadingPropuesta?rPropuesta(pd,c):''}
@@ -1321,6 +1321,8 @@ function bind(){
   $('#btn-back')?.addEventListener('click',()=>{st.view='list';render()});
   $$('.tab').forEach(t=>t.addEventListener('click',()=>{st.activeTab=t.dataset.tab;render()}));
 
+  // Auto-expand pre-filled textareas
+  document.querySelectorAll('textarea[style*="overflow:hidden"]').forEach(t=>{t.style.height='auto';t.style.height=t.scrollHeight+'px';});
   // Research
   $('#btn-analizar')?.addEventListener('click',analizar);
   $('#btn-reanalizar')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.investigacion.resultado='';c.investigacion.preguntas=[];await sv(c);analizar();});
