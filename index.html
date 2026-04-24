@@ -182,6 +182,42 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .nc-progress-fill{height:100%;border-radius:0 0 14px 14px;transition:width .4s ease}
 .ready-badge{background:rgba(74,171,122,.12);border:1px solid rgba(74,171,122,.4);color:var(--green);border-radius:6px;padding:3px 9px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .nc-divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+/* ── Calendar widget ── */
+.cal-wrap{position:relative}
+.cal-trigger{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-family:'Montserrat',sans-serif;user-select:none;transition:border-color .15s}
+.cal-trigger:hover{border-color:var(--border2)}
+.cal-trigger.cal-has{border-color:var(--gold)}
+.cal-backdrop{position:fixed;inset:0;z-index:198;background:transparent;cursor:default}
+.cal-popup{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:199;background:#161616;border:1px solid var(--border2);border-radius:12px;padding:14px;box-shadow:0 10px 36px rgba(0,0,0,.7)}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-month-lbl{font-size:12px;font-weight:700;color:var(--text);text-transform:capitalize;letter-spacing:.3px}
+.cal-nav{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--text2);font-size:16px;font-family:'Montserrat',sans-serif;line-height:1.3;transition:border-color .12s}
+.cal-nav:hover{border-color:#555;color:var(--text)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:8px}
+.cal-dow{font-size:8px;color:var(--text-muted);text-align:center;padding:4px 0;font-weight:700;text-transform:uppercase}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text2);min-height:28px;transition:background .1s}
+.cal-day:hover:not(.cal-empty){background:var(--surface3);color:var(--text)}
+.cal-today{color:var(--gold)!important;font-weight:800!important}
+.cal-sel{background:var(--gold)!important;color:#000!important;font-weight:800!important;border-radius:8px!important}
+.cal-sel:hover{background:var(--gold2)!important}
+.cal-empty{cursor:default;pointer-events:none}
+.cal-clear-btn{width:100%;background:transparent;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:2px;transition:border-color .12s,color .12s}
+.cal-clear-btn:hover{border-color:#555;color:var(--text)}
+/* ── Custom estado select ── */
+.csel-wrap{position:relative}
+.csel-trigger{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-family:'Montserrat',sans-serif;transition:border-color .15s;text-align:left}
+.csel-trigger:hover,.csel-open{border-color:var(--gold)!important}
+.csel-backdrop{position:fixed;inset:0;z-index:248;background:transparent;cursor:default}
+.csel-popup{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:249;background:#161616;border:1px solid var(--border2);border-radius:10px;overflow:hidden;box-shadow:0 10px 36px rgba(0,0,0,.75);max-height:320px;overflow-y:auto}
+.csel-group{font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:9px 12px 5px;background:rgba(0,0,0,.3);border-bottom:1px solid var(--border)}
+.csel-item{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;color:var(--text2);transition:background .1s}
+.csel-item:hover{background:var(--surface3);color:var(--text)}
+.csel-item.csel-active{background:rgba(155,109,255,.1);color:var(--gold)}
+.csel-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.s-sin-definir{background:rgba(85,79,110,.12);color:#6b6585}
+.s-pendiente-meet{background:rgba(217,95,95,.12);color:#d95f5f}
+.s-pendiente-cot{background:rgba(196,154,32,.12);color:#c49a20}
+
 </style>
 </head>
 <body>
@@ -189,8 +225,14 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 <script>
 // ── CONSTANTS ──
 const SP=`Sos un asistente estratégico-comercial para Juan, ejecutivo de Avalon World Agency, agencia de marketing y comunicación (Buenos Aires, Miami, Dubai, Barcelona, San Pablo). Modelo de negocio: servicio principal estrategia + pauta (Meta Ads, Google Ads). Complementario: redes, contenido, diseño, branding. Juan NO vende redes aisladas. Analizar marcas: leer negocio real, detectar contradicciones, evaluar fit con Avalon. Preguntas discovery: específicas al negocio, nunca genéricas, revelan problema real y presupuesto, posicionan a Juan como partner estratégico. 5 preguntas máximo. Propuestas: partir del negocio real, eje estrategia + pauta. Módulos disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre. Estilo: español rioplatense (vos), directo, comercial, sin paja.`;
-const ESTADOS=['Enviada','En negociación','Sin respuesta','Cerrada','Perdida'];
-const EC={'Enviada':'s-enviada','En negociación':'s-negociacion','Sin respuesta':'s-sin-respuesta','Cerrada':'s-cerrada','Perdida':'s-perdida'};
+const ESTADO_GROUPS=[
+  {label:'Sueltas',items:['Sin definir','Sin respuesta']},
+  {label:'Estado del cliente',items:['Pendiente meet','Pendiente cotización','Enviada']},
+  {label:'Estado de la propuesta',items:['En negociación','Cerrada','Perdida']}
+];
+const ESTADOS=ESTADO_GROUPS.flatMap(g=>g.items);
+const EC={'Sin definir':'s-sin-definir','Sin respuesta':'s-sin-respuesta','Pendiente meet':'s-pendiente-meet','Pendiente cotización':'s-pendiente-cot','Enviada':'s-enviada','En negociación':'s-negociacion','Cerrada':'s-cerrada','Perdida':'s-perdida'};
+const ESTADO_DOT={'Sin definir':'#554f6e','Sin respuesta':'#d95f5f','Pendiente meet':'#d95f5f','Pendiente cotización':'#c49a20','Enviada':'#4aab7a','En negociación':'#c49a20','Cerrada':'#4aab7a','Perdida':'#d95f5f'};
 const NEEDS=['Posicionamiento','Ventas','Comunidad','Nueva identidad','Rebranding','Pauta digital','Contenido','Estrategia','E-commerce','Awareness'];
 const PLATAFORMAS=['Meta','Google','TikTok','Pinterest','Otra'];
 const CANALES=['Meta','LinkedIn','Google','Referido','Nico','Ger','Caza'];
@@ -343,6 +385,8 @@ let st={
   copiedInv:false,copiedBrief:false,copiedFollowup:false,
   viewMode:'list',
   dragClient:null,
+  calOpen:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
+  estadoOpen:false,
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
   searchQuery:'',
   // Clientes Nuevos
@@ -526,8 +570,7 @@ function rList(){
   const convTo=f.dateTo||today2;
   const convPool=clients.filter(c=>c.lastContact>=convFrom&&c.lastContact<=convTo);
   const convCerradas=convPool.filter(c=>c.estado==='Cerrada').length;
-  const convEnviadas=convPool.filter(c=>c.estado==='Enviada').length;
-  const convTotal=convCerradas+convEnviadas;
+  const convTotal=convPool.length;
   const convRate=convTotal>0?Math.round(convCerradas/convTotal*100):0;
   const convColor=convRate>=30?'var(--green)':convRate>=15?'var(--yellow)':'var(--red)';
   const convMes=new Date(convFrom).toLocaleString('es-AR',{month:'long',year:'numeric'});
@@ -570,7 +613,7 @@ function rList(){
         <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">% Conversión · ${convMes}</div>
         <div style="display:flex;align-items:baseline;gap:4px">
           <span style="font-size:20px;font-weight:800;color:${convColor};line-height:1">${convRate}%</span>
-          <span style="font-size:9px;color:var(--text-muted);font-weight:600">${convCerradas} cerradas / ${convEnviadas} enviadas</span>
+          <span style="font-size:9px;color:var(--text-muted);font-weight:600">${convCerradas} cerradas / ${convTotal} totales</span>
         </div>
       </div>
       <div style="background:var(--surface3);border-radius:4px;height:5px;overflow:hidden">
@@ -829,11 +872,10 @@ function rDetail(){
   <div class="gold-bar"></div>
   <div class="tabs">
     <div class="tab ${st.activeTab==='inv'?'active':''}" data-tab="inv">🔍 Research${pr[0]?'<span class="tab-done"></span>':''}</div>
-    <div class="tab ${st.activeTab==='reunion'?'active':''}" data-tab="reunion">📋 Reunión${pr[1]?'<span class="tab-done"></span>':''}</div>
-    <div class="tab ${st.activeTab==='propuesta'?'active':''}" data-tab="propuesta">📄 Propuesta${pr[2]?'<span class="tab-done"></span>':''}</div>
+    <div class="tab ${st.activeTab==='reunion'?'active':''}" data-tab="reunion">📋 Reunión & Propuesta${pr[1]||pr[2]?'<span class="tab-done"></span>':''}</div>
     <div class="tab ${st.activeTab==='pipeline'?'active':''}" data-tab="pipeline">📊 Pipeline</div>
   </div>
-  ${rInv(c)}${rReunion(c)}${rProp(c)}${rPipe(c)}`;
+  ${rInv(c)}${rReunion(c)}${rPipe(c)}`;
 }
 
 function rInv(c){
@@ -862,24 +904,24 @@ function rInv(c){
 
 function rReunion(c){
   const qs=c.investigacion?.preguntas||[],ch=c.reunion?.checkedQs||[],show=st.activeTab==='reunion';
+  const pd=c.propuesta?.data;
   return`<div class="tab-content ${show?'active':''}" id="tab-reunion">
+    <div class="section-title">Preguntas de discovery</div>
     ${qs.length===0
-      ?`<div class="empty" style="padding:40px 10px"><div class="empty-icon">💡</div><div style="font-size:12px">Primero analizá el cliente en <strong>Research</strong></div></div>`
-      :`<div class="section-title">Preguntas de discovery</div>
-       <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-weight:600">Tocá para tildar cada pregunta hecha</div>
+      ?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;margin-bottom:12px">
+          <div style="font-size:20px;margin-bottom:6px">💡</div>
+          <div style="font-size:12px;color:var(--text-muted)">Primero analizá el cliente en <strong style="color:var(--text2)">Research</strong> para generar las preguntas</div>
+        </div>`
+      :`<div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-weight:600">Tocá para tildar cada pregunta hecha durante la reunión</div>
        <div class="questions-list">${qs.map((q,i)=>`<div class="question-item ${ch.includes(i)?'done':''}" data-qidx="${i}"><div class="question-num">Pregunta ${i+1}</div>${q}</div>`).join('')}</div>
-       <button class="btn-sm" id="btn-reset-qs">↺ Reiniciar</button>`}
+       <button class="btn-sm" id="btn-reset-qs" style="margin-bottom:4px">↺ Reiniciar</button>`}
     <hr class="divider">
     <div class="section-title">Notas en vivo</div>
     <textarea class="field-textarea" id="reunion-notas" style="min-height:130px" placeholder="Respuestas clave, señales de presupuesto, objeciones...">${c.reunion?.notasVivo||''}</textarea>
     <button class="btn-primary" id="btn-save-notas" style="margin-top:8px">Guardar notas</button>
-  </div>`;
-}
-
-function rProp(c){
-  const show=st.activeTab==='propuesta',pd=c.propuesta?.data;
-  return`<div class="tab-content ${show?'active':''}" id="tab-propuesta">
-    <div class="section-title">Transcripción de la reunión</div>
+    <hr class="divider">
+    <div class="section-title" style="margin-bottom:6px">📄 Propuesta</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:500">Transcripción de la reunión</div>
     <textarea class="field-textarea" id="prop-transcripcion" style="min-height:100px" placeholder="Pegá la transcripción o resumen de la meet...">${c.propuesta?.transcripcion||''}</textarea>
     <button class="btn-primary" id="btn-generar-brief" ${st.loadingPropuesta?'disabled':''}>${st.loadingPropuesta?'Generando propuesta...':'✦ Generar propuesta'}</button>
     ${st.loadingPropuesta?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando reunión y armando propuesta...</div>`:''}
@@ -981,13 +1023,79 @@ function notasHtml(notes){
   </details>`:''}`;
 }
 
+
+function rCalWidget(fieldId,value,color){
+  const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DOWS=['DO','LU','MA','MI','JU','VI','SÁ'];
+  const isOpen=st.calOpen===fieldId;
+  const todayStr=new Date().toISOString().split('T')[0];
+  const hasVal=!!value;
+  const display=hasVal?value.split('-').reverse().join('/'):'Seleccionar fecha';
+  let calHtml='';
+  if(isOpen){
+    const y=st.calYear,m=st.calMonth;
+    const firstDay=new Date(y,m,1).getDay();
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    let cells='';
+    for(let i=0;i<firstDay;i++)cells+=`<div class="cal-day cal-empty"></div>`;
+    for(let d=1;d<=daysInMonth;d++){
+      const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const cls='cal-day'+(ds===todayStr?' cal-today':'')+(ds===value?' cal-sel':'');
+      cells+=`<div class="${cls}" data-calpick="${fieldId}" data-caldate="${ds}">${d}</div>`;
+    }
+    calHtml=`<div class="cal-backdrop" data-calbdrop="1"></div>
+    <div class="cal-popup">
+      <div class="cal-header">
+        <button class="cal-nav" data-calprev="${fieldId}">‹</button>
+        <div class="cal-month-lbl">${MONTHS[m]} ${y}</div>
+        <button class="cal-nav" data-calnext="${fieldId}">›</button>
+      </div>
+      <div class="cal-grid">
+        ${DOWS.map(d=>`<div class="cal-dow">${d}</div>`).join('')}
+        ${cells}
+      </div>
+      <button class="cal-clear-btn" data-calclear="${fieldId}">✕ Limpiar fecha</button>
+    </div>`;
+  }
+  return`<div class="cal-wrap">
+    <div class="cal-trigger${hasVal?' cal-has':''}" data-calopen="${fieldId}" style="${hasVal?`border-color:${color};`:''}">
+      <span style="${!hasVal?'color:var(--text-muted)':'font-weight:600'}">${display}</span>
+      <span style="font-size:15px;opacity:.45">📅</span>
+    </div>
+    ${calHtml}
+  </div>`;
+}
+
+function rEstadoSelect(currentEstado){
+  const isOpen=st.estadoOpen;
+  const dot=ESTADO_DOT[currentEstado]||'#554f6e';
+  return`<div class="csel-wrap">
+    ${isOpen?'<div class="csel-backdrop" data-cselbdrop="1"></div>':''}
+    <div class="csel-trigger${isOpen?' csel-open':''}" id="csel-estado-btn">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="csel-dot" style="background:${dot}"></span>
+        <span>${currentEstado||'Seleccioná estado'}</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:10px">${isOpen?'▲':'▼'}</span>
+    </div>
+    ${isOpen?`<div class="csel-popup">
+      ${ESTADO_GROUPS.map(g=>`
+        <div class="csel-group">${g.label}</div>
+        ${g.items.map(item=>`<div class="csel-item${item===currentEstado?' csel-active':''}" data-csel="${item}">
+          <span class="csel-dot" style="background:${ESTADO_DOT[item]||'#554f6e'}"></span>${item}
+        </div>`).join('')}
+      `).join('')}
+    </div>`:''}
+  </div>`;
+}
+
 function rPipe(c){
   const d=ds(c.lastContact),l=ul(d,c.estado),co=uc(l),fu=c.followupText||'',show=st.activeTab==='pipeline',wl=wa(c.phone);
   const presFormatted=fmtPresByMoneda(c.presupuesto,c.moneda).replace('$','');
   return`<div class="tab-content ${show?'active':''}" id="tab-pipeline">
     <div class="section-title">Estado del prospecto</div>
     <div class="field-row">
-      <div class="field"><label class="field-label">Estado</label><select class="field-select" id="pip-estado">${ESTADOS.map(e=>`<option value="${e}" ${c.estado===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label class="field-label">Estado</label>${rEstadoSelect(c.estado)}</div>
       <div class="field"><label class="field-label">Último contacto</label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}"></div>
     </div>
     <div class="field-row">
@@ -1043,11 +1151,11 @@ function rPipe(c){
     <div class="meets-grid">
       <div class="meet-box">
         <div class="meet-box-label" style="color:var(--blue)">🔍 Discovery Meet</div>
-        <input class="field-input" id="pip-meet-discovery" type="date" value="${c.meetDiscovery||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+        ${rCalWidget('discovery',c.meetDiscovery||'','var(--blue)')}
       </div>
       <div class="meet-box">
         <div class="meet-box-label" style="color:var(--gold)">💼 Budget Meet</div>
-        <input class="field-input" id="pip-meet-budget" type="date" value="${c.meetBudget||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+        ${rCalWidget('budget',c.meetBudget||'','var(--gold)')}
       </div>
     </div>
     ${(c.meetDiscovery||c.meetBudget)?rMeetStatus(c):''}
@@ -1261,7 +1369,7 @@ function bind(){
   $('#btn-gen-followup')?.addEventListener('click',genFU);
   $('#btn-regen-fu')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';await sv(c);genFU()});
   $('#btn-copy-fu')?.addEventListener('click',()=>{cpT(gc()?.followupText||'','copiedFollowup')});
-  ['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes','pip-meet-discovery','pip-meet-budget'].forEach(id=>
+  ['pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes'].forEach(id=>
     document.getElementById(id)?.addEventListener('change',savePip)
   );
   $('#pip-tipo')?.addEventListener('change',()=>{
@@ -1271,6 +1379,54 @@ function bind(){
   });
   $$('#pip-plat-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
 
+
+  // ── Calendar handlers ──
+  $$('[data-calopen]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const fid=el.dataset.calopen;
+    if(st.calOpen===fid){st.calOpen=null;}
+    else{
+      st.calOpen=fid;
+      const c=gc();
+      const val=fid==='discovery'?c?.meetDiscovery:c?.meetBudget;
+      const d=val?new Date(val+'T12:00:00'):new Date();
+      st.calYear=d.getFullYear();st.calMonth=d.getMonth();
+    }
+    render();
+  }));
+  $$('[data-calprev]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    st.calMonth--;if(st.calMonth<0){st.calMonth=11;st.calYear--;}render();
+  }));
+  $$('[data-calnext]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    st.calMonth++;if(st.calMonth>11){st.calMonth=0;st.calYear++;}render();
+  }));
+  $$('[data-calpick]').forEach(el=>el.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const c=gc();if(!c)return;
+    const fid=el.dataset.calpick,date=el.dataset.caldate;
+    if(fid==='discovery')c.meetDiscovery=date;else c.meetBudget=date;
+    st.calOpen=null;await sv(c);render();
+  }));
+  $$('[data-calclear]').forEach(el=>el.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const c=gc();if(!c)return;
+    const fid=el.dataset.calclear;
+    if(fid==='discovery')c.meetDiscovery='';else c.meetBudget='';
+    st.calOpen=null;await sv(c);render();
+  }));
+  $$('[data-calbdrop]').forEach(el=>el.addEventListener('click',()=>{st.calOpen=null;render();}));
+  // ── Estado select handlers ──
+  document.getElementById('csel-estado-btn')?.addEventListener('click',e=>{
+    e.stopPropagation();st.estadoOpen=!st.estadoOpen;render();
+  });
+  $$('[data-csel]').forEach(el=>el.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const c=gc();if(!c)return;
+    c.estado=el.dataset.csel;st.estadoOpen=false;await sv(c);render();
+  }));
+  $$('[data-cselbdrop]').forEach(el=>el.addEventListener('click',()=>{st.estadoOpen=false;render();}));
   // Filters
   $('#btn-clear-filters')?.addEventListener('click',()=>{st.filters={dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:'',meets:''};render()});
   $('#f-date-from')?.addEventListener('change',e=>{st.filters.dateFrom=e.target.value;render()});
