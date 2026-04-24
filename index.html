@@ -237,7 +237,7 @@ async function sbDel(id){
 let nuevos=[];
 async function loadNC(){
   try{
-    const r=await fetch(SB_URL+'/rest/v1/new_clients?select=data&order=created_at.desc',{headers:sbH()});
+    const r=await fetch(SB_URL+'/rest/v1/new_clients?select=data&order=updated_at.desc',{headers:sbH()});
     const rows=await r.json();
     if(Array.isArray(rows))nuevos=rows.map(row=>ncNew(row.data));
   }catch(e){console.error('Load NC error',e);}
