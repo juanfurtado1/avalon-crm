@@ -814,7 +814,7 @@ function rCardV2(c){
     <div class="card-v2-top" style="padding-left:18px;padding-top:${c.canal?'18px':'14px'}">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-          <div class="c-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}${c.company?`<span style="font-weight:400;color:var(--text-muted);font-size:13px"> · ${c.company}</span>`:''}</div>
+          <div class="c-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.company?`${c.company}<span style="color:var(--border2);font-weight:300;margin:0 6px">|</span><span style="font-size:13px;font-weight:500;color:var(--text2)">${c.name}</span>`:c.name}</div>
           ${c.fromAirtable?'<span class="airtable-badge">Form</span>':''}
         </div>
       </div>
@@ -929,7 +929,7 @@ function rKanbanCols(sr){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:3px;margin-bottom:2px">
         <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">
           <span class="drag-handle">⠿</span>
-          <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px">${c.name}${c.company?`<span style="font-weight:400;color:var(--text-muted);font-size:11px"> · ${c.company}</span>`:''}</div>
+          <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px">${c.company?`${c.company}<span style="font-weight:400;color:var(--text-muted);font-size:11px"> | ${c.name}</span>`:c.name}</div>
         </div>
         <div class="card-actions" style="gap:2px">
           <button class="card-act" data-action="edit" data-id="${c.id}" title="Editar">✏️</button>
@@ -1743,7 +1743,7 @@ function rNuevosList(){
           <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${ready?'var(--green)':'var(--gold)'};border-radius:14px 0 0 14px"></div>
           <div class="nc-card-top">
             <div style="flex:1;min-width:0">
-              <div style="font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.3px;margin-bottom:3px">${c.name}${c.company?`<span style="color:var(--border2);font-weight:300;margin:0 6px">|</span><span style="font-size:12px;font-weight:600;color:var(--text2)">${c.company}</span>`:''}</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.3px;margin-bottom:3px">${c.company?`${c.company}<span style="color:var(--border2);font-weight:300;margin:0 6px">|</span><span style="font-size:12px;font-weight:600;color:var(--text2)">${c.name}</span>`:c.name}</div>
               <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
                 ${c.pm?`<span class="pm-badge">👤 ${c.pm}</span>`:'<span style="font-size:9px;color:var(--text-muted);font-weight:600">Sin PM</span>'}
                 ${c.fechaInicio?`<span style="font-size:9px;color:var(--text-muted);font-weight:600">📅 ${fmtDate(c.fechaInicio)}</span>`:''}
@@ -1808,7 +1808,7 @@ function rNuevoDetail(){
     <button class="btn-back" id="btn-nd-back">← Volver</button>
     <button class="btn-sm" id="btn-nd-delete" style="color:var(--red);border-color:rgba(217,95,95,.3)">🗑️</button>
     <div style="flex:1;min-width:0;padding:0 8px">
-      <div style="font-size:15px;font-weight:800;color:var(--green);letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}${c.company?` | ${c.company}`:''}</div>
+      <div style="font-size:15px;font-weight:800;color:var(--green);letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.company?`${c.company} | ${c.name}`:c.name}</div>
       ${c.rubro?`<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600">${c.rubro}</div>`:''}
     </div>
     ${ready?'<span class="ready-badge" style="flex-shrink:0">✓ Listo para PM</span>':''}
