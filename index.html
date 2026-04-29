@@ -92,6 +92,9 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .s-sin-respuesta{background:rgba(217,95,95,.12);color:#d95f5f}
 .s-cerrada{background:rgba(74,171,122,.12);color:#4aab7a}
 .s-perdida{background:rgba(100,100,100,.12);color:#666}
+.s-sin-definir{background:rgba(85,79,110,.15);color:#7a738f}
+.s-pendiente{background:rgba(230,130,40,.12);color:#e6823a}
+.s-pendiente-meet{background:rgba(155,109,255,.12);color:#9b6dff}
 .filter-panel{background:var(--surface);border-bottom:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px}
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .filter-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700;width:100%;margin-bottom:2px}
@@ -134,6 +137,30 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .meet-box-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:6px}
 .meet-box-date{font-size:13px;font-weight:600;color:var(--text)}
 .meet-box-empty{font-size:11px;color:var(--text-muted);font-style:italic}
+/* ── CALENDAR POPUP ── */
+.cal-overlay{position:fixed;inset:0;z-index:500;background:transparent}
+.cal-popup{position:absolute;background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:12px;width:240px;box-shadow:0 8px 32px rgba(0,0,0,.7);z-index:501;animation:fadeIn .12s}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cal-month-lbl{font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.cal-nav{background:var(--surface3);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif}
+.cal-nav:hover{background:var(--border2);color:var(--text)}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.cal-wd{font-size:8px;color:var(--text-muted);text-align:center;font-weight:700;text-transform:uppercase;padding:2px 0}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day{font-size:11px;text-align:center;padding:5px 2px;border-radius:5px;cursor:pointer;color:var(--text2);font-weight:500;border:1px solid transparent}
+.cal-day:hover{background:var(--surface3);color:var(--text)}
+.cal-day.today{color:var(--gold);font-weight:700}
+.cal-day.selected{background:var(--gold);color:#000;font-weight:800}
+.cal-day.empty{cursor:default;pointer-events:none}
+.cal-clear{width:100%;margin-top:8px;background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:600}
+.cal-clear:hover{border-color:#555;color:var(--text)}
+.cal-trigger{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:12px;color:var(--text);width:100%;justify-content:space-between;transition:border-color .15s;margin-top:4px}
+.cal-trigger:hover{border-color:var(--gold)}
+/* ── FOLLOWUP OPTIONS ── */
+.fu-option{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;font-size:12px;line-height:1.6;color:var(--text);cursor:pointer;transition:border-color .15s,background .15s;white-space:pre-wrap}
+.fu-option:hover{border-color:var(--gold);background:var(--gold-dim)}
+.fu-option-num{font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.fu-selected{background:var(--gold-dim);border:1px solid rgba(155,109,255,.4);border-radius:10px;padding:13px 14px;font-size:12px;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:8px}
 .kanban-board{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:10px 10px 120px;overflow-x:auto}
 .kanban-col-wrap{min-width:0}
 .kanban-col-header{border-radius:8px;padding:7px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
@@ -186,8 +213,8 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 <script>
 // ── CONSTANTS ──
 const SP=`Sos un asistente estratégico-comercial para Juan, ejecutivo de Avalon World Agency, agencia de marketing y comunicación (Buenos Aires, Miami, Dubai, Barcelona, San Pablo). Modelo de negocio: servicio principal estrategia + pauta (Meta Ads, Google Ads). Complementario: redes, contenido, diseño, branding. Juan NO vende redes aisladas. Analizar marcas: leer negocio real, detectar contradicciones, evaluar fit con Avalon. Preguntas discovery: específicas al negocio, nunca genéricas, revelan problema real y presupuesto, posicionan a Juan como partner estratégico. 5 preguntas máximo. Propuestas: partir del negocio real, eje estrategia + pauta. Módulos disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre. Estilo: español rioplatense (vos), directo, comercial, sin paja.`;
-const ESTADOS=['Enviada','En negociación','Sin respuesta','Cerrada','Perdida'];
-const EC={'Enviada':'s-enviada','En negociación':'s-negociacion','Sin respuesta':'s-sin-respuesta','Cerrada':'s-cerrada','Perdida':'s-perdida'};
+const ESTADOS=['Sin definir','Enviada','En negociación','Pendiente cotización','Pendiente meet','Sin respuesta','Cerrada','Perdida'];
+const EC={'Sin definir':'s-sin-definir','Enviada':'s-enviada','En negociación':'s-negociacion','Pendiente cotización':'s-pendiente','Pendiente meet':'s-pendiente-meet','Sin respuesta':'s-sin-respuesta','Cerrada':'s-cerrada','Perdida':'s-perdida'};
 const NEEDS=['Posicionamiento','Ventas','Comunidad','Nueva identidad','Rebranding','Pauta digital','Contenido','Estrategia','E-commerce','Awareness'];
 const PLATAFORMAS=['Meta','Google','TikTok','Pinterest','Otra'];
 const CANALES=['Meta','LinkedIn','Google','Referido','Nico','Ger','Caza'];
@@ -313,6 +340,7 @@ function nc(d={}){
     fromAirtable:d.fromAirtable||false,
     followupChannel:d.followupChannel||'email',
     followupText:d.followupText||'',
+    followupOptions:d.followupOptions||[],
     heatLevel:d.heatLevel||null,      // null=auto, 'hot'/'warm'/'cold'=manual
     heatIgnored:d.heatIgnored||false   // true = user dismissed the alert
   };
@@ -630,6 +658,57 @@ function renderListOnly(){
     const id=b.dataset.id;clients=clients.filter(x=>x.id!==id);await sbDel(id);render();
   }));
   bindKanbanDrag();
+}
+
+// ── CALENDAR ──
+const MESES_CAL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_CAL=['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+let calState={field:null,year:0,month:0,anchor:null};
+function openCal(fieldId,anchorEl){
+  closeCal();
+  const val=document.getElementById(fieldId)?.value||'';
+  const now=new Date();
+  calState={field:fieldId,year:val?parseInt(val.split('-')[0]):now.getFullYear(),month:val?parseInt(val.split('-')[1])-1:now.getMonth(),anchor:anchorEl};
+  const overlay=document.createElement('div');
+  overlay.className='cal-overlay';overlay.id='cal-overlay';
+  overlay.addEventListener('click',closeCal);
+  document.body.appendChild(overlay);
+  renderCalPopup();
+}
+function renderCalPopup(){
+  document.getElementById('cal-popup')?.remove();
+  const {year,month,field,anchor}=calState;
+  const selected=document.getElementById(field)?.value||'';
+  const todayStr=new Date().toISOString().split('T')[0];
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  let days='';
+  for(let i=0;i<firstDay;i++)days+='<div class="cal-day empty"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const ds2=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    days+=`<div class="cal-day${ds2===selected?' selected':''}${ds2===todayStr&&ds2!==selected?' today':''}" data-cal-date="${ds2}">${d}</div>`;
+  }
+  const popup=document.createElement('div');
+  popup.className='cal-popup';popup.id='cal-popup';
+  popup.innerHTML=`<div class="cal-header"><button class="cal-nav" id="cal-prev">‹</button><span class="cal-month-lbl">${MESES_CAL[month]} ${year}</span><button class="cal-nav" id="cal-next">›</button></div><div class="cal-weekdays">${DIAS_CAL.map(d=>`<div class="cal-wd">${d}</div>`).join('')}</div><div class="cal-days">${days}</div><button class="cal-clear" id="cal-clear-btn">✕ Limpiar fecha</button>`;
+  const rect=anchor.getBoundingClientRect();
+  popup.style.cssText=`top:${rect.bottom+window.scrollY+4}px;left:${Math.min(rect.left,window.innerWidth-256)}px`;
+  document.body.appendChild(popup);
+  popup.addEventListener('click',e=>e.stopPropagation());
+  document.getElementById('cal-prev')?.addEventListener('click',()=>{calState.month--;if(calState.month<0){calState.month=11;calState.year--;}renderCalPopup();});
+  document.getElementById('cal-next')?.addEventListener('click',()=>{calState.month++;if(calState.month>11){calState.month=0;calState.year++;}renderCalPopup();});
+  document.getElementById('cal-clear-btn')?.addEventListener('click',()=>{setCalDate(field,'');closeCal();});
+  popup.querySelectorAll('[data-cal-date]').forEach(el=>el.addEventListener('click',()=>{setCalDate(field,el.dataset.calDate);closeCal();}));
+}
+function setCalDate(fieldId,dateStr){
+  const inp=document.getElementById(fieldId);
+  if(inp){inp.value=dateStr;inp.dispatchEvent(new Event('change',{bubbles:true}));}
+  const lbl=document.getElementById('cal-lbl-'+fieldId);
+  if(lbl)lbl.textContent=dateStr?fmtDate(dateStr):'Seleccionar fecha';
+}
+function closeCal(){
+  document.getElementById('cal-overlay')?.remove();
+  document.getElementById('cal-popup')?.remove();
 }
 
 // ── RENDER ──
@@ -1314,11 +1393,19 @@ function rPipe(c){
     <div class="meets-grid">
       <div class="meet-box">
         <div class="meet-box-label" style="color:var(--blue)">🔍 Discovery Meet</div>
-        <input class="field-input" id="pip-meet-discovery" type="date" value="${c.meetDiscovery||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+        <button class="cal-trigger" data-cal-field="pip-meet-discovery">
+          <span id="cal-lbl-pip-meet-discovery">${c.meetDiscovery?fmtDate(c.meetDiscovery):'Seleccionar fecha'}</span>
+          <span style="font-size:14px;opacity:.6">📅</span>
+        </button>
+        <input type="hidden" id="pip-meet-discovery" value="${c.meetDiscovery||''}">
       </div>
       <div class="meet-box">
         <div class="meet-box-label" style="color:var(--gold)">💼 Budget Meet</div>
-        <input class="field-input" id="pip-meet-budget" type="date" value="${c.meetBudget||''}" style="margin-top:4px;padding:7px 10px;font-size:12px">
+        <button class="cal-trigger" data-cal-field="pip-meet-budget">
+          <span id="cal-lbl-pip-meet-budget">${c.meetBudget?fmtDate(c.meetBudget):'Seleccionar fecha'}</span>
+          <span style="font-size:14px;opacity:.6">📅</span>
+        </button>
+        <input type="hidden" id="pip-meet-budget" value="${c.meetBudget||''}">
       </div>
     </div>
     ${(c.meetDiscovery||c.meetBudget)?rMeetStatus(c):''}
@@ -1343,13 +1430,23 @@ function rPipe(c){
       <div class="channel-btn ${c.followupChannel==='linkedin'?'active':''}" data-ch="linkedin"><div class="channel-icon">💼</div>LinkedIn</div>
     </div>
     ${st.loadingFollowup
-      ?`<div class="ai-box loading"><div class="spinner"></div>Redactando...</div>`
-      :fu
-        ?`<div class="ai-box">${fu}</div>
-          <button class="btn-copy ${st.copiedFollowup?'copied':''}" id="btn-copy-fu">${st.copiedFollowup?'✓ Copiado':'📋 Copiar'}</button>
-          ${c.followupChannel==='whatsapp'&&wl?`<a class="wa-link" href="${wl}?text=${encodeURIComponent(fu)}" target="_blank" rel="noopener" style="display:flex;justify-content:center;width:100%;margin-bottom:8px">💬 Abrir WhatsApp con el mensaje</a>`:''}
-          <button class="btn-outline" id="btn-regen-fu">↻ Regenerar</button>`
-        :`<button class="btn-primary" id="btn-gen-followup">✦ Generar mensaje</button>`}
+      ?`<div class="ai-box loading"><div class="spinner"></div>Generando 3 opciones...</div>`
+      :c.followupOptions?.length&&!c.followupText
+        ?`<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+            ${c.followupOptions.map((opt,i)=>`
+            <div class="fu-option" data-fuopt="${i}">
+              <div class="fu-option-num">Opción ${i+1} ${['· Directa/urgente','· Cálida/relacional','· Propuesta de valor'][i]||''}</div>
+              ${opt}
+            </div>`).join('')}
+          </div>
+          <button class="btn-outline" id="btn-regen-fu" style="margin-top:0">↻ Regenerar opciones</button>`
+        :c.followupText
+          ?`<div class="fu-selected">${c.followupText}</div>
+            <button class="btn-copy ${st.copiedFollowup?'copied':''}" id="btn-copy-fu">${st.copiedFollowup?'✓ Copiado':'📋 Copiar'}</button>
+            ${c.followupChannel==='whatsapp'&&wl?`<a class="wa-link" href="${wl}?text=${encodeURIComponent(c.followupText)}" target="_blank" rel="noopener" style="display:flex;justify-content:center;width:100%;margin-bottom:8px">💬 Abrir WhatsApp con el mensaje</a>`:''}
+            <button class="btn-outline" id="btn-back-opts" style="margin-bottom:6px">← Volver a opciones</button>
+            <button class="btn-outline" id="btn-regen-fu">↻ Regenerar todo</button>`
+          :`<button class="btn-primary" id="btn-gen-followup">✦ Generar 3 opciones</button>`}
   </div>`;
 }
 
@@ -1485,12 +1582,21 @@ function bind(){
     st.view='list';st.activeClient=null;render();
   });
   $$('.channel-btn').forEach(b=>b.addEventListener('click',async()=>{
-    const c=gc();if(!c)return;c.followupChannel=b.dataset.ch;c.followupText='';await sv(c);render();
+    const c=gc();if(!c)return;c.followupChannel=b.dataset.ch;c.followupText='';c.followupOptions=[];await sv(c);render();
   }));
   $('#btn-gen-followup')?.addEventListener('click',genFU);
-  $('#btn-regen-fu')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';await sv(c);genFU()});
+  $('#btn-regen-fu')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';c.followupOptions=[];await sv(c);genFU();});
+  $('#btn-back-opts')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.followupText='';await sv(c);render();});
   $('#btn-copy-fu')?.addEventListener('click',()=>{cpT(gc()?.followupText||'','copiedFollowup')});
-  ['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes','pip-meet-discovery','pip-meet-budget'].forEach(id=>
+  $$('[data-fuopt]').forEach(card=>card.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    c.followupText=c.followupOptions[parseInt(card.dataset.fuopt)]||'';
+    await sv(c);render();
+  }));
+  $$('[data-cal-field]').forEach(btn=>{
+    btn.addEventListener('click',e=>{e.stopPropagation();openCal(btn.dataset.calField,btn);});
+  });
+  ['pip-estado','pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes'].forEach(id=>
     document.getElementById(id)?.addEventListener('change',savePip)
   );
   document.getElementById('pip-presupuesto')?.addEventListener('blur',savePip);
@@ -1619,14 +1725,17 @@ async function genFU(){
   const d=ds(c.lastContact);
   const historial=(c.notes||[]).map(n=>`${n.date}: ${n.text}`).join('\n')||c.note||'sin historial';
   const chLabel={'email':'email formal (con asunto)','whatsapp':'WhatsApp (máx 4 líneas, directo)','linkedin':'LinkedIn (máx 5 líneas, profesional pero humano)'}[c.followupChannel]||'email formal';
-  const instruccion={'email':'Escribí SOLO el email. Empezá con "Asunto:".','whatsapp':'Escribí SOLO el WhatsApp. Máximo 4 líneas.','linkedin':'Escribí SOLO el mensaje de LinkedIn. Máximo 5 líneas.'}[c.followupChannel]||'';
-  const p=`Seguimiento comercial para Juan de Avalon World Agency.\nCliente: ${c.name}${c.company?' de '+c.company:''}\nEmail: ${c.email||'no disponible'}\nCanal origen: ${c.canal||'no especificado'}\nServicio: ${c.service||'estrategia y pauta digital'}\nPresupuesto: ${fmtPresByMoneda(c.presupuesto,c.moneda)||'a definir'}\nEstado: ${c.estado} — Días sin contacto: ${d===999?'desconocido':d}\nNecesidades: ${c.needs?.join(', ')||'no especificadas'}\nHistorial:\n${historial}\nCanal: ${chLabel}\n${instruccion}`;
+  const instruccion={'email':'Cada opción empezá con "Asunto:". Máx 120 palabras.','whatsapp':'Cada opción máximo 4 líneas. Sin saludos largos.','linkedin':'Cada opción máximo 5 líneas. Profesional pero humano.'}[c.followupChannel]||'';
+  const p=`Generá 3 variantes de seguimiento comercial para Juan de Avalon World Agency.\nCliente: ${c.name}${c.company?' de '+c.company:''}\nCanal: ${c.canal||'no especificado'}\nServicio: ${c.service||c.servicio||'estrategia y pauta digital'}\nPresupuesto: ${fmtPresByMoneda(c.presupuesto,c.moneda)||'a definir'}\nEstado: ${c.estado} — Días sin contacto: ${d===999?'desconocido':d}\nNecesidades: ${c.needs?.join(', ')||'no especificadas'}\nHistorial:\n${historial}\nCanal envío: ${chLabel}\n${instruccion}\n\nLas 3 variantes deben tener TONO DIFERENTE: directa/urgente, cálida/relacional, propuesta de valor.\nSepará cada una EXACTAMENTE así:\n===OPCIÓN 1===\n[texto]\n===OPCIÓN 2===\n[texto]\n===OPCIÓN 3===\n[texto]\nNada fuera de ese formato.`;
   try{
     const t=await claude([{role:'user',content:p}]);
-    c.followupText=t;await sv(c);
+    const parts=t.split(/===OPCIÓN \d+===/).map(s=>s.trim()).filter(Boolean);
+    c.followupOptions=parts.slice(0,3);
+    c.followupText='';
+    await sv(c);
   }catch(e){
     if(e.message==='Sin API key'){st.loadingFollowup=false;return;}
-    c.followupText='Error: '+e.message;
+    c.followupOptions=[];c.followupText='Error: '+e.message;
     await sv(c);
   }
   st.loadingFollowup=false;render();
