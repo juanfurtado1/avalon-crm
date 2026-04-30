@@ -112,6 +112,7 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .search-wrap{position:relative;display:flex;align-items:center}
 .search-icon{position:absolute;left:9px;font-size:11px;pointer-events:none;opacity:.5}
 .btn-filter{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 11px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:10px;cursor:pointer;color:var(--text-muted);letter-spacing:.3px;text-transform:uppercase;display:flex;align-items:center;gap:4px}
+.filter-btn-active{background:var(--gold-dim)!important;border-color:var(--gold)!important;color:var(--gold)!important}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .12s}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .modal{background:var(--surface);border-radius:18px 18px 0 0;padding:20px 16px 40px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;animation:slideUp .18s ease}
@@ -189,15 +190,21 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .card-v2:hover .card-act,.kanban-card:hover .card-act{opacity:.7}
 .card-act:hover{opacity:1!important;background:var(--surface3);border-color:var(--border)}
 .card-act.del:hover{background:rgba(217,95,95,.15);border-color:rgba(217,95,95,.4)}
-.kanban-col-drop{border:2px dashed transparent;border-radius:10px;transition:border-color .15s,background .15s;min-height:60px}
-.kanban-col-drop.drag-over{border-color:var(--gold);background:var(--gold-dim)}
-.kanban-card.dragging{opacity:.4;transform:scale(.97)}
+.kanban-col-drop{border:2px dashed transparent;border-radius:10px;transition:border-color .12s,background .12s;min-height:60px}
+.kanban-col-drop.drag-over{border-color:var(--gold);background:rgba(155,109,255,.05)}
+.kanban-card.dragging{opacity:.25;transform:scale(.95);pointer-events:none}
+body.is-dragging{cursor:grabbing!important;user-select:none!important}
+body.is-dragging .kanban-card:not(.dragging){transition:opacity .1s}
+.drag-placeholder{height:54px;border:2px dashed var(--gold);border-radius:10px;background:var(--gold-dim);margin-bottom:8px;pointer-events:none;animation:ph-in .12s ease}
 .heat-alert-bar{background:rgba(196,154,32,.1);border-bottom:1px solid rgba(196,154,32,.3);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .heat-alert-item{background:var(--surface2);border:1px solid rgba(196,154,32,.3);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:8px;font-size:11px}
 .heat-alert-btn{border:none;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:700}
 .col-toggle-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.3px;transition:all .15s}
 .col-toggle-on{color:var(--text)!important;opacity:1!important}
+.drag-handle{cursor:grab;color:var(--text-muted);font-size:13px;padding:0 3px;user-select:none;flex-shrink:0;opacity:.5;transition:opacity .1s}
+.kanban-card:hover .drag-handle{opacity:1}
 .drag-handle:active{cursor:grabbing}
+@keyframes ph-in{from{opacity:0;transform:scaleY(.7)}to{opacity:1;transform:scaleY(1)}}
 /* ── CLIENTES NUEVOS ── */
 .nc-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
 .nc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 14px 0}
@@ -961,29 +968,79 @@ function rCardV2(c){
 
 function bindKanbanDrag(){
   const$$=s=>document.querySelectorAll(s);
+  const HEAT_LABELS={hot:'🔴 Hot',warm:'🟡 Warm',cold:'🔵 Cold',linkedin:'💼 LinkedIn',recuperar:'♻️ Recuperar'};
+  const enterCounts={};
+  let ph=null;
+
+  function getPlaceholder(){
+    if(!ph){ph=document.createElement('div');ph.className='drag-placeholder';}
+    return ph;
+  }
+  function removePh(){if(ph&&ph.parentNode)ph.parentNode.removeChild(ph);}
+  function getAfterEl(col,y){
+    const cards=[...col.querySelectorAll('.kanban-card:not(.dragging)')];
+    return cards.reduce((cl,card)=>{
+      const box=card.getBoundingClientRect();
+      const off=y-box.top-box.height/2;
+      return(off<0&&off>cl.offset)?{offset:off,el:card}:cl;
+    },{offset:Number.NEGATIVE_INFINITY,el:null}).el;
+  }
+
   $$('.kanban-card[draggable]').forEach(card=>{
     card.addEventListener('dragstart',e=>{
-      st.dragClient=card.dataset.id;card.classList.add('dragging');
-      e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',card.dataset.id);
+      st.dragClient=card.dataset.id;
+      setTimeout(()=>card.classList.add('dragging'),0);
+      document.body.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',card.dataset.id);
+      // ghost image limpio
+      const g=card.cloneNode(true);
+      Object.assign(g.style,{position:'fixed',top:'-999px',left:'-999px',width:card.offsetWidth+'px',borderRadius:'10px',pointerEvents:'none'});
+      document.body.appendChild(g);
+      e.dataTransfer.setDragImage(g,24,24);
+      setTimeout(()=>g.remove(),0);
     });
     card.addEventListener('dragend',()=>{
       card.classList.remove('dragging');
-      $$('.kanban-col-drop').forEach(col=>col.classList.remove('drag-over'));
+      document.body.classList.remove('is-dragging');
+      removePh();
+      $$('.kanban-col-drop').forEach(col=>{col.classList.remove('drag-over');enterCounts[col.dataset.col]=0;});
+      st.dragClient=null;
     });
   });
+
   $$('.kanban-col-drop').forEach(col=>{
-    col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drag-over');});
-    col.addEventListener('dragleave',()=>col.classList.remove('drag-over'));
+    const key=col.dataset.col;
+    enterCounts[key]=0;
+    col.addEventListener('dragenter',e=>{
+      e.preventDefault();
+      enterCounts[key]=(enterCounts[key]||0)+1;
+      col.classList.add('drag-over');
+    });
+    col.addEventListener('dragover',e=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      const after=getAfterEl(col,e.clientY);
+      const p=getPlaceholder();
+      if(after==null)col.appendChild(p);else col.insertBefore(p,after);
+    });
+    col.addEventListener('dragleave',()=>{
+      enterCounts[key]=Math.max(0,(enterCounts[key]||0)-1);
+      if(enterCounts[key]===0)col.classList.remove('drag-over');
+    });
     col.addEventListener('drop',async e=>{
-      e.preventDefault();col.classList.remove('drag-over');
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      enterCounts[key]=0;
+      removePh();
       const id=e.dataTransfer.getData('text/plain')||st.dragClient;
       const targetHeat=col.dataset.col;
       const c=clients.find(x=>x.id===id);
-      if(c&&targetHeat){
+      if(c&&targetHeat&&c.heatLevel!==targetHeat){
         c.heatLevel=targetHeat;c.heatIgnored=false;
-        await sv(c);
-        toast(`${c.name} → ${{hot:'🔴 Hot',warm:'🟡 Warm',cold:'🔵 Cold',linkedin:'💼 LinkedIn',recuperar:'♻️ Recuperar'}[targetHeat]||targetHeat}`);
-        render();
+        render(); // UI optimista inmediata
+        toast(`${c.name} → ${HEAT_LABELS[targetHeat]||targetHeat}`);
+        await sv(c); // guarda en background
       }
       st.dragClient=null;
     });
