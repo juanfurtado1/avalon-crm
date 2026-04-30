@@ -122,6 +122,13 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .divider{border:none;border-top:1px solid var(--border);margin:14px 0}
 .info-chip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:10px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px;margin-bottom:8px;font-weight:600;cursor:pointer}
 .meet-badge{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.meets-btn{position:relative;cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.meets-tooltip{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid var(--border2);border-radius:10px;padding:10px 12px;min-width:220px;max-width:280px;z-index:200;box-shadow:0 8px 28px rgba(0,0,0,.7);pointer-events:none;opacity:0;transition:opacity .15s}
+.meets-btn:hover .meets-tooltip{opacity:1}
+.meets-tooltip-row{display:flex;flex-direction:column;gap:4px;padding:5px 0;border-bottom:1px solid var(--border)}
+.meets-tooltip-row:last-child{border-bottom:none}
+.meets-tooltip-name{font-size:11px;font-weight:700;color:var(--text)}
+.meets-tooltip-detail{font-size:10px;color:var(--text-muted);font-weight:600}
 .meet-discovery{background:rgba(106,159,216,.12);border:1px solid rgba(106,159,216,.4);color:#6a9fd8}
 .meet-budget{background:rgba(155,109,255,.12);border:1px solid rgba(155,109,255,.4);color:var(--gold)}
 .meet-overdue{background:rgba(217,95,95,.15);border:1px solid rgba(217,95,95,.5);color:var(--red)}
@@ -145,20 +152,20 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .cal-trigger:hover{border-color:var(--border2)}
 .cal-trigger.cal-has{border-color:var(--gold)}
 .cal-backdrop{position:fixed;inset:0;z-index:198;background:transparent;cursor:default}
-.cal-popup{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:199;background:#161616;border:1px solid var(--border2);border-radius:12px;padding:14px;box-shadow:0 10px 36px rgba(0,0,0,.7)}
-.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.cal-month-lbl{font-size:12px;font-weight:700;color:var(--text);text-transform:capitalize;letter-spacing:.3px}
-.cal-nav{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--text2);font-size:16px;font-family:'Montserrat',sans-serif;line-height:1.3;transition:border-color .12s}
+.cal-popup{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:199;background:#161616;border:1px solid var(--border2);border-radius:10px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.7);max-width:240px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cal-month-lbl{font-size:10px;font-weight:700;color:var(--text);text-transform:capitalize;letter-spacing:.3px}
+.cal-nav{background:var(--surface3);border:1px solid var(--border);border-radius:5px;padding:1px 6px;cursor:pointer;color:var(--text2);font-size:13px;font-family:'Montserrat',sans-serif;line-height:1.3;transition:border-color .12s}
 .cal-nav:hover{border-color:#555;color:var(--text)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:8px}
-.cal-dow{font-size:8px;color:var(--text-muted);text-align:center;padding:4px 0;font-weight:700;text-transform:uppercase}
-.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text2);min-height:28px;transition:background .1s}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px}
+.cal-dow{font-size:7px;color:var(--text-muted);text-align:center;padding:2px 0;font-weight:700;text-transform:uppercase}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;font-size:9px;font-weight:600;color:var(--text2);min-height:20px;transition:background .1s}
 .cal-day:hover:not(.cal-empty){background:var(--surface3);color:var(--text)}
 .cal-today{color:var(--gold)!important;font-weight:800!important}
 .cal-sel{background:var(--gold)!important;color:#000!important;font-weight:800!important;border-radius:8px!important}
 .cal-sel:hover{background:var(--gold2)!important}
 .cal-empty{cursor:default;pointer-events:none}
-.cal-clear-btn{width:100%;background:transparent;border:1px solid var(--border);border-radius:7px;padding:8px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:2px;transition:border-color .12s,color .12s}
+.cal-clear-btn{width:100%;background:transparent;border:1px solid var(--border);border-radius:5px;padding:5px;font-size:9px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;margin-top:2px;transition:border-color .12s,color .12s}
 .cal-clear-btn:hover{border-color:#555;color:var(--text)}
 /* ── CUSTOM ESTADO SELECT ── */
 .csel-wrap{position:relative}
@@ -913,7 +920,7 @@ function rList(){
         <div style="width:${Math.min(convRate,100)}%;background:${convColor};height:100%;border-radius:4px;transition:width .4s ease"></div>
       </div>
     </div>
-    <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">${ct.meets>0?`<div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0"><span class="meet-badge meet-discovery">🔍 Meets próximas: ${ct.meets}</span></div>`:'<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px 0">Sin reuniones próximas</div>'}</div>
+    <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">${(()=>{const today2=new Date().toISOString().split(`T`)[0];const upcoming=clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).sort((a,b)=>{const aD=[a.meetDiscovery,a.meetBudget].filter(Boolean).sort()[0];const bD=[b.meetDiscovery,b.meetBudget].filter(Boolean).sort()[0];return aD<bD?-1:1;});if(!upcoming.length)return`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px 0">Sin reuniones próximas</div>`;const rows=upcoming.map(c=>{const parts=[];if(c.meetDiscovery&&c.meetDiscovery>=today2)parts.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">🔍 ${c.name}${c.company?` · `+c.company:``}</span><span class="meets-tooltip-detail">Discovery — ${fmtDate(c.meetDiscovery)}</span></div>`);if(c.meetBudget&&c.meetBudget>=today2)parts.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">💼 ${c.name}${c.company?` · `+c.company:``}</span><span class="meets-tooltip-detail">Budget — ${fmtDate(c.meetBudget)}</span></div>`);return parts.join(``)}).join(``);return`<div style="display:flex;align-items:center;justify-content:center;padding:4px 0"><button class="meets-btn"><span class="meet-badge meet-discovery">🔍 Meets próximas: ${upcoming.length}</span><div class="meets-tooltip">${rows}</div></button></div>`;})()}</div>
   </div>
   <div class="filters">${['Todos',...ESTADOS].map(f=>`<button class="filt ${st.filter===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div>
   <div id="cards-area">
@@ -1036,11 +1043,18 @@ function bindKanbanDrag(){
       const id=e.dataTransfer.getData('text/plain')||st.dragClient;
       const targetHeat=col.dataset.col;
       const c=clients.find(x=>x.id===id);
+      // Hot/Warm/Cold NO pueden ir a LinkedIn o Recuperar (solo al revés)
+      const LOCKED_TARGETS=['linkedin','recuperar'];
+      const MAIN_COLS=['hot','warm','cold'];
+      const sourceHeat=c?.heatLevel||(c?getHeat(c):null);
+      if(LOCKED_TARGETS.includes(targetHeat)&&MAIN_COLS.includes(sourceHeat)){
+        toast('⚠️ Mové a Hot, Warm o Cold primero');st.dragClient=null;return;
+      }
       if(c&&targetHeat&&c.heatLevel!==targetHeat){
         c.heatLevel=targetHeat;c.heatIgnored=false;
-        render(); // UI optimista inmediata
+        render();
         toast(`${c.name} → ${HEAT_LABELS[targetHeat]||targetHeat}`);
-        await sv(c); // guarda en background
+        await sv(c);
       }
       st.dragClient=null;
     });
@@ -1306,17 +1320,28 @@ function rInv(c){
 }
 
 function rReunion(c){
-  const qs=c.investigacion?.preguntas||[],ch=c.reunion?.checkedQs||[],show=st.activeTab==='reunion';
+  const qs=c.investigacion?.preguntas||[],ch=c.reunion?.checkedQs||[],ans=c.reunion?.answers||{},show=st.activeTab==='reunion';
   return`<div class="tab-content ${show?'active':''}" id="tab-reunion">
     ${qs.length===0
       ?`<div class="empty" style="padding:40px 10px"><div class="empty-icon">💡</div><div style="font-size:12px">Primero analizá el cliente en <strong>Research</strong></div></div>`
       :`<div class="section-title">Preguntas de discovery</div>
-       <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-weight:600">Tocá para tildar cada pregunta hecha</div>
-       <div class="questions-list">${qs.map((q,i)=>`<div class="question-item ${ch.includes(i)?'done':''}" data-qidx="${i}"><div class="question-num">Pregunta ${i+1}</div>${q}</div>`).join('')}</div>
+       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+       ${qs.map((q,i)=>`
+         <div style="background:var(--surface2);border:1px solid ${ch.includes(i)?'var(--green)':'var(--border)'};border-radius:10px;padding:11px 13px;transition:border-color .15s">
+           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+             <div>
+               <div style="font-size:8px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Pregunta ${i+1}</div>
+               <div style="font-size:12px;color:var(--text);line-height:1.5;font-weight:600">${q}</div>
+             </div>
+             <button class="btn-sm ${ch.includes(i)?'btn-gold':''}" data-qidx="${i}" style="flex-shrink:0;font-size:10px;padding:4px 8px">${ch.includes(i)?'✓ Hecha':'Marcar'}</button>
+           </div>
+           <textarea class="field-textarea" data-qans="${i}" style="min-height:56px;font-size:11px;resize:none" placeholder="Respuesta del cliente...">${ans[i]||''}</textarea>
+         </div>`).join('')}
+       </div>
        <button class="btn-sm" id="btn-reset-qs">↺ Reiniciar</button>`}
     <hr class="divider">
-    <div class="section-title">Notas en vivo</div>
-    <textarea class="field-textarea" id="reunion-notas" style="min-height:130px" placeholder="Respuestas clave, señales de presupuesto, objeciones...">${c.reunion?.notasVivo||''}</textarea>
+    <div class="section-title">Notas generales</div>
+    <textarea class="field-textarea" id="reunion-notas" style="min-height:130px" placeholder="Señales de presupuesto, objeciones, impresiones generales...">${c.reunion?.notasVivo||''}</textarea>
     <button class="btn-primary" id="btn-save-notas" style="margin-top:8px">Guardar notas</button>
   </div>`;
 }
@@ -1333,60 +1358,77 @@ function rProp(c){
 }
 
 function rPropuesta(pd,c){
-  const fc=['#9b6dff','#6aabe8','#4aab7a'];
+  const LETRAS_COLOR={'A':'#9b6dff','B':'#6aabe8','C':'#4aab7a','D':'#c49a20','E':'#d95f5f','F':'#0a66c2'};
   const mi={'Estrategia de Comunicación':'🧭','Paid Media / Media Planner':'📣','Manejo de Redes Sociales':'📱','Diseño y Creatividad':'🎨','Guiones y Contenido':'✍️','Filmmaker / Producción':'🎬','Edición de Video':'🎞️','Investigación de Mercado':'🔍','Automatización / CRM + IA':'⚙️','Gestión MercadoLibre':'🛒'};
+  const servicios=pd.servicios||pd.modulos?.map((m,i)=>({letra:String.fromCharCode(65+i),nombre:m.nombre,subtitulo:m.descripcion?.split('.')[0]||'',bullets:m.bullets||[]}))|| [];
+  const met=pd.metodologia||{fase1:{titulo:'Fundación (Mes 1)',bullets:[]},fase2:{titulo:'Construcción (Mes 2)',bullets:[]},fase3:{titulo:'Escalamiento (Mes 3+)',bullets:[]}};
+  const precios=pd.precios||{preOnboarding:'1.000.000 ARS',onboarding:'1.200.000 ARS',full:'1.500.000 ARS',inversionPublicitaria:'A convenir'};
   return`
   <hr class="divider">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
     <div class="section-title" style="margin:0">Propuesta generada</div>
     <div style="display:flex;gap:6px">
       <button class="btn-copy ${st.copiedBrief?'copied':''}" id="btn-copy-brief" style="margin:0;width:auto;padding:6px 10px">${st.copiedBrief?'✓':'📋'} Copiar</button>
       <button class="btn-sm" id="btn-rebrief">↻</button>
     </div>
   </div>
+
+  <!-- DIAGNÓSTICO -->
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
-    <div style="font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Diagnóstico</div>
-    <div style="font-size:13px;line-height:1.6;color:var(--text)">${pd.diagnostico||''}</div>
+    <div style="font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Diagnóstico</div>
+    <div style="font-size:12px;line-height:1.7;color:var(--text)">${pd.diagnostico||''}</div>
   </div>
-  <div class="section-title">Módulos recomendados</div>
+
+  <!-- SERVICIOS -->
+  <div class="section-title">Servicios</div>
   <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-    ${(pd.modulos||[]).map(m=>`
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;border-left:3px solid ${fc[(m.fase||1)-1]}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:7px">
-          <span style="font-size:18px">${mi[m.nombre]||'📌'}</span>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${m.nombre}</div>
-            ${m.plataformas?.length?`<div style="font-size:10px;color:var(--gold);margin-top:1px">${m.plataformas.join(' · ')}</div>`:''}
-          </div>
-        </div>
-        <span style="font-size:9px;font-weight:700;border-radius:4px;padding:2px 7px;background:${fc[(m.fase||1)-1]}22;color:${fc[(m.fase||1)-1]};white-space:nowrap">FASE ${m.fase||1}</span>
+    ${servicios.map(s=>{const col=LETRAS_COLOR[s.letra]||'#9b6dff';return`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;border-left:3px solid ${col}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:14px;font-weight:800;color:${col}">${s.letra}.</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text)">${s.nombre}</span>
+        <span style="font-size:9px;font-weight:600;color:${col};background:${col}18;border-radius:4px;padding:2px 6px">${mi[s.nombre]||'📌'}</span>
       </div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px">${m.descripcion||''}</div>
-      ${m.bullets?.length?`<ul style="padding-left:14px;display:flex;flex-direction:column;gap:3px">${m.bullets.map(b=>`<li style="font-size:11px;color:var(--text-muted)">${b}</li>`).join('')}</ul>`:''}
-    </div>`).join('')}
+      ${s.subtitulo?`<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:7px">${s.subtitulo}</div>`:''}
+      <ul style="padding-left:14px;display:flex;flex-direction:column;gap:3px;margin:0">
+        ${(s.bullets||[]).map(b=>`<li style="font-size:11px;color:var(--text2);line-height:1.5">${b}</li>`).join('')}
+      </ul>
+    </div>`}).join('')}
   </div>
-  <div class="section-title">Timeline</div>
+
+  <!-- METODOLOGÍA -->
+  <div class="section-title">Metodología de trabajo</div>
   <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
-    ${(pd.timeline||[]).map((t,i)=>`
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;gap:10px;align-items:flex-start">
-      <div style="width:3px;align-self:stretch;border-radius:2px;background:${fc[i]||'#9b6dff'};flex-shrink:0"></div>
-      <div style="flex:1">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-          <div style="font-size:12px;font-weight:700;color:var(--text)">${t.titulo}</div>
-          <div style="font-size:10px;color:var(--text-muted);font-weight:600">${t.periodo}</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted)">${t.descripcion}</div>
-        ${t.modulos?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${t.modulos.map(m=>`<span style="font-size:9px;background:${fc[i]||'#9b6dff'}18;border:1px solid ${fc[i]||'#9b6dff'}35;color:${fc[i]||'#9b6dff'};border-radius:4px;padding:2px 6px;font-weight:600">${m}</span>`).join('')}</div>`:''}
-      </div>
-    </div>`).join('')}
+    ${[met.fase1,met.fase2,met.fase3].filter(Boolean).map((f,i)=>{const cols=['#9b6dff','#c49a20','#4aab7a'];const col=cols[i];return`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;border-left:3px solid ${col}">
+      <div style="font-size:11px;font-weight:700;color:${col};margin-bottom:5px">${f.titulo||'Fase '+(i+1)}</div>
+      <ul style="padding-left:14px;margin:0;display:flex;flex-direction:column;gap:2px">
+        ${(f.bullets||[]).map(b=>`<li style="font-size:11px;color:var(--text-muted)">${b}</li>`).join('')}
+      </ul>
+    </div>`}).join('')}
   </div>
-  ${pd.inversion?`<div style="background:var(--gold-dim);border:1px solid rgba(155,109,255,.3);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-    <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Inversión estimada</div>
-    <div style="font-size:15px;font-weight:700;color:var(--gold)">${pd.inversion}</div>
-  </div>`:''}
-  ${pd.proximoPaso?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-    <div style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Próximo paso</div>
+
+  <!-- TARIFAS -->
+  <div class="section-title">Tarifas</div>
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px">
+    ${[
+      {tipo:'Honorarios Pre-Onboarding','desc':'Estrategia · Key Visual · Control de redes',precio:precios.preOnboarding,mes:'1er mes',col:'#9b6dff'},
+      {tipo:'Honorarios Onboarding','desc':'Campañas · Contenido · Filmación · Ideas',precio:precios.onboarding,mes:'2do mes',col:'#c49a20'},
+      {tipo:'Honorarios Full','desc':'Full service · Pauta activa · Optimización',precio:precios.full,mes:'Mes 3+',col:'#4aab7a'},
+      {tipo:'Inversión Publicitaria','desc':precios.inversionPublicitaria==='A convenir'?'Dinero directo a medios (Meta, Google, etc.) — Recomendamos Línea de Crédito':'Inversión estimada en medios',precio:precios.inversionPublicitaria,mes:'',col:'#6a9fd8'},
+    ].map(row=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:${row.col}">${row.tipo}${row.mes?` <span style="font-size:9px;font-weight:600;opacity:.7">(${row.mes})</span>`:''}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${row.desc}</div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap">${row.precio}</div>
+    </div>`).join('')}
+    <div style="padding:8px 13px;font-size:9px;color:var(--text-muted)">* Factura A: se suma IVA · Contratación mínima 6 meses · Precios en ARS con ajuste IPC bimestral</div>
+  </div>
+
+  ${pd.proximoPaso?`<div style="background:var(--gold-dim);border:1px solid rgba(155,109,255,.3);border-radius:10px;padding:12px 14px">
+    <div style="font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Próximo paso</div>
     <div style="font-size:12px;color:var(--text)">${pd.proximoPaso}</div>
   </div>`:''}`;
 }
@@ -1633,8 +1675,15 @@ function bind(){
 
   // Reunion
   $$('.question-item').forEach(q=>q.addEventListener('click',()=>toggleQ(parseInt(q.dataset.qidx))));
-  $('#btn-reset-qs')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.reunion.checkedQs=[];await sv(c);render()});
-  $('#btn-save-notas')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.reunion.notasVivo=gi('reunion-notas')||'';await sv(c);toast('Notas guardadas ✓')});
+  $('#btn-reset-qs')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.reunion.checkedQs=[];c.reunion.answers={};await sv(c);render()});
+  $('#btn-save-notas')?.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    c.reunion.notasVivo=$('#reunion-notas')?.value||'';
+    // save per-question answers
+    if(!c.reunion.answers)c.reunion.answers={};
+    document.querySelectorAll('[data-qans]').forEach(el=>{c.reunion.answers[el.dataset.qans]=el.value;});
+    await sv(c);toast('Notas guardadas ✓');
+  });
 
   // Propuesta
   $('#btn-generar-brief')?.addEventListener('click',genBrief);
@@ -1833,7 +1882,39 @@ async function genBrief(){
   st.loadingPropuesta=true;render();
   const nt=c.needs?.length?`\nNecesidades: ${c.needs.join(', ')}`:''
   const tipo=c.tipo==='LC'?`\nTipo LC: no incluir Paid Media salvo que se haya mencionado gestión`:'';
-  const p=`Analizá esta reunión y generá una propuesta para ${c.name}${c.company?` de ${c.company}`:''}.${nt}${tipo}\nAnálisis previo: ${c.investigacion.resultado?c.investigacion.resultado.substring(0,400)+'...':'no disponible'}\nNotas: ${c.reunion?.notasVivo||'no disponibles'}\n\nTranscripción:\n${tr}\n\nRespondé SOLO con JSON válido sin backticks:\n{\n  "diagnostico": "2-3 oraciones",\n  "modulos": [{"nombre":"nombre exacto","fase":1,"plataformas":[],"descripcion":"2 oraciones adaptadas al rubro","bullets":["3 bullets específicos"]}],\n  "timeline": [{"titulo":"Fase 1 — Nombre","periodo":"Mes 1-2","descripcion":"qué se implementa","modulos":["Módulo 1"]}],\n  "inversion": "rango estimado",\n  "proximoPaso": "acción concreta"\n}\nReglas: 3-6 módulos, nombres exactos de la lista, contenido adaptado al rubro, 2-3 fases.`;
+  const p=`Sos el equipo estratégico de Avalon World Agency. Analizá esta reunión y generá una propuesta PERSONALIZADA para ${c.name}${c.company?` de ${c.company}`:''}, del rubro ${c.rubro||'no especificado'}.
+Análisis previo de marca: ${c.investigacion.resultado?c.investigacion.resultado.substring(0,600)+'...':'no disponible'}
+Respuestas de discovery: ${Object.entries(c.reunion?.answers||{}).map(([k,v])=>v?`P${parseInt(k)+1}: ${v}`:'').filter(Boolean).join(' | ')||'no disponibles'}
+Notas: ${c.reunion?.notasVivo||'no disponibles'}
+Transcripción: ${tr}
+
+Generá una propuesta con el formato EXACTO de las propuestas de Avalon. El diagnóstico debe ser ESPECÍFICO al negocio real de este cliente (su rubro, sus problemas concretos, competencia, oportunidades). Los servicios deben tener letras (A, B, C...) y subtítulo descriptivo del rubro. La metodología en 3 fases con bullets concretos.
+
+Respondé SOLO con JSON válido sin backticks:
+{
+  "diagnostico": "párrafo de 3-5 oraciones MUY específico al rubro y situación actual del cliente",
+  "servicios": [
+    {
+      "letra": "A",
+      "nombre": "Estrategia de Comunicación",
+      "subtitulo": "subtítulo adaptado al rubro del cliente",
+      "bullets": ["bullet específico al negocio", "otro bullet", "otro más"]
+    }
+  ],
+  "metodologia": {
+    "fase1": {"titulo": "Fundación (Mes 1)", "bullets": ["acción concreta 1", "acción 2", "acción 3"]},
+    "fase2": {"titulo": "Construcción (Mes 2)", "bullets": ["acción 1", "acción 2"]},
+    "fase3": {"titulo": "Escalamiento (Mes 3+)", "bullets": ["acción 1", "acción 2"]}
+  },
+  "precios": {
+    "preOnboarding": "1.000.000 ARS",
+    "onboarding": "1.200.000 ARS",
+    "full": "1.500.000 ARS",
+    "inversionPublicitaria": "A convenir"
+  },
+  "proximoPaso": "acción concreta para cerrar"
+}
+Reglas: 3-6 servicios con letras A/B/C..., nombres exactos de la lista disponible, contenido ULTRA específico al rubro. Servicios disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre.`;
   try{
     const t=await claude([{role:'user',content:p}]);
     const data=JSON.parse(t.replace(/```json|```/g,'').trim());
