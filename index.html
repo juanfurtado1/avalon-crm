@@ -974,463 +974,71 @@ function rCardV2(c){
 }
 
 function bindKanbanDrag(){
-  const$$=s=>document.querySelectorAll(s);
   const HEAT_LABELS={hot:'🔴 Hot',warm:'🟡 Warm',cold:'🔵 Cold',linkedin:'💼 LinkedIn',recuperar:'♻️ Recuperar'};
-  const enterCounts={};
-  let ph=null;
+  const LOCKED=['linkedin','recuperar'];
+  const MAIN=['hot','warm','cold'];
+  let draggingId=null;
 
-  function getPlaceholder(){
-    if(!ph){ph=document.createElement('div');ph.className='drag-placeholder';}
-    return ph;
-  }
-  function removePh(){if(ph&&ph.parentNode)ph.parentNode.removeChild(ph);}
-  function getAfterEl(col,y){
-    const cards=[...col.querySelectorAll('.kanban-card:not(.dragging)')];
-    return cards.reduce((cl,card)=>{
-      const box=card.getBoundingClientRect();
-      const off=y-box.top-box.height/2;
-      return(off<0&&off>cl.offset)?{offset:off,el:card}:cl;
-    },{offset:Number.NEGATIVE_INFINITY,el:null}).el;
-  }
-
-  $$('.kanban-card[draggable]').forEach(card=>{
-    card.addEventListener('dragstart',e=>{
-      st.dragClient=card.dataset.id;
-      setTimeout(()=>card.classList.add('dragging'),0);
-      document.body.classList.add('is-dragging');
+  // Cards — dragstart / dragend
+  document.querySelectorAll('.kanban-card[draggable]').forEach(card=>{
+    card.addEventListener('dragstart',function(e){
+      draggingId=this.dataset.id;
+      st.dragClient=draggingId;
       e.dataTransfer.effectAllowed='move';
-      e.dataTransfer.setData('text/plain',card.dataset.id);
-      // ghost image limpio
-      const g=card.cloneNode(true);
-      Object.assign(g.style,{position:'fixed',top:'-999px',left:'-999px',width:card.offsetWidth+'px',borderRadius:'10px',pointerEvents:'none'});
-      document.body.appendChild(g);
-      e.dataTransfer.setDragImage(g,24,24);
-      setTimeout(()=>g.remove(),0);
+      e.dataTransfer.setData('text/plain',draggingId);
+      this.style.opacity='0.4';
     });
-    card.addEventListener('dragend',()=>{
-      card.classList.remove('dragging');
-      document.body.classList.remove('is-dragging');
-      removePh();
-      $$('.kanban-col-drop').forEach(col=>{col.classList.remove('drag-over');enterCounts[col.dataset.col]=0;});
+    card.addEventListener('dragend',function(){
+      this.style.opacity='';
+      draggingId=null;
       st.dragClient=null;
+      document.querySelectorAll('.kanban-col-drop').forEach(c=>{
+        c.classList.remove('drag-over');
+      });
     });
   });
 
-  $$('.kanban-col-drop').forEach(col=>{
-    const key=col.dataset.col;
-    enterCounts[key]=0;
-    col.addEventListener('dragenter',e=>{
-      e.preventDefault();
-      enterCounts[key]=(enterCounts[key]||0)+1;
-      col.classList.add('drag-over');
-    });
-    col.addEventListener('dragover',e=>{
+  // Columns — drag target
+  document.querySelectorAll('.kanban-col-drop').forEach(col=>{
+    col.addEventListener('dragover',function(e){
       e.preventDefault();
       e.dataTransfer.dropEffect='move';
-      const after=getAfterEl(col,e.clientY);
-      const p=getPlaceholder();
-      if(after==null)col.appendChild(p);else col.insertBefore(p,after);
+      this.classList.add('drag-over');
     });
-    col.addEventListener('dragleave',()=>{
-      enterCounts[key]=Math.max(0,(enterCounts[key]||0)-1);
-      if(enterCounts[key]===0)col.classList.remove('drag-over');
+    col.addEventListener('dragleave',function(e){
+      // only remove if truly leaving the column (not entering a child)
+      if(!this.contains(e.relatedTarget)){
+        this.classList.remove('drag-over');
+      }
     });
-    col.addEventListener('drop',async e=>{
+    col.addEventListener('drop',async function(e){
       e.preventDefault();
-      col.classList.remove('drag-over');
-      enterCounts[key]=0;
-      removePh();
+      this.classList.remove('drag-over');
       const id=e.dataTransfer.getData('text/plain')||st.dragClient;
-      const targetHeat=col.dataset.col;
+      const targetHeat=this.dataset.col;
       const c=clients.find(x=>x.id===id);
-      // Hot/Warm/Cold NO pueden ir a LinkedIn o Recuperar (solo al revés)
-      const LOCKED_TARGETS=['linkedin','recuperar'];
-      const MAIN_COLS=['hot','warm','cold'];
-      const sourceHeat=c?.heatLevel||(c?getHeat(c):null);
-      if(LOCKED_TARGETS.includes(targetHeat)&&MAIN_COLS.includes(sourceHeat)){
-        toast('⚠️ Mové a Hot, Warm o Cold primero');st.dragClient=null;return;
+      if(!c||!targetHeat)return;
+      const sourceHeat=c.heatLevel||getHeat(c);
+      if(LOCKED.includes(targetHeat)&&MAIN.includes(sourceHeat)){
+        toast('⚠️ Solo podés mover a Hot, Warm o Cold');return;
       }
-      if(c&&targetHeat&&c.heatLevel!==targetHeat){
-        c.heatLevel=targetHeat;c.heatIgnored=false;
-        render();
-        toast(`${c.name} → ${HEAT_LABELS[targetHeat]||targetHeat}`);
-        await sv(c);
-      }
-      st.dragClient=null;
+      if(c.heatLevel===targetHeat)return;
+      c.heatLevel=targetHeat;
+      c.heatIgnored=false;
+      toast(`${c.name} → ${HEAT_LABELS[targetHeat]||targetHeat}`);
+      render();
+      await sv(c);
     });
   });
-  $$('[data-alert-move]').forEach(b=>b.addEventListener('click',async e=>{
+
+  document.querySelectorAll('[data-alert-move]').forEach(b=>b.addEventListener('click',async e=>{
     e.stopPropagation();const c=clients.find(x=>x.id===b.dataset.alertMove);
     if(c){c.heatLevel=b.dataset.heat;await sv(c);toast('✓ Movido');render();}
   }));
-  $$('[data-alert-dismiss]').forEach(b=>b.addEventListener('click',async e=>{
+  document.querySelectorAll('[data-alert-dismiss]').forEach(b=>b.addEventListener('click',async e=>{
     e.stopPropagation();const c=clients.find(x=>x.id===b.dataset.alertDismiss);
     if(c){c.heatIgnored=true;await sv(c);render();}
   }));
-}
-
-function rKanbanCols(sr){
-  const today=new Date().toISOString().split('T')[0];
-  const active=sr.filter(c=>!['Cerrada','Perdida'].includes(c.estado));
-
-  const linkedin=active.filter(c=>c.heatLevel==='linkedin');
-  const recuperar=active.filter(c=>c.heatLevel==='recuperar');
-  const rest=active.filter(c=>!['linkedin','recuperar'].includes(c.heatLevel));
-  const hot=rest.filter(c=>getHeat(c)==='hot');
-  const warm=rest.filter(c=>getHeat(c)==='warm');
-  const cold=rest.filter(c=>['ok','cold'].includes(getHeat(c)));
-
-  const alerts=rest.filter(c=>{
-    if(!c.heatLevel||c.heatIgnored)return false;
-    const auto=ul(ds(c.lastContact),c.estado);
-    const autoNorm=auto==='ok'?'cold':auto;
-    return c.heatLevel!==autoNorm;
-  });
-
-  function alertBar(){
-    if(!alerts.length)return'';
-    return`<div class="heat-alert-bar">
-      <span style="font-size:10px;font-weight:700;color:#c49a20;text-transform:uppercase;letter-spacing:.5px">⚠️ ${alerts.length} prospecto${alerts.length>1?'s':''} para revisar:</span>
-      ${alerts.map(c=>{
-        const auto=ul(ds(c.lastContact),c.estado);
-        const autoNorm=auto==='ok'?'cold':auto;
-        const labels={hot:'🔴 Hot',warm:'🟡 Warm',cold:'🔵 Cold'};
-        const colors={hot:'#d95f5f',warm:'#c49a20',cold:'#6a9fd8'};
-        return`<div class="heat-alert-item">
-          <span style="font-weight:700">${c.name}</span>
-          <span style="color:var(--text-muted)">→ debería ser</span>
-          <span style="color:${colors[autoNorm]};font-weight:700">${labels[autoNorm]}</span>
-          <span style="color:var(--text-muted);font-size:9px">(${ula(ds(c.lastContact),c.estado)})</span>
-          <button class="heat-alert-btn" data-alert-move="${c.id}" data-heat="${autoNorm}" style="background:${colors[autoNorm]}22;color:${colors[autoNorm]};border:1px solid ${colors[autoNorm]}44">Mover</button>
-          <button class="heat-alert-btn" data-alert-dismiss="${c.id}" style="background:var(--surface3);color:var(--text-muted);border:1px solid var(--border)">Ignorar</button>
-        </div>`;
-      }).join('')}
-    </div>`;
-  }
-
-  function kCard(c){
-    const d=ds(c.lastContact),heat=getHeat(c),co=heatColor(heat);
-    const hasMeetD=c.meetDiscovery&&c.meetDiscovery>=today;
-    const hasMeetB=c.meetBudget&&c.meetBudget>=today;
-    return`<div class="kanban-card" data-id="${c.id}" draggable="true">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${co};border-radius:10px 0 0 10px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:3px;margin-bottom:2px">
-        <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">
-          <span class="drag-handle">⠿</span>
-          <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px">${c.company?`${c.company}<span style="font-weight:400;color:var(--text-muted);font-size:11px"> | ${c.name}</span>`:c.name}</div>
-        </div>
-        <div class="card-actions" style="gap:2px">
-          <button class="card-act" data-action="edit" data-id="${c.id}" title="Editar">✏️</button>
-          <button class="card-act del" data-action="del" data-id="${c.id}" title="Eliminar">🗑️</button>
-          <span class="badge ${EC[c.estado]||''}" style="font-size:7px;padding:2px 4px;flex-shrink:0">${c.estado}</span>
-        </div>
-      </div>
-      ${c.company?`<div style="font-size:9px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.company}</div>`:''}
-      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:3px">
-        <div style="font-size:9px;color:${co};font-weight:700;display:flex;align-items:center;gap:2px"><span style="width:5px;height:5px;border-radius:50%;background:${co};display:inline-block;flex-shrink:0"></span>${ula(d,c.estado)}</div>
-        ${c.presupuesto?`<div style="font-size:9px;color:var(--text-muted);font-weight:600">💰${fmtPresByMoneda(c.presupuesto,c.moneda)}</div>`:''}
-        ${c.tipo?`<span style="font-size:8px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 4px;color:var(--text-muted);font-weight:600">${c.tipo}</span>`:''}
-        ${hasMeetD?`<span style="font-size:8px;color:var(--blue);font-weight:700">🔍${fmtDate(c.meetDiscovery)}</span>`:''}
-        ${hasMeetB?`<span style="font-size:8px;color:var(--gold);font-weight:700">💼${fmtDate(c.meetBudget)}</span>`:''}
-        ${c.heatLevel?`<span style="font-size:8px;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-weight:600">manual</span>`:''}
-      </div>
-    </div>`;
-  }
-
-  function col_html(label,colId,color,bg,items){
-    return`<div class="kanban-col-wrap">
-      <div class="kanban-col-header" style="background:${bg};border:1px solid ${color}33">
-        <span style="color:${color}">${label}</span>
-        <span class="kanban-col-count" style="color:${color}">${items.length}</span>
-      </div>
-      <div class="kanban-col kanban-col-drop" data-col="${colId}">
-        ${items.length?items.map(kCard).join(''):`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:18px 6px;font-style:italic">Sin prospectos</div>`}
-      </div>
-    </div>`;
-  }
-
-  const COLS=[
-    {id:'hot',label:'🔴 Hot',color:'#d95f5f',bg:'rgba(217,95,95,.08)',items:hot},
-    {id:'warm',label:'🟡 Warm',color:'#c49a20',bg:'rgba(196,154,32,.08)',items:warm},
-    {id:'cold',label:'🔵 Cold',color:'#6a9fd8',bg:'rgba(106,159,216,.08)',items:cold},
-    {id:'linkedin',label:'💼 LinkedIn',color:'#0a66c2',bg:'rgba(10,102,194,.08)',items:linkedin},
-    {id:'recuperar',label:'♻️ Recuperar',color:'#4aab7a',bg:'rgba(74,171,122,.08)',items:recuperar},
-  ];
-
-  const toggleBar=`<div style="display:flex;gap:5px;padding:8px 10px 0;flex-wrap:wrap">
-    ${COLS.map(col=>`<button class="col-toggle-btn ${st.hiddenCols[col.id]?'':'col-toggle-on'}" data-col-toggle="${col.id}" style="border-color:${col.color}33;${st.hiddenCols[col.id]?'opacity:.4':'background:'+col.bg}">${col.label}</button>`).join('')}
-    <button class="col-toggle-btn" id="btn-show-all-cols" style="margin-left:auto;opacity:.6">Mostrar todas</button>
-  </div>`;
-
-  const visibleCols=COLS.filter(col=>!st.hiddenCols[col.id]);
-  const gridCols=visibleCols.length||1;
-
-  return`${alertBar()}${toggleBar}<div class="kanban-board" style="grid-template-columns:repeat(${gridCols},1fr)">
-    ${visibleCols.map(col=>col_html(col.label,col.id,col.color,col.bg,col.items)).join('')}
-  </div>`;
-}
-
-function rNewModal(){
-  return`<div class="modal-overlay" id="modal-overlay"><div class="modal"><div class="modal-handle"></div>
-  <div class="modal-title">Nuevo Prospecto</div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Nombre *</label><input class="field-input" id="fn-name" placeholder="Ej: Martín López"></div>
-    <div class="field"><label class="field-label">Empresa / Marca</label><input class="field-input" id="fn-company" placeholder="Ej: Sakura Japan"></div>
-  </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Web</label><input class="field-input" id="fn-web" placeholder="https://..."></div>
-    <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="fn-ig" placeholder="@usuario o URL"></div>
-  </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Teléfono</label><input class="field-input" id="fn-phone" placeholder="11 5555-5555" type="tel"></div>
-    <div class="field"><label class="field-label">Email</label><input class="field-input" id="fn-email" placeholder="martin@empresa.com" type="email"></div>
-  </div>
-  <div class="field"><label class="field-label">Canal — ¿de dónde viene?</label>
-    <div class="needs-grid" id="fn-canal-grid">${CANALES.map(c=>`<div class="need-toggle" data-canal="${c}">${c}</div>`).join('')}</div>
-  </div>
-  <div class="field"><label class="field-label">¿Qué necesita? (multiselección)</label>
-    <div class="needs-grid" id="fn-needs-grid">${NEEDS.map(n=>`<div class="need-toggle" data-need="${n}">${n}</div>`).join('')}</div>
-  </div>
-  <div class="field"><label class="field-label">Tipo de cliente</label>
-    <div class="needs-grid" id="fn-tipo-grid">
-      <div class="need-toggle on" data-tipo="Abono">Abono</div>
-      <div class="need-toggle" data-tipo="LC">LC — Línea de Crédito</div>
-    </div>
-  </div>
-  <div id="fn-lc-fields" style="display:none">
-    <div class="field"><label class="field-label">Plataformas</label>
-      <div class="needs-grid" id="fn-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle" data-plat="${p}">${p}</div>`).join('')}</div>
-    </div>
-  </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Presupuesto aprox.</label>
-      <input class="field-input" id="fn-presupuesto" placeholder="500.000" oninput="fmtPres(this)" inputmode="numeric">
-    </div>
-    <div class="field"><label class="field-label">Moneda</label>
-      <select class="field-select" id="fn-moneda">${MONEDAS.map(m=>`<option value="${m}">${m}</option>`).join('')}</select>
-    </div>
-  </div>
-  <div class="field"><label class="field-label">Modalidad de pago</label>
-    <div class="needs-grid" id="fn-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle" data-modal="${m}">${m}</div>`).join('')}</div>
-  </div>
-  <div class="field"><label class="field-label">Servicio</label>
-    <select class="field-select" id="fn-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
-  </div>
-  <button class="btn-primary" id="btn-save-new">Crear prospecto</button>
-  <button class="btn-outline" id="btn-cancel-new">Cancelar</button>
-  </div></div>`;
-}
-
-function rEditModal(){
-  const c=gc();if(!c)return'';
-  return`<div class="modal-overlay" id="edit-modal-overlay"><div class="modal"><div class="modal-handle"></div>
-  <div class="modal-title">✏️ Editar prospecto</div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Nombre *</label><input class="field-input" id="ed-name" placeholder="Ej: Martín López" value="${c.name||''}"></div>
-    <div class="field"><label class="field-label">Empresa / Marca</label><input class="field-input" id="ed-company" placeholder="Ej: Sakura Japan" value="${c.company||''}"></div>
-  </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Web</label><input class="field-input" id="ed-web" placeholder="https://..." value="${c.web||''}"></div>
-    <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="ed-ig" placeholder="@usuario o URL" value="${c.instagram||''}"></div>
-  </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Teléfono</label><input class="field-input" id="ed-phone" placeholder="11 5555-5555" type="tel" value="${c.phone||''}"></div>
-    <div class="field"><label class="field-label">Email</label><input class="field-input" id="ed-email" placeholder="martin@empresa.com" type="email" value="${c.email||''}"></div>
-  </div>
-  <div class="field"><label class="field-label">Canal — ¿de dónde viene?</label>
-    <div class="needs-grid" id="ed-canal-grid">${CANALES.map(ch=>`<div class="need-toggle ${c.canal===ch?'on':''}" data-canal="${ch}">${ch}</div>`).join('')}</div>
-  </div>
-  <div class="field"><label class="field-label">¿Qué necesita? (multiselección)</label>
-    <div class="needs-grid" id="ed-needs-grid">${NEEDS.map(n=>`<div class="need-toggle ${(c.needs||[]).includes(n)?'on':''}" data-need="${n}">${n}</div>`).join('')}</div>
-  </div>
-  <div class="field"><label class="field-label">Tipo de cliente</label>
-    <div class="needs-grid" id="ed-tipo-grid">
-      <div class="need-toggle ${c.tipo!=='LC'?'on':''}" data-tipo="Abono">Abono</div>
-      <div class="need-toggle ${c.tipo==='LC'?'on':''}" data-tipo="LC">LC — Línea de Crédito</div>
-    </div>
-  </div>
-  <div id="ed-lc-fields" style="${c.tipo==='LC'?'':'display:none'}">
-    <div class="field"><label class="field-label">Plataformas</label>
-      <div class="needs-grid" id="ed-plat-grid">${PLATAFORMAS.map(p=>`<div class="need-toggle ${(c.plataformas||[]).includes(p)?'on':''}" data-plat="${p}">${p}</div>`).join('')}</div>
-    </div>
-  </div>
-  <div class="field-row">
-    <div class="field"><label class="field-label">Presupuesto aprox.</label>
-      <input class="field-input" id="ed-presupuesto" placeholder="800.000" value="${c.presupuesto?parseInt(c.presupuesto).toLocaleString('es-AR'):''}" oninput="fmtPres(this)" inputmode="numeric">
-    </div>
-    <div class="field"><label class="field-label">Moneda</label>
-      <select class="field-select" id="ed-moneda">${MONEDAS.map(m=>`<option value="${m}" ${c.moneda===m?'selected':''}>${m}</option>`).join('')}</select>
-    </div>
-  </div>
-  <div class="field"><label class="field-label">Modalidad de pago</label>
-    <div class="needs-grid" id="ed-modal-grid">${MODALIDADES.map(m=>`<div class="need-toggle ${c.modalidadPago===m?'on':''}" data-modal="${m}">${m}</div>`).join('')}</div>
-  </div>
-  <div class="field"><label class="field-label">Servicio</label>
-    <select class="field-select" id="ed-servicio"><option value="">Sin definir</option>${SERVICIOS.map(s=>`<option value="${s}" ${c.servicio===s?'selected':''}>${s}</option>`).join('')}</select>
-  </div>
-  <button class="btn-primary" id="btn-save-edit">Guardar cambios</button>
-  <button class="btn-outline" id="btn-cancel-edit">Cancelar</button>
-  </div></div>`;
-}
-function rDetail(){
-  const c=gc();if(!c){st.view='list';render();return'';}
-  const pr=sp(c);
-  return`
-  <div class="detail-header">
-    <button class="btn-back" id="btn-back">← Volver</button>
-    <button class="btn-sm" id="btn-open-edit" style="color:var(--gold);border-color:rgba(155,109,255,.4)">✏️ Editar</button>
-    <button class="btn-sm" id="btn-delete-client-hdr" style="color:var(--red);border-color:rgba(217,95,95,.3)">🗑️</button>
-    <div style="flex:1;min-width:0">
-      <div class="detail-name">${c.name}</div>
-      ${c.company?`<div class="detail-company">${c.company}</div>`:''}
-    </div>
-  </div>
-  <div class="gold-bar"></div>
-  <div class="tabs">
-    <div class="tab ${st.activeTab==='inv'?'active':''}" data-tab="inv">🔍 Research${pr[0]?'<span class="tab-done"></span>':''}</div>
-    <div class="tab ${st.activeTab==='reunion'?'active':''}" data-tab="reunion">📋 Reunión${pr[1]?'<span class="tab-done"></span>':''}</div>
-    <div class="tab ${st.activeTab==='propuesta'?'active':''}" data-tab="propuesta">📄 Propuesta${pr[2]?'<span class="tab-done"></span>':''}</div>
-    <div class="tab ${st.activeTab==='pipeline'?'active':''}" data-tab="pipeline">📊 Pipeline</div>
-  </div>
-  ${rInv(c)}${rReunion(c)}${rProp(c)}${rPipe(c)}`;
-}
-
-function rInv(c){
-  const inv=c.investigacion,show=st.activeTab==='inv',wl=wa(c.phone);
-  return`<div class="tab-content ${show?'active':''}" id="tab-inv">
-    ${(c.web||c.instagram||c.phone)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-      ${c.web?`<div class="info-chip" onclick="window.open('${c.web.startsWith('http')?c.web:'https://'+c.web}','_blank')">🌐 ${c.web.replace(/https?:\/\//,'')}</div>`:''}
-      ${c.instagram?`<div class="info-chip" onclick="window.open('${igUrl(c.instagram)}','_blank')">📸 ${igLabel(c.instagram)}</div>`:''}
-      ${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}
-    </div>`:''}
-    ${c.needs?.length?`<div class="needs-chips" style="margin-bottom:12px">${c.needs.map(n=>`<span class="need-chip">${n}</span>`).join('')}</div>`:''}
-    <div class="field"><label class="field-label">Web del cliente</label><input class="field-input" id="inv-web" value="${c.web||''}" placeholder="https://..."></div>
-    <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="inv-ig" value="${c.instagram||''}" placeholder="@usuario o URL"></div>
-    <div class="field"><label class="field-label">Contexto adicional</label><textarea class="field-textarea" id="inv-contexto" placeholder="Rubro, qué te contactó, lo que encontraste, texto de la web/IG...">${inv.contexto||''}</textarea></div>
-    <button class="btn-primary" id="btn-analizar" ${st.loadingInv?'disabled':''}>${st.loadingInv?'Analizando...':'✦ Analizar cliente'}</button>
-    ${st.loadingInv?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando marca y detectando oportunidades...</div>`:''}
-    ${inv.resultado&&!st.loadingInv?`
-      <hr class="divider">
-      <div class="section-title">Análisis de marca</div>
-      <div class="ai-box">${fmt(inv.resultado)}</div>
-      <button class="btn-copy ${st.copiedInv?'copied':''}" id="btn-copy-inv">${st.copiedInv?'✓ Copiado':'📋 Copiar análisis'}</button>
-      <button class="btn-outline" id="btn-reanalizar">↻ Reanalizar</button>
-    `:''}
-  </div>`;
-}
-
-function rReunion(c){
-  const qs=c.investigacion?.preguntas||[],ch=c.reunion?.checkedQs||[],ans=c.reunion?.answers||{},show=st.activeTab==='reunion';
-  return`<div class="tab-content ${show?'active':''}" id="tab-reunion">
-    ${qs.length===0
-      ?`<div class="empty" style="padding:40px 10px"><div class="empty-icon">💡</div><div style="font-size:12px">Primero analizá el cliente en <strong>Research</strong></div></div>`
-      :`<div class="section-title">Preguntas de discovery</div>
-       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-       ${qs.map((q,i)=>`
-         <div style="background:var(--surface2);border:1px solid ${ch.includes(i)?'var(--green)':'var(--border)'};border-radius:10px;padding:11px 13px;transition:border-color .15s">
-           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
-             <div>
-               <div style="font-size:8px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Pregunta ${i+1}</div>
-               <div style="font-size:12px;color:var(--text);line-height:1.5;font-weight:600">${q}</div>
-             </div>
-             <button class="btn-sm ${ch.includes(i)?'btn-gold':''}" data-qidx="${i}" style="flex-shrink:0;font-size:10px;padding:4px 8px">${ch.includes(i)?'✓ Hecha':'Marcar'}</button>
-           </div>
-           <textarea class="field-textarea" data-qans="${i}" style="min-height:56px;font-size:11px;resize:none" placeholder="Respuesta del cliente...">${ans[i]||''}</textarea>
-         </div>`).join('')}
-       </div>
-       <button class="btn-sm" id="btn-reset-qs">↺ Reiniciar</button>`}
-    <hr class="divider">
-    <div class="section-title">Notas generales</div>
-    <textarea class="field-textarea" id="reunion-notas" style="min-height:130px" placeholder="Señales de presupuesto, objeciones, impresiones generales...">${c.reunion?.notasVivo||''}</textarea>
-    <button class="btn-primary" id="btn-save-notas" style="margin-top:8px">Guardar notas</button>
-  </div>`;
-}
-
-function rProp(c){
-  const show=st.activeTab==='propuesta',pd=c.propuesta?.data;
-  return`<div class="tab-content ${show?'active':''}" id="tab-propuesta">
-    <div class="section-title">Transcripción de la reunión</div>
-    <textarea class="field-textarea" id="prop-transcripcion" style="min-height:100px" placeholder="Pegá la transcripción o resumen de la meet...">${c.propuesta?.transcripcion||''}</textarea>
-    <button class="btn-primary" id="btn-generar-brief" ${st.loadingPropuesta?'disabled':''}>${st.loadingPropuesta?'Generando propuesta...':'✦ Generar propuesta'}</button>
-    ${st.loadingPropuesta?`<div class="ai-box loading" style="margin-top:12px"><div class="spinner"></div>Analizando reunión y armando propuesta...</div>`:''}
-    ${pd&&!st.loadingPropuesta?rPropuesta(pd,c):''}
-  </div>`;
-}
-
-function rPropuesta(pd,c){
-  const LETRAS_COLOR={'A':'#9b6dff','B':'#6aabe8','C':'#4aab7a','D':'#c49a20','E':'#d95f5f','F':'#0a66c2'};
-  const mi={'Estrategia de Comunicación':'🧭','Paid Media / Media Planner':'📣','Manejo de Redes Sociales':'📱','Diseño y Creatividad':'🎨','Guiones y Contenido':'✍️','Filmmaker / Producción':'🎬','Edición de Video':'🎞️','Investigación de Mercado':'🔍','Automatización / CRM + IA':'⚙️','Gestión MercadoLibre':'🛒'};
-  const servicios=pd.servicios||pd.modulos?.map((m,i)=>({letra:String.fromCharCode(65+i),nombre:m.nombre,subtitulo:m.descripcion?.split('.')[0]||'',bullets:m.bullets||[]}))|| [];
-  const met=pd.metodologia||{fase1:{titulo:'Fundación (Mes 1)',bullets:[]},fase2:{titulo:'Construcción (Mes 2)',bullets:[]},fase3:{titulo:'Escalamiento (Mes 3+)',bullets:[]}};
-  const precios=pd.precios||{preOnboarding:'1.000.000 ARS',onboarding:'1.200.000 ARS',full:'1.500.000 ARS',inversionPublicitaria:'A convenir'};
-  return`
-  <hr class="divider">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-    <div class="section-title" style="margin:0">Propuesta generada</div>
-    <div style="display:flex;gap:6px">
-      <button class="btn-copy ${st.copiedBrief?'copied':''}" id="btn-copy-brief" style="margin:0;width:auto;padding:6px 10px">${st.copiedBrief?'✓':'📋'} Copiar</button>
-      <button class="btn-sm" id="btn-rebrief">↻</button>
-    </div>
-  </div>
-
-  <!-- DIAGNÓSTICO -->
-  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
-    <div style="font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Diagnóstico</div>
-    <div style="font-size:12px;line-height:1.7;color:var(--text)">${pd.diagnostico||''}</div>
-  </div>
-
-  <!-- SERVICIOS -->
-  <div class="section-title">Servicios</div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-    ${servicios.map(s=>{const col=LETRAS_COLOR[s.letra]||'#9b6dff';return`
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;border-left:3px solid ${col}">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span style="font-size:14px;font-weight:800;color:${col}">${s.letra}.</span>
-        <span style="font-size:13px;font-weight:700;color:var(--text)">${s.nombre}</span>
-        <span style="font-size:9px;font-weight:600;color:${col};background:${col}18;border-radius:4px;padding:2px 6px">${mi[s.nombre]||'📌'}</span>
-      </div>
-      ${s.subtitulo?`<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:7px">${s.subtitulo}</div>`:''}
-      <ul style="padding-left:14px;display:flex;flex-direction:column;gap:3px;margin:0">
-        ${(s.bullets||[]).map(b=>`<li style="font-size:11px;color:var(--text2);line-height:1.5">${b}</li>`).join('')}
-      </ul>
-    </div>`}).join('')}
-  </div>
-
-  <!-- METODOLOGÍA -->
-  <div class="section-title">Metodología de trabajo</div>
-  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
-    ${[met.fase1,met.fase2,met.fase3].filter(Boolean).map((f,i)=>{const cols=['#9b6dff','#c49a20','#4aab7a'];const col=cols[i];return`
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;border-left:3px solid ${col}">
-      <div style="font-size:11px;font-weight:700;color:${col};margin-bottom:5px">${f.titulo||'Fase '+(i+1)}</div>
-      <ul style="padding-left:14px;margin:0;display:flex;flex-direction:column;gap:2px">
-        ${(f.bullets||[]).map(b=>`<li style="font-size:11px;color:var(--text-muted)">${b}</li>`).join('')}
-      </ul>
-    </div>`}).join('')}
-  </div>
-
-  <!-- TARIFAS -->
-  <div class="section-title">Tarifas</div>
-  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px">
-    ${[
-      {tipo:'Honorarios Pre-Onboarding','desc':'Estrategia · Key Visual · Control de redes',precio:precios.preOnboarding,mes:'1er mes',col:'#9b6dff'},
-      {tipo:'Honorarios Onboarding','desc':'Campañas · Contenido · Filmación · Ideas',precio:precios.onboarding,mes:'2do mes',col:'#c49a20'},
-      {tipo:'Honorarios Full','desc':'Full service · Pauta activa · Optimización',precio:precios.full,mes:'Mes 3+',col:'#4aab7a'},
-      {tipo:'Inversión Publicitaria','desc':precios.inversionPublicitaria==='A convenir'?'Dinero directo a medios (Meta, Google, etc.) — Recomendamos Línea de Crédito':'Inversión estimada en medios',precio:precios.inversionPublicitaria,mes:'',col:'#6a9fd8'},
-    ].map(row=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:${row.col}">${row.tipo}${row.mes?` <span style="font-size:9px;font-weight:600;opacity:.7">(${row.mes})</span>`:''}</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${row.desc}</div>
-      </div>
-      <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap">${row.precio}</div>
-    </div>`).join('')}
-    <div style="padding:8px 13px;font-size:9px;color:var(--text-muted)">* Factura A: se suma IVA · Contratación mínima 6 meses · Precios en ARS con ajuste IPC bimestral</div>
-  </div>
-
-  ${pd.proximoPaso?`<div style="background:var(--gold-dim);border:1px solid rgba(155,109,255,.3);border-radius:10px;padding:12px 14px">
-    <div style="font-size:9px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Próximo paso</div>
-    <div style="font-size:12px;color:var(--text)">${pd.proximoPaso}</div>
-  </div>`:''}`;
 }
 
 function rMeetStatus(c){
