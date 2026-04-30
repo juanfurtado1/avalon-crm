@@ -1604,8 +1604,7 @@ function bind(){
   $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
   $$('.card-v2').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
   $$('.kanban-card').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
-
-  // Card action buttons (edit/delete from card)
+  bindKanbanDrag();
   $$('[data-action="edit"]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
     st.activeClient=b.dataset.id;st.showEditModal=true;render();
