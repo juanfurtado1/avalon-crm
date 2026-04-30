@@ -1015,7 +1015,7 @@ function bindKanbanDrag(){
       if(c.heatLevel===targetHeat)return;
       c.heatLevel=targetHeat;
       c.heatIgnored=false;
-      toast(c.name+' → '+(HEAT_LABELS[targetHeat]||targetHeat));
+      toast((c.company||c.name)+' → '+(HEAT_LABELS[targetHeat]||targetHeat));
       render();
       await sv(c);
     });
