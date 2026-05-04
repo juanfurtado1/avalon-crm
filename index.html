@@ -20,9 +20,17 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
 .stat-n{font-size:22px;font-weight:700;color:var(--gold);line-height:1}
 .stat-l{font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;font-weight:600}
-.filters{display:flex;gap:6px;padding:12px 14px 0;overflow-x:auto;scrollbar-width:none}
+.filters{display:flex;align-items:center;gap:8px;padding:8px 14px 6px}
+.filt-select-wrap{position:relative;display:flex;align-items:center;gap:6px}
+.filt-select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 28px 5px 10px;font-size:10px;color:var(--text);font-family:'Montserrat',sans-serif;font-weight:700;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;letter-spacing:.2px;transition:border-color .15s}
+.filt-select:focus,.filt-select:hover{border-color:var(--gold)}
+.filt-select-arrow{position:absolute;right:8px;pointer-events:none;font-size:9px;color:var(--text-muted)}
+.filt-active-badge{background:rgba(155,109,255,.15);border:1px solid rgba(155,109,255,.35);border-radius:6px;padding:4px 8px;font-size:9px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.filt-active-badge button{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:0;line-height:1;font-family:inherit}
+.filt-active-badge button:hover{color:var(--text)}
+.filt-kanban-notice{font-size:9px;color:var(--text-muted);font-weight:600;opacity:.7}
 .filters::-webkit-scrollbar{display:none}
-.filt{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 11px;font-size:10px;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-family:'Montserrat',sans-serif;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.filt{display:none}
 .filt.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
 .cards{padding:12px 14px 120px;display:flex;flex-direction:column;gap:10px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 13px 13px 17px;position:relative;cursor:pointer;transition:border-color .15s}
@@ -1058,7 +1066,28 @@ function rList(){
     </div>
     <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">${(()=>{const td=new Date().toISOString().split('T')[0];const up=clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=td)||(c.meetBudget&&c.meetBudget>=td)).sort((a,b)=>{const aD=[a.meetDiscovery,a.meetBudget].filter(Boolean).sort()[0];const bD=[b.meetDiscovery,b.meetBudget].filter(Boolean).sort()[0];return aD<bD?-1:1;});if(!up.length)return`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px 0">Sin reuniones próximas</div>`;const rows=up.flatMap(c=>{const r=[];if(c.meetDiscovery&&c.meetDiscovery>=td)r.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">🔍 ${c.name}${c.company?' · '+c.company:''}</span><span class="meets-tooltip-detail">Discovery — ${fmtDate(c.meetDiscovery)}</span></div>`);if(c.meetBudget&&c.meetBudget>=td)r.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">💼 ${c.name}${c.company?' · '+c.company:''}</span><span class="meets-tooltip-detail">Budget — ${fmtDate(c.meetBudget)}</span></div>`);return r;}).join('');return`<div style="display:flex;align-items:center;justify-content:center;padding:4px 0"><button class="meets-btn"><span class="meet-badge meet-discovery">🔍 Meets próximas: ${up.length}</span><div class="meets-tooltip">${rows}</div></button></div>`;})()}</div>
   </div>
-  <div class="filters">${['Todos',...ESTADOS].map(f=>`<button class="filt ${st.filter===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div>
+  <div class="filters">
+    <div class="filt-select-wrap">
+      <select class="filt-select" id="estado-filter-select">
+        <option value="Todos" ${st.filter==='Todos'?'selected':''}>Todos los estados</option>
+        <optgroup label="── Conversación WhatsApp">
+          ${['Activa','Esperando respuesta','Coordinando meet'].map(e=>`<option value="${e}" ${st.filter===e?'selected':''}>${e}</option>`).join('')}
+        </optgroup>
+        <optgroup label="── Estado del cliente">
+          ${['Meet coordinada','Pendiente cotización','Enviada'].map(e=>`<option value="${e}" ${st.filter===e?'selected':''}>${e}</option>`).join('')}
+        </optgroup>
+        <optgroup label="── Estado de la propuesta">
+          ${['En negociación','Cerrada','Perdida'].map(e=>`<option value="${e}" ${st.filter===e?'selected':''}>${e}</option>`).join('')}
+        </optgroup>
+        <optgroup label="── Sueltas">
+          ${['Sin definir','Sin respuesta'].map(e=>`<option value="${e}" ${st.filter===e?'selected':''}>${e}</option>`).join('')}
+        </optgroup>
+      </select>
+      <span class="filt-select-arrow">▾</span>
+    </div>
+    ${st.filter!=='Todos'?`<div class="filt-active-badge"><span style="width:7px;height:7px;border-radius:50%;background:${ESTADO_COLOR_MAP[st.filter]||'#554f6e'};display:inline-block"></span>${st.filter} · ${sr.length} resultado${sr.length!==1?'s':''}<button id="btn-clear-estado-filter">✕</button></div>`:''}
+    ${st.viewMode==='kanban'&&st.filter!=='Todos'?`<span class="filt-kanban-notice">↳ columnas filtradas</span>`:''}
+  </div>
   ${rProyecciones(clients)}
   <div id="cards-area">
   ${st.viewMode==='kanban'?rKanbanCols(sr):`<div class="cards">${sr.length===0
@@ -1256,7 +1285,10 @@ function rKanbanCols(sr){
     {id:'recuperar',label:'♻️ Recuperar',color:'#4aab7a',bg:'rgba(74,171,122,.08)',items:recuperar},
   ];
 
-  const toggleBar=`<div style="display:flex;gap:5px;padding:8px 10px 0;flex-wrap:wrap">
+  const filterBanner=st.filter&&st.filter!=='Todos'
+    ?`<div style="display:flex;align-items:center;gap:7px;padding:6px 10px 0"><span style="width:7px;height:7px;border-radius:50%;background:${ESTADO_COLOR_MAP[st.filter]||'#554f6e'};display:inline-block"></span><span style="font-size:10px;font-weight:700;color:${ESTADO_COLOR_MAP[st.filter]||'#554f6e'}">${st.filter}</span><span style="font-size:10px;color:var(--text-muted)">· ${sr.length} prospecto${sr.length!==1?'s':''} visibles</span></div>`
+    :'';
+  const toggleBar=`${filterBanner}<div style="display:flex;gap:5px;padding:8px 10px 0;flex-wrap:wrap">
     ${COLS.map(col=>`<button class="col-toggle-btn ${st.hiddenCols[col.id]?'':'col-toggle-on'}" data-col-toggle="${col.id}" style="border-color:${col.color}33;${st.hiddenCols[col.id]?'opacity:.4':'background:'+col.bg}">${col.label}</button>`).join('')}
     <button class="col-toggle-btn" id="btn-show-all-cols" style="margin-left:auto;opacity:.6">Mostrar todas</button>
   </div>`;
@@ -1716,6 +1748,8 @@ function bind(){
   $('#btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render()});
   $('#btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render()});
   $('#btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render()});
+  document.getElementById('estado-filter-select')?.addEventListener('change',e=>{st.filter=e.target.value;render();});
+  document.getElementById('btn-clear-estado-filter')?.addEventListener('click',()=>{st.filter='Todos';render();});
   $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
   $$('.card-v2').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
   $$('.kanban-card').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
