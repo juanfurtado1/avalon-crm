@@ -1206,9 +1206,11 @@ function rKanbanCols(sr){
   const linkedin=active.filter(c=>c.heatLevel==='linkedin');
   const recuperar=active.filter(c=>c.heatLevel==='recuperar');
   const rest=active.filter(c=>!['linkedin','recuperar'].includes(c.heatLevel));
-  const hot=rest.filter(c=>getHeat(c)==='hot');
-  const warm=rest.filter(c=>getHeat(c)==='warm');
-  const cold=rest.filter(c=>['ok','cold'].includes(getHeat(c)));
+  // Para estados inactivos (Perdida/Cerrada) getHeat retorna 'none' — redirigir a cold
+  const effectiveHeat=c=>{ const h=getHeat(c); return h==='none'?'cold':h; };
+  const hot=rest.filter(c=>effectiveHeat(c)==='hot');
+  const warm=rest.filter(c=>effectiveHeat(c)==='warm');
+  const cold=rest.filter(c=>['ok','cold'].includes(effectiveHeat(c)));
 
   const alerts=rest.filter(c=>{
     if(!c.heatLevel||c.heatIgnored)return false;
