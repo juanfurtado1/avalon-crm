@@ -96,6 +96,21 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .s-pendiente{background:rgba(230,130,40,.12);color:#e6823a}
 .s-pendiente-meet{background:rgba(217,95,95,.12);color:#d95f5f}
 .s-pendiente-cot{background:rgba(196,154,32,.12);color:#c49a20}
+.s-activa{background:rgba(37,211,102,.12);color:#25d366}
+.s-esperando{background:rgba(196,154,32,.12);color:#c49a20}
+.s-coordinando{background:rgba(106,159,216,.12);color:#6a9fd8}
+.s-meet-coord{background:rgba(155,109,255,.12);color:#9b6dff}
+/* ── PROYECCIONES BAR ── */
+.proyec-bar{background:var(--surface);border-bottom:1px solid var(--border)}
+.proyec-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;user-select:none;transition:background .12s}
+.proyec-header:hover{background:var(--surface2)}
+.proyec-content{padding:0 14px 12px}
+.proyec-table{width:100%;border-collapse:collapse}
+.proyec-table th{font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);font-weight:700;padding:4px 8px;text-align:right;white-space:nowrap}
+.proyec-table th:first-child{text-align:left}
+.proyec-table td{font-size:11px;padding:5px 8px;border-top:1px solid var(--border);text-align:right;white-space:nowrap}
+.proyec-table td:first-child{text-align:left;font-weight:700;font-size:10px}
+.proyec-total td{border-top:2px solid var(--border2)!important;background:rgba(0,0,0,.25)}
 .filter-panel{background:var(--surface);border-bottom:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px}
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .filter-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700;width:100%;margin-bottom:2px}
@@ -242,13 +257,14 @@ body.is-dragging .kanban-card:not(.dragging){transition:opacity .1s}
 // ── CONSTANTS ──
 const SP=`Sos un asistente estratégico-comercial para Juan, ejecutivo de Avalon World Agency, agencia de marketing y comunicación (Buenos Aires, Miami, Dubai, Barcelona, San Pablo). Modelo de negocio: servicio principal estrategia + pauta (Meta Ads, Google Ads). Complementario: redes, contenido, diseño, branding. Juan NO vende redes aisladas. Analizar marcas: leer negocio real, detectar contradicciones, evaluar fit con Avalon. Preguntas discovery: específicas al negocio, nunca genéricas, revelan problema real y presupuesto, posicionan a Juan como partner estratégico. 5 preguntas máximo. Propuestas: partir del negocio real, eje estrategia + pauta. Módulos disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre. Estilo: español rioplatense (vos), directo, comercial, sin paja.`;
 const ESTADO_GROUPS=[
-  {label:'Sueltas',items:['Sin definir','Sin respuesta']},
-  {label:'Estado del cliente',items:['Pendiente meet','Pendiente cotización','Enviada']},
-  {label:'Estado de la propuesta',items:['En negociación','Cerrada','Perdida']}
+  {label:'Conversación de WhatsApp',items:['Activa','Esperando respuesta','Coordinando meet']},
+  {label:'Estado del cliente',items:['Meet coordinada','Pendiente cotización','Enviada']},
+  {label:'Estado de la propuesta',items:['En negociación','Cerrada','Perdida']},
+  {label:'Sueltas',items:['Sin definir','Sin respuesta']}
 ];
 const ESTADOS=ESTADO_GROUPS.flatMap(g=>g.items);
-const EC={'Sin definir':'s-sin-definir','Sin respuesta':'s-sin-respuesta','Pendiente meet':'s-pendiente-meet','Pendiente cotización':'s-pendiente-cot','Enviada':'s-enviada','En negociación':'s-negociacion','Cerrada':'s-cerrada','Perdida':'s-perdida'};
-const ESTADO_DOT={'Sin definir':'#554f6e','Sin respuesta':'#d95f5f','Pendiente meet':'#d95f5f','Pendiente cotización':'#c49a20','Enviada':'#4aab7a','En negociación':'#c49a20','Cerrada':'#4aab7a','Perdida':'#d95f5f'};
+const EC={'Sin definir':'s-sin-definir','Sin respuesta':'s-sin-respuesta','Pendiente meet':'s-pendiente-meet','Meet coordinada':'s-meet-coord','Pendiente cotización':'s-pendiente-cot','Enviada':'s-enviada','En negociación':'s-negociacion','Cerrada':'s-cerrada','Perdida':'s-perdida','Activa':'s-activa','Esperando respuesta':'s-esperando','Coordinando meet':'s-coordinando'};
+const ESTADO_DOT={'Sin definir':'#554f6e','Sin respuesta':'#d95f5f','Pendiente meet':'#d95f5f','Meet coordinada':'#9b6dff','Pendiente cotización':'#c49a20','Enviada':'#4aab7a','En negociación':'#c49a20','Cerrada':'#4aab7a','Perdida':'#d95f5f','Activa':'#25d366','Esperando respuesta':'#c49a20','Coordinando meet':'#6a9fd8'};
 const NEEDS=['Posicionamiento','Ventas','Comunidad','Nueva identidad','Rebranding','Pauta digital','Contenido','Estrategia','E-commerce','Awareness'];
 const PLATAFORMAS=['Meta','Google','TikTok','Pinterest','Otra'];
 const CANALES=['Meta','LinkedIn','Google','Referido','Nico','Ger','Caza'];
@@ -359,7 +375,7 @@ function nc(d={}){
     needs:d.needs||[],service:d.service||'',
     tipo:d.tipo||'Abono',plataformas:d.plataformas||[],
     presupuesto:d.presupuesto||'',modalidadPago:d.modalidadPago||'',moneda:d.moneda||'ARS',
-    estado:d.estado||'Enviada',
+    estado:d.estado||'Activa',
     lastContact:d.lastContact||new Date().toISOString().split('T')[0],
     note:d.note||'',
     notes:d.notes||(d.note?[{date:d.lastContact||new Date().toISOString().split('T')[0],text:d.note}]:[]),
@@ -394,7 +410,8 @@ let st={
   dragClient:null,
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
   // Clientes Nuevos
-  activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false
+  activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,
+  showProyecciones:false
 };
 
 // ── HELPERS ──
@@ -484,7 +501,7 @@ function generarInforme(){
   const enviadas=fl.filter(c=>c.estado==='Enviada').length;
   const enNeg=fl.filter(c=>c.estado==='En negociación');
   const pendCot=fl.filter(c=>c.estado==='Pendiente cotización');
-  const pendMeet=fl.filter(c=>c.estado==='Pendiente meet');
+  const pendMeet=fl.filter(c=>c.estado==='Meet coordinada');
   const sinResp=fl.filter(c=>c.estado==='Sin respuesta');
   const convBase=cerradas.length+enviadas;
   const convRate=convBase>0?Math.round(cerradas.length/convBase*100):0;
@@ -618,7 +635,7 @@ function generarInforme(){
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Detalle</span></div>');
   p('<h2>Detalle de Prospectos</h2><div style="overflow-y:auto;flex:1">');
   p('<table class="dt"><thead><tr><th>Prospecto</th><th>Estado</th><th>Tipo</th><th>Presupuesto</th><th>Servicio</th><th>Canal</th><th>Contacto</th></tr></thead><tbody>');
-  const ord={'Cerrada':0,'En negociaci\u00f3n':1,'Enviada':2,'Pendiente cotizaci\u00f3n':3,'Pendiente meet':4,'Sin respuesta':5,'Sin definir':6,'Perdida':7};
+  const ord={'Cerrada':0,'En negociaci\u00f3n':1,'Enviada':2,'Pendiente cotizaci\u00f3n':3,'Meet coordinada':4,'Coordinando meet':5,'Esperando respuesta':6,'Activa':7,'Sin respuesta':8,'Sin definir':9,'Perdida':10};
   fl.slice().sort(function(a,b){return(ord[a.estado]||5)-(ord[b.estado]||5);}).forEach(function(c){
     const d2=ds(c.lastContact),ht=ul(d2,c.estado);
     const dot=ht==='hot'?'&#x1F534;':ht==='warm'?'&#x1F7E1;':ht==='cold'?'&#x1F535;':'&#x26AA;';
@@ -635,7 +652,7 @@ function generarInforme(){
   p('<div><div class="rc" style="margin-bottom:16px"><div class="rl">Tasa de conversi&#243;n</div><div class="rv" style="color:'+convColor+'">'+convRate+'%</div><div style="font-size:12px;color:#555;margin-top:4px">'+cerradas.length+' cerradas / '+enviadas+' enviadas</div></div>');
   p('<div style="background:rgba(147,51,234,.05);border:1px solid rgba(147,51,234,.3);padding:16px;border-radius:4px">');
   p('<div style="font-size:11px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Por estado</div>');
-  [['En negociaci&#243;n',enNeg.length,'#5090c8'],['Pend. cotizaci&#243;n',pendCot.length,'#e6823a'],['Pendiente meet',pendMeet.length,'#9b6dff'],['Sin respuesta',sinResp.length,'#d95f5f']].forEach(function(r){
+  [['En negociaci&#243;n',enNeg.length,'#5090c8'],['Pend. cotizaci&#243;n',pendCot.length,'#e6823a'],['Meet coordinada',pendMeet.length,'#9b6dff'],['Sin respuesta',sinResp.length,'#d95f5f']].forEach(function(r){
     if(r[1]>0)p('<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#777">'+r[0]+'</span><span style="font-size:13px;font-weight:700;color:'+r[2]+'">'+r[1]+'</span></div>');
   });
   p('</div></div><div>');
@@ -856,6 +873,56 @@ function rReportBar(fl,totalMonto){
   </div>`;
 }
 
+// ── PROYECCIONES BAR ──
+function rProyecciones(allClients){
+  const GRUPOS=[
+    {label:'💬 Conversación WA',estados:['Activa','Esperando respuesta','Coordinando meet'],color:'#25d366'},
+    {label:'🤝 Avanzando',estados:['Meet coordinada','Pendiente cotización'],color:'#9b6dff'},
+    {label:'📄 Prop. enviada',estados:['Enviada'],color:'#4aab7a'},
+    {label:'🔥 Negociando',estados:['En negociación'],color:'#c49a20'},
+    {label:'✅ Cerrado',estados:['Cerrada'],color:'#4aab7a'},
+    {label:'❌ Perdido',estados:['Perdida'],color:'#d95f5f'},
+  ];
+  const MS=['ARS','USD','USDT'];
+  function fmtP(val,m){const n=parseInt(val);if(!n||isNaN(n))return`<span style="color:var(--border2)">—</span>`;return`<span style="font-weight:700;color:var(--text)">${m==='ARS'?'$':''}${n.toLocaleString('es-AR')}</span>`;}
+  if(!st.showProyecciones)return`<div class="proyec-bar"><div class="proyec-header" id="btn-toggle-proyec"><span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:6px">📊 <span>Proyecciones</span></span><span style="font-size:10px;color:var(--text-muted)">▾</span></div></div>`;
+  const rows=GRUPOS.map(g=>{
+    const pool=allClients.filter(c=>g.estados.includes(c.estado));
+    const totals={};MS.forEach(m=>{totals[m]=pool.filter(c=>(c.moneda||'ARS')===m).reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);});
+    return{...g,pool,totals,count:pool.length};
+  });
+  const visibles=rows.filter(r=>r.count>0);
+  const grand={};MS.forEach(m=>{grand[m]=rows.reduce((a,r)=>a+r.totals[m],0);});
+  const grandCount=allClients.filter(c=>c.estado!=='Perdida').length;
+  return`<div class="proyec-bar">
+    <div class="proyec-header" id="btn-toggle-proyec">
+      <span style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:6px">📊 <span>Proyecciones</span></span>
+      <span style="font-size:10px;color:var(--text-muted)">▴</span>
+    </div>
+    <div class="proyec-content">
+      <table class="proyec-table">
+        <thead><tr>
+          <th style="text-align:left">Estado</th>
+          ${MS.map(m=>`<th>${m}</th>`).join('')}
+          <th>Cant.</th>
+        </tr></thead>
+        <tbody>
+          ${visibles.map(r=>`<tr>
+            <td style="color:${r.color}">${r.label}</td>
+            ${MS.map(m=>`<td>${fmtP(r.totals[m],m)}</td>`).join('')}
+            <td style="color:var(--text-muted);font-weight:600">${r.count}</td>
+          </tr>`).join('')}
+          <tr class="proyec-total">
+            <td style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">Total pipeline</td>
+            ${MS.map(m=>`<td style="color:var(--gold)">${fmtP(grand[m],m)}</td>`).join('')}
+            <td style="color:var(--text-muted);font-weight:700">${grandCount}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
 function rList(){
   const fl=applyFilters(clients);
   const sr=[...fl].sort((a,b)=>Number(b.id)-Number(a.id));
@@ -923,6 +990,7 @@ function rList(){
     <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">${(()=>{const td=new Date().toISOString().split('T')[0];const up=clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=td)||(c.meetBudget&&c.meetBudget>=td)).sort((a,b)=>{const aD=[a.meetDiscovery,a.meetBudget].filter(Boolean).sort()[0];const bD=[b.meetDiscovery,b.meetBudget].filter(Boolean).sort()[0];return aD<bD?-1:1;});if(!up.length)return`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px 0">Sin reuniones próximas</div>`;const rows=up.flatMap(c=>{const r=[];if(c.meetDiscovery&&c.meetDiscovery>=td)r.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">🔍 ${c.name}${c.company?' · '+c.company:''}</span><span class="meets-tooltip-detail">Discovery — ${fmtDate(c.meetDiscovery)}</span></div>`);if(c.meetBudget&&c.meetBudget>=td)r.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">💼 ${c.name}${c.company?' · '+c.company:''}</span><span class="meets-tooltip-detail">Budget — ${fmtDate(c.meetBudget)}</span></div>`);return r;}).join('');return`<div style="display:flex;align-items:center;justify-content:center;padding:4px 0"><button class="meets-btn"><span class="meet-badge meet-discovery">🔍 Meets próximas: ${up.length}</span><div class="meets-tooltip">${rows}</div></button></div>`;})()}</div>
   </div>
   <div class="filters">${['Todos',...ESTADOS].map(f=>`<button class="filt ${st.filter===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div>
+  ${rProyecciones(clients)}
   <div id="cards-area">
   ${st.viewMode==='kanban'?rKanbanCols(sr):`<div class="cards">${sr.length===0
     ?`<div class="empty"><div class="empty-icon">🎯</div>${clients.length===0?'Agregá tu primer prospecto':'Sin clientes en este estado'}</div>`
@@ -1539,6 +1607,7 @@ function bind(){
     searchEl.addEventListener('input',e=>{st.searchTerm=e.target.value;renderListOnly();});
     searchEl.addEventListener('keydown',e=>e.stopPropagation());
   }
+  $('#btn-toggle-proyec')?.addEventListener('click',()=>{st.showProyecciones=!st.showProyecciones;render()});
   $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $('#btn-generar-informe')?.addEventListener('click',generarInforme);
   $('#btn-open-new')?.addEventListener('click',()=>{st.showNewModal=true;render()});
