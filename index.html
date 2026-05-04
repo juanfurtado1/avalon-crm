@@ -102,15 +102,34 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .s-meet-coord{background:rgba(155,109,255,.12);color:#9b6dff}
 /* ── PROYECCIONES BAR ── */
 .proyec-bar{background:var(--surface);border-bottom:1px solid var(--border)}
-.proyec-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;user-select:none;transition:background .12s}
+.proyec-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;user-select:none;transition:background .12s}
 .proyec-header:hover{background:var(--surface2)}
-.proyec-content{padding:0 14px 12px}
-.proyec-table{width:100%;border-collapse:collapse}
-.proyec-table th{font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);font-weight:700;padding:4px 8px;text-align:right;white-space:nowrap}
-.proyec-table th:first-child{text-align:left}
-.proyec-table td{font-size:11px;padding:5px 8px;border-top:1px solid var(--border);text-align:right;white-space:nowrap}
-.proyec-table td:first-child{text-align:left;font-weight:700;font-size:10px}
-.proyec-total td{border-top:2px solid var(--border2)!important;background:rgba(0,0,0,.25)}
+.proyec-content{padding:0 14px 10px}
+.proyec-row{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.proyec-row:last-child{border-bottom:none}
+.proyec-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.proyec-name{flex:1;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proyec-count{font-size:9px;color:#000;font-weight:800;background:var(--text-muted);border-radius:3px;padding:1px 5px;flex-shrink:0;min-width:16px;text-align:center}
+.proyec-ars{font-size:10px;font-weight:700;width:72px;text-align:right;flex-shrink:0}
+.proyec-usd{font-size:10px;font-weight:700;width:52px;text-align:right;flex-shrink:0;color:var(--blue)}
+.proyec-pbar{width:52px;flex-shrink:0;display:flex;align-items:center;gap:4px}
+.proyec-pbar-track{flex:1;height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.proyec-pbar-fill{height:100%;border-radius:2px;transition:width .3s}
+.proyec-pct{font-size:8px;color:var(--text-muted);font-weight:700;width:22px;text-align:right;flex-shrink:0}
+.proyec-footer{display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;border-top:1px solid var(--border2);margin-top:4px}
+/* ── NOTIF PANEL ── */
+.notif-panel{position:fixed;top:50px;right:14px;width:300px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.75);z-index:300;max-height:75vh;display:flex;flex-direction:column;animation:slideUp .15s ease}
+.notif-header{padding:11px 14px 8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.notif-list{overflow-y:auto;flex:1}
+.notif-item{padding:9px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;display:flex;gap:10px;align-items:flex-start}
+.notif-item:hover{background:var(--surface2)}
+.notif-item.ni-done{opacity:.38}
+.notif-item.ni-done .notif-msg{text-decoration:line-through}
+.notif-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.notif-msg{font-size:11px;font-weight:600;color:var(--text);line-height:1.4;flex:1}
+.notif-sub{font-size:9px;color:var(--text-muted);font-weight:600;margin-top:2px}
+.notif-bell{position:relative;display:flex;align-items:center}
+.notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;width:14px;height:14px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:800;pointer-events:none}
 .filter-panel{background:var(--surface);border-bottom:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px}
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .filter-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700;width:100%;margin-bottom:2px}
@@ -272,6 +291,25 @@ const CANAL_COLOR={'Meta':'#1877f2','LinkedIn':'#0a66c2','Google':'#ea4335','Ref
 const MODALIDADES=['Facturado','Financiera','En mano'];
 const SERVICIOS=['Paid Media','Estrategia y Paid Media','Estrategia y contenido','Servicio FULL 360'];
 const MONEDAS=['ARS','USD','USDT'];
+const ESTADO_PROB={'Activa':10,'Esperando respuesta':15,'Coordinando meet':25,'Meet coordinada':35,'Pendiente cotización':50,'Enviada':65,'En negociación':80,'Cerrada':100,'Perdida':0,'Sin respuesta':5,'Sin definir':5};
+const ESTADO_COLOR_MAP={'Activa':'#25d366','Esperando respuesta':'#c49a20','Coordinando meet':'#6a9fd8','Meet coordinada':'#9b6dff','Pendiente cotización':'#c49a20','Enviada':'#4aab7a','En negociación':'#c49a20','Cerrada':'#4aab7a','Perdida':'#d95f5f','Sin respuesta':'#d95f5f','Sin definir':'#554f6e'};
+const TASK_MSGS={'Activa':'Iniciar conversación por WhatsApp','Esperando respuesta':'Hacer seguimiento si no responde en 48hs','Coordinando meet':'Confirmar fecha y enviar invite de reunión','Meet coordinada':'Preparar preguntas de discovery','Pendiente cotización':'Armar y enviar cotización','Enviada':'Hacer seguimiento de propuesta (3 días)','En negociación':'Llamar para avanzar la negociación','Cerrada':'Iniciar proceso de onboarding 🚀','Perdida':'Registrar motivo de pérdida','Sin respuesta':'Intentar re-contactar por otro canal','Sin definir':'Definir siguiente paso'};
+
+// ── NOTIFICATIONS ──
+function getTasks(){return JSON.parse(localStorage.getItem('avalon_tasks')||'[]');}
+function saveTasks(tasks){localStorage.setItem('avalon_tasks',JSON.stringify(tasks));}
+function getPendingCount(){return getTasks().filter(t=>!t.done).length;}
+function addNotif(c,newEstado){
+  const tasks=getTasks();
+  const msg=TASK_MSGS[newEstado]||'Seguimiento pendiente';
+  tasks.unshift({id:Date.now().toString(),clientId:c.id,clientName:c.name+(c.company?' · '+c.company:''),estado:newEstado,msg,date:new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),done:false});
+  if(tasks.length>60)tasks.length=60;
+  saveTasks(tasks);
+  if(Notification.permission==='granted'){
+    try{new Notification('Avalon CRM — '+(c.company||c.name),{body:'→ '+newEstado+'\n'+msg,icon:'https://avalonworldagency.com/wp-content/uploads/2024/06/logo-avalon-1.png'});}catch(e){}
+  }
+}
+function requestNotifPermission(){if(Notification&&Notification.permission==='default')Notification.requestPermission().then(()=>render());}
 
 // ── CLIENTES NUEVOS — CONSTANTS ──
 const NC_SCOPE=['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn','CM y Diseño','Filmmaker','CRM'];
@@ -411,7 +449,7 @@ let st={
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
   // Clientes Nuevos
   activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,
-  showProyecciones:false
+  showProyecciones:false,showNotifPanel:false
 };
 
 // ── HELPERS ──
@@ -787,6 +825,7 @@ async function render(){
   if(st.view==='nuevos'){app.innerHTML=rNuevosList();if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());bind();bindNuevos();return;}
   if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
   app.innerHTML=st.view==='list'?rList():rDetail();
+  if(st.showNotifPanel)app.insertAdjacentHTML('beforeend',rNotifPanel());
   if(st.showEditModal)app.insertAdjacentHTML('beforeend',rEditModal());
   if(st.showSbModal)app.insertAdjacentHTML('beforeend',rSbModal());
   if(st.showApiModal)app.insertAdjacentHTML('beforeend',rApiModal());
@@ -874,52 +913,90 @@ function rReportBar(fl,totalMonto){
 }
 
 // ── PROYECCIONES BAR ──
+// ── PROYECCIONES BAR (visual compacta) ──
 function rProyecciones(allClients){
-  const GRUPOS=[
-    {label:'💬 Conversación WA',estados:['Activa','Esperando respuesta','Coordinando meet'],color:'#25d366'},
-    {label:'🤝 Avanzando',estados:['Meet coordinada','Pendiente cotización'],color:'#9b6dff'},
-    {label:'📄 Prop. enviada',estados:['Enviada'],color:'#4aab7a'},
-    {label:'🔥 Negociando',estados:['En negociación'],color:'#c49a20'},
-    {label:'✅ Cerrado',estados:['Cerrada'],color:'#4aab7a'},
-    {label:'❌ Perdido',estados:['Perdida'],color:'#d95f5f'},
-  ];
-  const MS=['ARS','USD','USDT'];
-  function fmtP(val,m){const n=parseInt(val);if(!n||isNaN(n))return`<span style="color:var(--border2)">—</span>`;return`<span style="font-weight:700;color:var(--text)">${m==='ARS'?'$':''}${n.toLocaleString('es-AR')}</span>`;}
-  if(!st.showProyecciones)return`<div class="proyec-bar"><div class="proyec-header" id="btn-toggle-proyec"><span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:6px">📊 <span>Proyecciones</span></span><span style="font-size:10px;color:var(--text-muted)">▾</span></div></div>`;
-  const rows=GRUPOS.map(g=>{
-    const pool=allClients.filter(c=>g.estados.includes(c.estado));
-    const totals={};MS.forEach(m=>{totals[m]=pool.filter(c=>(c.moneda||'ARS')===m).reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);});
-    return{...g,pool,totals,count:pool.length};
-  });
-  const visibles=rows.filter(r=>r.count>0);
-  const grand={};MS.forEach(m=>{grand[m]=rows.reduce((a,r)=>a+r.totals[m],0);});
-  const grandCount=allClients.filter(c=>c.estado!=='Perdida').length;
+  const ESTADOS_ORD=['En negociación','Cerrada','Enviada','Meet coordinada','Pendiente cotización','Coordinando meet','Esperando respuesta','Activa','Sin respuesta','Sin definir','Perdida'];
+  function fmtA(n,mon){if(!n)return'<span style="color:var(--border2);font-size:9px">—</span>';return`${mon==='ARS'?'<span style="font-size:8px;opacity:.7">$</span>':''}${Math.round(n/1000)>0?Math.round(n/1000).toLocaleString('es-AR')+'k':n.toLocaleString('es-AR')}`;}
+  if(!st.showProyecciones)return`<div class="proyec-bar"><div class="proyec-header" id="btn-toggle-proyec"><span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px"><span>📊</span><span>Proyecciones</span></span><span style="font-size:9px;color:var(--text-muted)">▾</span></div></div>`;
+  // Build rows per estado
+  const rows=ESTADOS_ORD.map(est=>{
+    const pool=allClients.filter(c=>c.estado===est);
+    if(!pool.length)return null;
+    const ars=pool.filter(c=>(c.moneda||'ARS')==='ARS').reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);
+    const usd=pool.filter(c=>c.moneda==='USD'||c.moneda==='USDT').reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);
+    const prob=ESTADO_PROB[est]??5;
+    const color=ESTADO_COLOR_MAP[est]||'#554f6e';
+    return{est,count:pool.length,ars,usd,prob,color};
+  }).filter(Boolean);
+  const grandARS=rows.reduce((a,r)=>a+Math.round(r.ars*r.prob/100),0);
+  const grandUSD=rows.reduce((a,r)=>a+Math.round(r.usd*r.prob/100),0);
+  const grandCount=allClients.length;
   return`<div class="proyec-bar">
     <div class="proyec-header" id="btn-toggle-proyec">
-      <span style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:6px">📊 <span>Proyecciones</span></span>
-      <span style="font-size:10px;color:var(--text-muted)">▴</span>
+      <span style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px">📊 <span>Proyecciones</span></span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:9px;color:var(--text-muted)">Pipeline ponderado: <strong style="color:var(--gold)">${grandARS?'$'+Math.round(grandARS/1000).toLocaleString('es-AR')+'k':''}</strong>${grandARS&&grandUSD?' · ':''}<strong style="color:var(--blue)">${grandUSD?'USD '+Math.round(grandUSD/1000).toLocaleString('es-AR')+'k':''}</strong></span>
+        <span style="font-size:9px;color:var(--text-muted)">▴</span>
+      </div>
     </div>
     <div class="proyec-content">
-      <table class="proyec-table">
-        <thead><tr>
-          <th style="text-align:left">Estado</th>
-          ${MS.map(m=>`<th>${m}</th>`).join('')}
-          <th>Cant.</th>
-        </tr></thead>
-        <tbody>
-          ${visibles.map(r=>`<tr>
-            <td style="color:${r.color}">${r.label}</td>
-            ${MS.map(m=>`<td>${fmtP(r.totals[m],m)}</td>`).join('')}
-            <td style="color:var(--text-muted);font-weight:600">${r.count}</td>
-          </tr>`).join('')}
-          <tr class="proyec-total">
-            <td style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">Total pipeline</td>
-            ${MS.map(m=>`<td style="color:var(--gold)">${fmtP(grand[m],m)}</td>`).join('')}
-            <td style="color:var(--text-muted);font-weight:700">${grandCount}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div style="display:flex;align-items:center;gap:7px;padding:3px 0 5px;border-bottom:1px solid var(--border);margin-bottom:3px">
+        <div class="proyec-dot" style="background:transparent"></div>
+        <div class="proyec-name" style="color:var(--text-muted);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Estado</div>
+        <div style="width:16px;font-size:8px;color:var(--text-muted);text-align:center;font-weight:700;text-transform:uppercase;letter-spacing:.5px">#</div>
+        <div class="proyec-ars" style="color:var(--text-muted);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">ARS</div>
+        <div class="proyec-usd" style="color:var(--text-muted);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">USD</div>
+        <div class="proyec-pbar" style="justify-content:flex-end"><span style="font-size:8px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">% cierre</span></div>
+      </div>
+      ${rows.map(r=>`<div class="proyec-row">
+        <div class="proyec-dot" style="background:${r.color}"></div>
+        <div class="proyec-name" style="color:${r.color}">${r.est}</div>
+        <div style="width:16px;text-align:center"><span class="proyec-count" style="background:${r.color}22;color:${r.color}">${r.count}</span></div>
+        <div class="proyec-ars">${fmtA(r.ars,'ARS')}</div>
+        <div class="proyec-usd">${fmtA(r.usd,'USD')}</div>
+        <div class="proyec-pbar">
+          <div class="proyec-pbar-track"><div class="proyec-pbar-fill" style="width:${r.prob}%;background:${r.color}"></div></div>
+          <span class="proyec-pct">${r.prob}%</span>
+        </div>
+      </div>`).join('')}
+      <div class="proyec-footer">
+        <span style="font-size:9px;color:var(--text-muted);font-weight:600">${grandCount} prospectos en total</span>
+        <span style="font-size:9px;font-weight:700">
+          ${grandARS?`<span style="color:var(--gold)">Ponderado ARS: $${Math.round(grandARS/1000).toLocaleString('es-AR')}k</span>`:''}
+          ${grandARS&&grandUSD?' &middot; ':''}
+          ${grandUSD?`<span style="color:var(--blue)">USD ${Math.round(grandUSD/1000).toLocaleString('es-AR')}k</span>`:''}
+        </span>
+      </div>
     </div>
+  </div>`;
+}
+
+// ── NOTIF PANEL ──
+function rNotifPanel(){
+  const tasks=getTasks();
+  const pending=tasks.filter(t=>!t.done).length;
+  if(!st.showNotifPanel)return'';
+  return`<div class="notif-panel" id="notif-panel">
+    <div class="notif-header">
+      <span style="font-size:12px;font-weight:800;color:var(--text)">🔔 Tareas${pending?` <span style="background:var(--red);color:#fff;border-radius:4px;padding:1px 6px;font-size:9px">${pending}</span>`:''}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${pending?`<button class="btn-sm" id="btn-mark-all-done" style="font-size:9px;padding:3px 7px">✓ Marcar todo</button>`:''}
+        <button class="btn-sm" id="btn-close-notif" style="padding:3px 7px;font-size:11px">✕</button>
+      </div>
+    </div>
+    <div class="notif-list">
+      ${tasks.length===0?`<div style="padding:24px 14px;text-align:center;font-size:11px;color:var(--text-muted)">Sin tareas pendientes</div>`:
+        tasks.map((t,i)=>`<div class="notif-item ${t.done?'ni-done':''}" data-taskidx="${i}">
+          <div class="notif-dot" style="background:${ESTADO_COLOR_MAP[t.estado]||'#554f6e'}"></div>
+          <div style="flex:1;min-width:0">
+            <div class="notif-msg">${t.msg}</div>
+            <div class="notif-sub">${t.clientName} · <span style="color:${ESTADO_COLOR_MAP[t.estado]||'#554f6e'}">${t.estado}</span> · ${t.date}</div>
+          </div>
+          <div style="font-size:13px;flex-shrink:0">${t.done?'✓':'○'}</div>
+        </div>`).join('')
+      }
+    </div>
+    ${Notification.permission==='default'?`<div style="padding:8px 14px;background:rgba(155,109,255,.07);border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between"><span>Activar notificaciones del browser</span><button class="btn-sm" id="btn-req-notif" style="font-size:9px;padding:3px 7px;color:var(--gold);border-color:rgba(155,109,255,.4)">Activar</button></div>`:''}
   </div>`;
 }
 
@@ -963,13 +1040,13 @@ function rList(){
       <button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button>
       <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
       <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters">⚡ Filtros${haf?' ●':''}</button>
+      <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
       <button class="btn-sm" id="btn-go-nuevos" style="background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
       <button class="btn-add" id="btn-open-new">+ Prospecto</button>
     </div>
   </div>
   <div class="gold-bar"></div>
   ${st.showFilters?rFilterPanel():''}
-  ${rReportBar(fl,totalMonto)}
   <div class="stats">
     <div class="stat"><div class="stat-n">${ct.total}</div><div class="stat-l">Total</div></div>
     <div class="stat"><div class="stat-n">${ct.abonos}</div><div class="stat-l">Abonos</div></div>
@@ -1608,6 +1685,24 @@ function bind(){
     searchEl.addEventListener('keydown',e=>e.stopPropagation());
   }
   $('#btn-toggle-proyec')?.addEventListener('click',()=>{st.showProyecciones=!st.showProyecciones;render()});
+  // Notif panel
+  $('#btn-notif')?.addEventListener('click',e=>{e.stopPropagation();st.showNotifPanel=!st.showNotifPanel;render()});
+  $('#btn-close-notif')?.addEventListener('click',()=>{st.showNotifPanel=false;render()});
+  $('#btn-mark-all-done')?.addEventListener('click',()=>{const t=getTasks().map(x=>({...x,done:true}));saveTasks(t);render()});
+  $('#btn-req-notif')?.addEventListener('click',()=>requestNotifPermission());
+  document.querySelectorAll('.notif-item[data-taskidx]').forEach(el=>el.addEventListener('click',()=>{
+    const tasks=getTasks();const i=parseInt(el.dataset.taskidx);
+    if(tasks[i])tasks[i].done=!tasks[i].done;
+    saveTasks(tasks);render();
+  }));
+  // Close notif panel on outside click
+  if(st.showNotifPanel){
+    document.addEventListener('click',function closeNotif(e){
+      if(!document.getElementById('notif-panel')?.contains(e.target)&&e.target.id!=='btn-notif'){
+        st.showNotifPanel=false;render();document.removeEventListener('click',closeNotif);
+      }
+    },{once:false});
+  }
   $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $('#btn-generar-informe')?.addEventListener('click',generarInforme);
   $('#btn-open-new')?.addEventListener('click',()=>{st.showNewModal=true;render()});
@@ -1788,7 +1883,9 @@ function bind(){
   $$('[data-csel]').forEach(el=>el.addEventListener('click',async e=>{
     e.stopPropagation();
     const c=gc();if(!c)return;
-    c.estado=el.dataset.csel;st.estadoOpen=false;await sv(c);render();
+    const prev=c.estado,next=el.dataset.csel;
+    if(prev!==next)addNotif(c,next);
+    c.estado=next;st.estadoOpen=false;await sv(c);render();
   }));
   $$('[data-cselbdrop]').forEach(el=>el.addEventListener('click',()=>{st.estadoOpen=false;render();}));
   ['pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes'].forEach(id=>
@@ -2302,6 +2399,8 @@ document.addEventListener('click',function(e){
   await loadNC();
   st.sbLoading=false;
   render();
+  // Request browser notification permission after load
+  setTimeout(requestNotifPermission,2000);
 })();
 </script>
 </body>
