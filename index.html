@@ -1556,7 +1556,7 @@ function rPipe(c){
     <div class="section-title">Estado del prospecto</div>
     <div class="field-row">
       <div class="field"><label class="field-label">Estado</label>${rEstadoSelect(c.estado)}</div>
-      <div class="field"><label class="field-label">Último contacto</label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}"></div>
+      <div class="field"><label class="field-label" style="display:flex;align-items:center;gap:5px">Último contacto <span style="background:rgba(155,109,255,.15);color:var(--gold);border-radius:3px;padding:1px 5px;font-size:8px;font-weight:700;letter-spacing:.3px">AUTO</span></label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}" title="Se actualiza solo al guardar una nota"></div>
     </div>
     <div class="field-row">
       <div class="field"><label class="field-label">Servicio</label>
@@ -1943,8 +1943,12 @@ async function savePip(){
   const noteText=g('pip-note')?.value.trim();
   if(noteText){
     if(!c.notes)c.notes=[];
-    const today=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-    c.notes.push({date:today,text:noteText});
+    const todayISO=new Date().toISOString().split('T')[0];
+    const todayLabel=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    // ── Auto-actualizar último contacto al guardar nota ──
+    c.lastContact=todayISO;
+    if(g('pip-date')){g('pip-date').value=todayISO;}
+    c.notes.push({date:todayLabel,text:noteText});
     c.note=noteText;
     if(g('pip-note'))g('pip-note').value='';
   }
