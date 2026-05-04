@@ -1199,7 +1199,9 @@ function bindKanbanDrag(){
 
 function rKanbanCols(sr){
   const today=new Date().toISOString().split('T')[0];
-  const active=sr.filter(c=>!['Cerrada','Perdida'].includes(c.estado));
+  // Si hay filtro activo de estado, respetar ese conjunto; si no, excluir Cerrada/Perdida
+  const excludeInactive=!st.filter||st.filter==='Todos';
+  const active=excludeInactive?sr.filter(c=>!['Cerrada','Perdida'].includes(c.estado)):sr;
 
   const linkedin=active.filter(c=>c.heatLevel==='linkedin');
   const recuperar=active.filter(c=>c.heatLevel==='recuperar');
