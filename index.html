@@ -102,21 +102,19 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .s-meet-coord{background:rgba(155,109,255,.12);color:#9b6dff}
 /* ── PROYECCIONES BAR ── */
 .proyec-bar{background:var(--surface);border-bottom:1px solid var(--border)}
-.proyec-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;user-select:none;transition:background .12s}
+.proyec-header{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;cursor:pointer;user-select:none;transition:background .12s}
 .proyec-header:hover{background:var(--surface2)}
-.proyec-content{padding:0 14px 10px}
-.proyec-row{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
-.proyec-row:last-child{border-bottom:none}
-.proyec-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.proyec-name{flex:1;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.proyec-count{font-size:9px;color:#000;font-weight:800;background:var(--text-muted);border-radius:3px;padding:1px 5px;flex-shrink:0;min-width:16px;text-align:center}
-.proyec-ars{font-size:10px;font-weight:700;width:72px;text-align:right;flex-shrink:0}
-.proyec-usd{font-size:10px;font-weight:700;width:52px;text-align:right;flex-shrink:0;color:var(--blue)}
-.proyec-pbar{width:52px;flex-shrink:0;display:flex;align-items:center;gap:4px}
-.proyec-pbar-track{flex:1;height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
-.proyec-pbar-fill{height:100%;border-radius:2px;transition:width .3s}
-.proyec-pct{font-size:8px;color:var(--text-muted);font-weight:700;width:22px;text-align:right;flex-shrink:0}
-.proyec-footer{display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;border-top:1px solid var(--border2);margin-top:4px}
+.proyec-cards{display:flex;flex-wrap:wrap;gap:6px;padding:2px 14px 10px}
+.proyec-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;flex:1;min-width:100px;max-width:160px;transition:border-color .12s}
+.proyec-card:hover{border-color:var(--border2)}
+.proyec-card-top{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.proyec-card-name{font-size:9px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px}
+.proyec-card-cnt{font-size:9px;font-weight:800;border-radius:3px;padding:1px 5px;flex-shrink:0}
+.proyec-card-amt{font-size:12px;font-weight:800;line-height:1.2;margin-bottom:5px}
+.proyec-card-sub{font-size:9px;color:var(--blue);font-weight:600;margin-bottom:4px}
+.proyec-card-bar{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:3px}
+.proyec-card-fill{height:100%;border-radius:2px;transition:width .3s}
+.proyec-card-pct{font-size:8px;font-weight:700;color:var(--text-muted)}
 /* ── NOTIF PANEL ── */
 .notif-panel{position:fixed;top:50px;right:14px;width:300px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.75);z-index:300;max-height:75vh;display:flex;flex-direction:column;animation:slideUp .15s ease}
 .notif-header{padding:11px 14px 8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
@@ -291,7 +289,7 @@ const CANAL_COLOR={'Meta':'#1877f2','LinkedIn':'#0a66c2','Google':'#ea4335','Ref
 const MODALIDADES=['Facturado','Financiera','En mano'];
 const SERVICIOS=['Paid Media','Estrategia y Paid Media','Estrategia y contenido','Servicio FULL 360'];
 const MONEDAS=['ARS','USD','USDT'];
-const ESTADO_PROB={'Activa':10,'Esperando respuesta':15,'Coordinando meet':25,'Pendiente cotización':35,'Meet coordinada':40,'Enviada':55,'En negociación':70,'Cerrada':100,'Perdida':0,'Sin respuesta':0,'Sin definir':0};
+const ESTADO_PROB={'Activa':10,'Esperando respuesta':5,'Coordinando meet':15,'Pendiente cotización':15,'Meet coordinada':15,'Enviada':25,'En negociación':40,'Cerrada':100,'Perdida':0,'Sin respuesta':0,'Sin definir':0};
 const ESTADO_COLOR_MAP={'Activa':'#25d366','Esperando respuesta':'#c49a20','Coordinando meet':'#6a9fd8','Meet coordinada':'#9b6dff','Pendiente cotización':'#c49a20','Enviada':'#4aab7a','En negociación':'#c49a20','Cerrada':'#4aab7a','Perdida':'#d95f5f','Sin respuesta':'#d95f5f','Sin definir':'#554f6e'};
 const TASK_MSGS={'Activa':'Iniciar conversación por WhatsApp','Esperando respuesta':'Hacer seguimiento si no responde en 48hs','Coordinando meet':'Confirmar fecha y enviar invite de reunión','Meet coordinada':'Preparar preguntas de discovery','Pendiente cotización':'Armar y enviar cotización','Enviada':'Hacer seguimiento de propuesta (3 días)','En negociación':'Llamar para avanzar la negociación','Cerrada':'Iniciar proceso de onboarding 🚀','Perdida':'Registrar motivo de pérdida','Sin respuesta':'Intentar re-contactar por otro canal','Sin definir':'Definir siguiente paso'};
 
@@ -913,60 +911,50 @@ function rReportBar(fl,totalMonto){
 }
 
 // ── PROYECCIONES BAR ──
-// ── PROYECCIONES BAR (visual compacta) ──
+// ── PROYECCIONES BAR (cards compactas) ──
 function rProyecciones(allClients){
-  const ESTADOS_ORD=['En negociación','Cerrada','Enviada','Meet coordinada','Pendiente cotización','Coordinando meet','Esperando respuesta','Activa','Sin respuesta','Sin definir','Perdida'];
-  function fmtA(n,mon){if(!n)return'<span style="color:var(--border2);font-size:9px">—</span>';return`${mon==='ARS'?'<span style="font-size:8px;opacity:.7">$</span>':''}${Math.round(n/1000)>0?Math.round(n/1000).toLocaleString('es-AR')+'k':n.toLocaleString('es-AR')}`;}
-  if(!st.showProyecciones)return`<div class="proyec-bar"><div class="proyec-header" id="btn-toggle-proyec"><span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px"><span>📊</span><span>Proyecciones</span></span><span style="font-size:9px;color:var(--text-muted)">▾</span></div></div>`;
-  // Build rows per estado
+  const ESTADOS_ORD=['Cerrada','En negociación','Enviada','Meet coordinada','Pendiente cotización','Coordinando meet','Esperando respuesta','Activa','Sin respuesta','Sin definir','Perdida'];
+  function fmtA(n,mon){
+    if(!n)return null;
+    const abs=Math.abs(n);
+    const str=abs>=1000000?'$'+(abs/1000000).toFixed(1).replace('.0','')+'M':abs>=1000?'$'+Math.round(abs/1000).toLocaleString('es-AR')+'k':'$'+abs.toLocaleString('es-AR');
+    return mon==='ARS'?str:'USD '+str.replace('$','');
+  }
+  if(!st.showProyecciones)return`<div class="proyec-bar"><div class="proyec-header" id="btn-toggle-proyec"><span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px">📊 Proyecciones</span><span style="font-size:9px;color:var(--text-muted)">▾</span></div></div>`;
   const rows=ESTADOS_ORD.map(est=>{
     const pool=allClients.filter(c=>c.estado===est);
     if(!pool.length)return null;
     const ars=pool.filter(c=>(c.moneda||'ARS')==='ARS').reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);
     const usd=pool.filter(c=>c.moneda==='USD'||c.moneda==='USDT').reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);
-    const prob=ESTADO_PROB[est]??5;
+    const prob=ESTADO_PROB[est]??0;
     const color=ESTADO_COLOR_MAP[est]||'#554f6e';
     return{est,count:pool.length,ars,usd,prob,color};
   }).filter(Boolean);
   const grandARS=rows.reduce((a,r)=>a+Math.round(r.ars*r.prob/100),0);
   const grandUSD=rows.reduce((a,r)=>a+Math.round(r.usd*r.prob/100),0);
-  const grandCount=allClients.length;
   return`<div class="proyec-bar">
     <div class="proyec-header" id="btn-toggle-proyec">
-      <span style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px">📊 <span>Proyecciones</span></span>
+      <span style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px">📊 Proyecciones</span>
       <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:9px;color:var(--text-muted)">Pipeline ponderado: <strong style="color:var(--gold)">${grandARS?'$'+Math.round(grandARS/1000).toLocaleString('es-AR')+'k':''}</strong>${grandARS&&grandUSD?' · ':''}<strong style="color:var(--blue)">${grandUSD?'USD '+Math.round(grandUSD/1000).toLocaleString('es-AR')+'k':''}</strong></span>
+        <span style="font-size:9px;color:var(--text-muted)">Ponderado: ${grandARS?`<strong style="color:var(--gold)">$${Math.round(grandARS/1000).toLocaleString('es-AR')}k ARS</strong>`:''} ${grandUSD?`<strong style="color:var(--blue)">USD ${Math.round(grandUSD/1000).toLocaleString('es-AR')}k</strong>`:''}</span>
         <span style="font-size:9px;color:var(--text-muted)">▴</span>
       </div>
     </div>
-    <div class="proyec-content">
-      <div style="display:flex;align-items:center;gap:7px;padding:3px 0 5px;border-bottom:1px solid var(--border);margin-bottom:3px">
-        <div class="proyec-dot" style="background:transparent"></div>
-        <div class="proyec-name" style="color:var(--text-muted);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Estado</div>
-        <div style="width:16px;font-size:8px;color:var(--text-muted);text-align:center;font-weight:700;text-transform:uppercase;letter-spacing:.5px">#</div>
-        <div class="proyec-ars" style="color:var(--text-muted);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">ARS</div>
-        <div class="proyec-usd" style="color:var(--text-muted);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">USD</div>
-        <div class="proyec-pbar" style="justify-content:flex-end"><span style="font-size:8px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">% cierre</span></div>
-      </div>
-      ${rows.map(r=>`<div class="proyec-row">
-        <div class="proyec-dot" style="background:${r.color}"></div>
-        <div class="proyec-name" style="color:${r.color}">${r.est}</div>
-        <div style="width:16px;text-align:center"><span class="proyec-count" style="background:${r.color}22;color:${r.color}">${r.count}</span></div>
-        <div class="proyec-ars">${fmtA(r.ars,'ARS')}</div>
-        <div class="proyec-usd">${fmtA(r.usd,'USD')}</div>
-        <div class="proyec-pbar">
-          <div class="proyec-pbar-track"><div class="proyec-pbar-fill" style="width:${r.prob}%;background:${r.color}"></div></div>
-          <span class="proyec-pct">${r.prob}%</span>
-        </div>
-      </div>`).join('')}
-      <div class="proyec-footer">
-        <span style="font-size:9px;color:var(--text-muted);font-weight:600">${grandCount} prospectos en total</span>
-        <span style="font-size:9px;font-weight:700">
-          ${grandARS?`<span style="color:var(--gold)">Ponderado ARS: $${Math.round(grandARS/1000).toLocaleString('es-AR')}k</span>`:''}
-          ${grandARS&&grandUSD?' &middot; ':''}
-          ${grandUSD?`<span style="color:var(--blue)">USD ${Math.round(grandUSD/1000).toLocaleString('es-AR')}k</span>`:''}
-        </span>
-      </div>
+    <div class="proyec-cards">
+      ${rows.map(r=>{
+        const arsStr=fmtA(r.ars,'ARS');const usdStr=fmtA(r.usd,'USD');
+        return`<div class="proyec-card">
+          <div class="proyec-card-top">
+            <span style="width:6px;height:6px;border-radius:50%;background:${r.color};flex-shrink:0;display:inline-block"></span>
+            <span class="proyec-card-name" style="color:${r.color}">${r.est}</span>
+            <span class="proyec-card-cnt" style="background:${r.color}22;color:${r.color}">${r.count}</span>
+          </div>
+          <div class="proyec-card-amt" style="color:${r.ars||r.usd?'var(--text)':'var(--text-muted)'}">${arsStr||usdStr||'—'}</div>
+          ${usdStr&&arsStr?`<div class="proyec-card-sub">${usdStr}</div>`:''}
+          <div class="proyec-card-bar"><div class="proyec-card-fill" style="width:${r.prob}%;background:${r.color}"></div></div>
+          <div class="proyec-card-pct">${r.prob}% cierre</div>
+        </div>`;
+      }).join('')}
     </div>
   </div>`;
 }
