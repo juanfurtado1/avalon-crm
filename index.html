@@ -139,10 +139,13 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .report-stat{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;display:flex;gap:5px;align-items:center}
 .report-stat-n{font-size:13px;font-weight:700;color:var(--gold)}
 .report-stat-l{font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.search-input{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 12px 6px 30px;font-size:11px;color:var(--text);font-family:'Montserrat',sans-serif;outline:none;width:150px;transition:border-color .15s,width .2s}
+.search-input{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 26px 6px 30px;font-size:11px;color:var(--text);font-family:'Montserrat',sans-serif;outline:none;width:150px;transition:border-color .15s,width .2s}
 .search-input:focus{border-color:var(--gold);width:200px}
 .search-wrap{position:relative;display:flex;align-items:center}
 .search-icon{position:absolute;left:9px;font-size:11px;pointer-events:none;opacity:.5}
+.search-clear{position:absolute;right:8px;font-size:11px;cursor:pointer;color:var(--text-muted);opacity:.7;display:none;background:none;border:none;padding:0;line-height:1;font-family:inherit}
+.search-clear:hover{opacity:1;color:var(--text)}
+.search-clear.visible{display:block}
 .btn-filter{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 11px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:10px;cursor:pointer;color:var(--text-muted);letter-spacing:.3px;text-transform:uppercase;display:flex;align-items:center;gap:4px}
 .filter-btn-active{background:var(--gold-dim)!important;border-color:var(--gold)!important;color:var(--gold)!important}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .12s}
@@ -1020,6 +1023,7 @@ function rList(){
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input class="search-input" id="search-input" placeholder="Buscar cliente..." value="${st.searchTerm}" autocomplete="off">
+        <button class="search-clear ${st.searchTerm?'visible':''}" id="btn-search-clear">✕</button>
       </div>
       <button class="btn-sm" id="btn-export">⬇</button>
       <input type="file" id="import-file" accept=".json" style="display:none">
@@ -1669,9 +1673,20 @@ function bind(){
   // Search — update state without re-render on every key, use input event
   const searchEl=document.getElementById('search-input');
   if(searchEl){
-    searchEl.addEventListener('input',e=>{st.searchTerm=e.target.value;renderListOnly();});
+    searchEl.addEventListener('input',e=>{
+      st.searchTerm=e.target.value;
+      const clr=document.getElementById('btn-search-clear');
+      if(clr)clr.className='search-clear'+(e.target.value?'  visible':' ');
+      renderListOnly();
+    });
     searchEl.addEventListener('keydown',e=>e.stopPropagation());
   }
+  document.getElementById('btn-search-clear')?.addEventListener('click',()=>{
+    st.searchTerm='';
+    const inp=document.getElementById('search-input');
+    if(inp){inp.value='';inp.focus();}
+    renderListOnly();
+  });
   $('#btn-toggle-proyec')?.addEventListener('click',()=>{st.showProyecciones=!st.showProyecciones;render()});
   // Notif panel
   $('#btn-notif')?.addEventListener('click',e=>{e.stopPropagation();st.showNotifPanel=!st.showNotifPanel;render()});
