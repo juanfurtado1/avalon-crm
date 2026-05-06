@@ -1036,7 +1036,7 @@ function rList(){
   const fl=applyFilters(clients);
   const sr=[...fl].sort((a,b)=>Number(b.id)-Number(a.id));
   const today2=new Date().toISOString().split('T')[0];
-  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='cold').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length};
+  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='cold').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length,cerradas:clients.filter(c=>c.estado==='Cerrada').length,perdidas:clients.filter(c=>c.estado==='Perdida').length,pipeline:clients.filter(c=>!['Cerrada','Perdida'].includes(c.estado)).length};
   // Proyección pipeline: presupuestos de estado Enviada + columna Hot
   const proyeccionPool=fl.filter(c=>c.estado==='Enviada'||ul(ds(c.lastContact),c.estado)==='hot');
   const totalMonto=proyeccionPool.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
@@ -1082,20 +1082,56 @@ function rList(){
   <div class="gold-bar"></div>
   ${st.showFilters?rFilterPanel():''}
   <div class="stats">
-    <div class="stat"><div class="stat-n">${ct.total}</div><div class="stat-l">Total</div></div>
-    <div class="stat"><div class="stat-n">${ct.abonos}</div><div class="stat-l">Abonos</div></div>
-    <div class="stat"><div class="stat-n" style="color:var(--gold)">${ct.lc}</div><div class="stat-l">LC</div></div>
-    <div class="stat"><div class="stat-n" style="color:${ct.urgentes>0?'var(--blue)':'var(--text-muted)'}">${ct.urgentes}</div><div class="stat-l">Sin contacto</div></div>
-    <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+    <!-- Stats principales en una sola fila -->
+    <div class="stat" style="grid-column:span 4;padding:10px 16px;display:flex;align-items:center;gap:0">
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;padding:4px 8px;border-right:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:26px;font-weight:800;color:#c4a0ff;line-height:1;text-shadow:0 0 24px rgba(155,109,255,.7)">${ct.total}</div>
+        <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;font-weight:700">Total</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1.5;padding:4px 8px;border-right:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span style="font-size:26px;font-weight:800;color:#6a9fd8;line-height:1;text-shadow:0 0 24px rgba(106,159,216,.6)">${ct.pipeline}</span>
+          <span style="font-size:9px;color:rgba(106,159,216,.6);font-weight:700">${ct.total>0?Math.round(ct.pipeline/ct.total*100):0}%</span>
+        </div>
+        <div style="font-size:8px;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-weight:700">▶ Pipeline</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1.5;padding:4px 8px;border-right:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span style="font-size:26px;font-weight:800;color:#4aab7a;line-height:1;text-shadow:0 0 24px rgba(74,171,122,.6)">${ct.cerradas}</span>
+          <span style="font-size:9px;color:rgba(74,171,122,.6);font-weight:700">${ct.total>0?Math.round(ct.cerradas/ct.total*100):0}%</span>
+        </div>
+        <div style="font-size:8px;color:#4aab7a;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-weight:700">✓ Cerradas</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1.5;padding:4px 8px;border-right:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span style="font-size:26px;font-weight:800;color:#d95f5f;line-height:1;text-shadow:0 0 24px rgba(217,95,95,.5)">${ct.perdidas}</span>
+          <span style="font-size:9px;color:rgba(217,95,95,.5);font-weight:700">${ct.total>0?Math.round(ct.perdidas/ct.total*100):0}%</span>
+        </div>
+        <div style="font-size:8px;color:#d95f5f;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-weight:700">✗ Perdidas</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1.5;padding:4px 8px">
+        <div style="font-size:26px;font-weight:800;color:${ct.urgentes>5?'#d95f5f':'#c49a20'};line-height:1;text-shadow:0 0 24px ${ct.urgentes>5?'rgba(217,95,95,.5)':'rgba(196,154,32,.5)'}">${ct.urgentes}</div>
+        <div style="font-size:8px;color:${ct.urgentes>5?'#d95f5f':'#c49a20'};text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-weight:700">⚠ Sin contacto</div>
+      </div>
+    </div>
+    <!-- Barra de conversión + segmentada -->
+    <div class="stat" style="grid-column:span 4;padding:8px 16px 10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">% Conversión · ${convMes}</div>
         <div style="display:flex;align-items:baseline;gap:4px">
-          <span style="font-size:20px;font-weight:800;color:${convColor};line-height:1">${convRate}%</span>
+          <span style="font-size:20px;font-weight:800;color:${convColor};line-height:1;text-shadow:0 0 20px ${convColor}99">${convRate}%</span>
           <span style="font-size:9px;color:var(--text-muted);font-weight:600">${convCerradas} cerradas / ${convTotal} en pipeline</span>
         </div>
       </div>
-      <div style="background:var(--surface3);border-radius:4px;height:5px;overflow:hidden">
-        <div style="width:${Math.min(convRate,100)}%;background:${convColor};height:100%;border-radius:4px;transition:width .4s ease"></div>
+      <div style="display:flex;height:6px;border-radius:6px;overflow:hidden;gap:1px">
+        <div style="flex:${ct.pipeline||0.01};background:linear-gradient(90deg,#1e3a5a,#6a9fd8)" title="${ct.pipeline} en pipeline"></div>
+        <div style="flex:${ct.cerradas||0.01};background:linear-gradient(90deg,#1a5a3a,#4aab7a)" title="${ct.cerradas} cerradas"></div>
+        <div style="flex:${ct.perdidas||0.01};background:linear-gradient(90deg,#5a1a1a,#d95f5f)" title="${ct.perdidas} perdidas"></div>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:5px">
+        <span style="font-size:8px;color:#6a9fd8;font-weight:700">▬ ${ct.pipeline} activos</span>
+        <span style="font-size:8px;color:#4aab7a;font-weight:700">▬ ${ct.cerradas} cerrados</span>
+        <span style="font-size:8px;color:#d95f5f;font-weight:700">▬ ${ct.perdidas} perdidos</span>
       </div>
     </div>
     <div class="stat" style="grid-column:span 4;border-top:1px solid var(--border)">${(()=>{const td=new Date().toISOString().split('T')[0];const up=clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=td)||(c.meetBudget&&c.meetBudget>=td)).sort((a,b)=>{const aD=[a.meetDiscovery,a.meetBudget].filter(Boolean).sort()[0];const bD=[b.meetDiscovery,b.meetBudget].filter(Boolean).sort()[0];return aD<bD?-1:1;});if(!up.length)return`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px 0">Sin reuniones próximas</div>`;const rows=up.flatMap(c=>{const r=[];if(c.meetDiscovery&&c.meetDiscovery>=td)r.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">🔍 ${c.name}${c.company?' · '+c.company:''}</span><span class="meets-tooltip-detail">Discovery — ${fmtDate(c.meetDiscovery)}</span></div>`);if(c.meetBudget&&c.meetBudget>=td)r.push(`<div class="meets-tooltip-row"><span class="meets-tooltip-name">💼 ${c.name}${c.company?' · '+c.company:''}</span><span class="meets-tooltip-detail">Budget — ${fmtDate(c.meetBudget)}</span></div>`);return r;}).join('');return`<div style="display:flex;align-items:center;justify-content:center;padding:4px 0"><button class="meets-btn"><span class="meet-badge meet-discovery">🔍 Meets próximas: ${up.length}</span><div class="meets-tooltip">${rows}</div></button></div>`;})()}</div>
