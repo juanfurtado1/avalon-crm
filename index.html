@@ -2107,9 +2107,21 @@ async function analizar(){
   const p=`Analizá este prospecto para Juan.\n\nCliente: ${c.name}${c.company?` — ${c.company}`:''}\nWeb: ${c.web||'no disponible'}\nInstagram: ${c.instagram||'no disponible'}${nt}\nContexto: ${c.investigacion.contexto||'ninguno'}\n\nRespondé en dos partes:\n\n### Análisis de la marca\nQué vende realmente, cómo está posicionada, qué contradicciones tiene, dónde están las oportunidades para Avalon. Evaluá el fit (estrategia + pauta).\n\n### Preguntas de discovery\nListá exactamente 5 preguntas numeradas, específicas para este cliente. Para revelar el problema real, detectar presupuesto y posicionar a Juan como partner estratégico.`;
   try{
     const t=await claude([{role:'user',content:p}]);
-    const m=t.match(/###\s*Preguntas de discovery\s*([\s\S]*)/i);
-    let pqs=[];
-    if(m){pqs=m[1].trim().split('\n').filter(l=>/^\d+[\.\)]/.test(l.trim())).map(l=>l.replace(/^\d+[\.\)]\s*/,'').trim()).filter(Boolean);}
+    // Extracción robusta — múltiples patrones de fallback
+    const secMatch=t.match(/(?:#{1,3})\s*Preguntas de discovery[\s\S]*?\n([\s\S]*?)(?=\n#{1,3}|$)/i);
+    const haystack=secMatch?secMatch[1]:t;
+    let pqs=haystack.split('\n')
+      .map(l=>l.trim())
+      .filter(l=>/^\*{0,2}\d+[.)\]]?\*{0,2}[.)\]]?/.test(l)&&l.length>10)
+      .map(l=>l.replace(/^[*\d.)\]]+\s*/,'').replace(/\*\*/g,'').trim())
+      .filter(Boolean).slice(0,5);
+    if(!pqs.length){
+      pqs=haystack.split('\n')
+        .map(l=>l.trim())
+        .filter(l=>l.includes('\u00bf')&&l.length>10)
+        .map(l=>l.replace(/^[-\u2022*\d.)\]]+\s*/,'').trim())
+        .filter(Boolean).slice(0,5);
+    }
     c.investigacion.resultado=t;c.investigacion.preguntas=pqs;
     await sv(c);
   }catch(e){
