@@ -1109,9 +1109,10 @@ function rList(){
         </div>
         <div style="font-size:8px;color:#d95f5f;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-weight:700">✗ Perdidas</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;flex:1.5;padding:4px 8px">
+      <div id="btn-stat-sincontacto" style="display:flex;flex-direction:column;align-items:center;flex:1.5;padding:4px 8px;cursor:pointer;border-radius:8px;transition:background .15s" onmouseenter="this.style.background='rgba(196,154,32,.08)'" onmouseleave="this.style.background='transparent'">
         <div style="font-size:26px;font-weight:800;color:${ct.urgentes>5?'#d95f5f':'#c49a20'};line-height:1;text-shadow:0 0 24px ${ct.urgentes>5?'rgba(217,95,95,.5)':'rgba(196,154,32,.5)'}">${ct.urgentes}</div>
         <div style="font-size:8px;color:${ct.urgentes>5?'#d95f5f':'#c49a20'};text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-weight:700">⚠ Sin contacto</div>
+        <div style="font-size:7px;color:var(--text-muted);margin-top:2px;font-weight:600">tap para ver</div>
       </div>
     </div>
     <!-- Barra de conversión + segmentada -->
@@ -1822,7 +1823,12 @@ function bind(){
   $('#btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render()});
   $('#btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render()});
   $('#btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render()});
-  document.getElementById('estado-filter-select')?.addEventListener('change',e=>{st.filter=e.target.value;render();});
+  document.getElementById('btn-stat-sincontacto')?.addEventListener('click',()=>{
+    st.filters.urgencia=st.filters.urgencia==='sin-contacto'?'':' sin-contacto';
+    st.filters.urgencia='sin-contacto';
+    st.showFilters=false;
+    render();
+  });
   document.getElementById('btn-clear-estado-filter')?.addEventListener('click',()=>{st.filter='Todos';render();});
   $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
   $$('.card-v2').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
