@@ -550,7 +550,7 @@ function generarInforme(){
   const pendCot=fl.filter(c=>c.estado==='Pendiente cotización');
   const pendMeet=fl.filter(c=>c.estado==='Meet coordinada');
   const sinResp=fl.filter(c=>c.estado==='Sin respuesta');
-  const convBase=cerradas.length+enviadas;
+  const convBase=cerradas.length+enviadas+fl.filter(c=>c.estado==='En negociación').length;
   const convRate=convBase>0?Math.round(cerradas.length/convBase*100):0;
   const convColor=convRate>=30?'#4ade80':convRate>=15?'#fb923c':'#ef4444';
   const montoTotal=fl.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
@@ -917,7 +917,7 @@ function rReportBar(fl,totalMonto){
     ${fl.filter(c=>c.tipo==='LC').length?`<div class="report-stat"><div class="report-stat-n" style="color:var(--blue)">${fl.filter(c=>c.tipo==='LC').length}</div><div class="report-stat-l">LC</div></div>`:''}
     ${fl.filter(c=>c.tipo!=='LC').length?`<div class="report-stat"><div class="report-stat-n">${fl.filter(c=>c.tipo!=='LC').length}</div><div class="report-stat-l">Abonos</div></div>`:''}
     ${Object.entries(byEstado).map(([e,n])=>`<div class="report-stat"><div class="report-stat-n" style="font-size:11px">${n}</div><div class="report-stat-l">${e}</div></div>`).join('')}
-    ${hasDateF?`<button id="btn-generar-informe" style="margin-left:auto;background:var(--gold-dim);border:1px solid rgba(155,109,255,.5);border-radius:7px;padding:6px 12px;font-size:10px;color:var(--gold);font-family:'Montserrat',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.5px">📊 Generar informe</button>`:''}
+    <button id="btn-generar-informe" style="margin-left:auto;background:var(--gold-dim);border:1px solid rgba(155,109,255,.5);border-radius:7px;padding:6px 12px;font-size:10px;color:var(--gold);font-family:'Montserrat',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.5px">📊 Informe</button>
   </div>`;
 }
 
@@ -1014,8 +1014,8 @@ function rList(){
   const convTo=f.dateTo||today2;
   const convPool=clients.filter(c=>c.lastContact>=convFrom&&c.lastContact<=convTo);
   const convCerradas=convPool.filter(c=>c.estado==='Cerrada').length;
-  const convEnviadas=convPool.filter(c=>c.estado==='Enviada').length;
-  const convTotal=convCerradas+convEnviadas;
+  const convBase=convPool.filter(c=>['Cerrada','Enviada','En negociación'].includes(c.estado)).length;
+  const convTotal=convBase;
   const convRate=convTotal>0?Math.round(convCerradas/convTotal*100):0;
   const convColor=convRate>=30?'var(--green)':convRate>=15?'var(--yellow)':'var(--red)';
   const convMes=new Date(convFrom).toLocaleString('es-AR',{month:'long',year:'numeric'});
@@ -1057,7 +1057,7 @@ function rList(){
         <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">% Conversión · ${convMes}</div>
         <div style="display:flex;align-items:baseline;gap:4px">
           <span style="font-size:20px;font-weight:800;color:${convColor};line-height:1">${convRate}%</span>
-          <span style="font-size:9px;color:var(--text-muted);font-weight:600">${convCerradas} cerradas / ${convEnviadas} enviadas</span>
+          <span style="font-size:9px;color:var(--text-muted);font-weight:600">${convCerradas} cerradas / ${convTotal} en pipeline</span>
         </div>
       </div>
       <div style="background:var(--surface3);border-radius:4px;height:5px;overflow:hidden">
