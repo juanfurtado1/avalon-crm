@@ -372,7 +372,7 @@ async function loadC(){
   try{
     const r=await fetch(SB_URL+'/rest/v1/clients?select=data&order=created_at.desc',{headers:sbH()});
     const rows=await r.json();
-    if(Array.isArray(rows))clients=rows.map(row=>nc(row.data));
+    if(Array.isArray(rows))clients=rows.filter(row=>row.data&&row.data.id!=='lc_master').map(row=>nc(row.data));
   }catch(e){console.error('Load error',e);}
 }
 async function sv(c){if(!c)return;await sbUp(c);}
@@ -392,6 +392,7 @@ async function sbDel(id){
 
 // ── NUEVOS CLIENTES — SUPABASE ──
 let nuevos=[];
+let lcData={periodos:[]};
 async function loadNC(){
   try{
     const r=await fetch(SB_URL+'/rest/v1/new_clients?select=data&order=updated_at.desc',{headers:sbH()});
@@ -411,6 +412,23 @@ async function svNC(c){
 async function sbDelNC(id){
   try{await fetch(SB_URL+'/rest/v1/new_clients?id=eq.'+id,{method:'DELETE',headers:sbH()});}
   catch(e){console.error('NC delete error',e);}
+}
+// ── LC CONSUMO — SUPABASE ──
+async function loadLC(){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/clients?id=eq.lc_master&select=data',{headers:sbH()});
+    const rows=await r.json();
+    if(Array.isArray(rows)&&rows[0]?.data?.periodos)lcData=rows[0].data;
+  }catch(e){}
+}
+async function saveLCMaster(){
+  try{
+    await fetch(SB_URL+'/rest/v1/clients',{
+      method:'POST',
+      headers:{...sbH(),'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({id:'lc_master',data:lcData,updated_at:new Date().toISOString()})
+    });
+  }catch(e){console.error('Save LC error',e);}
 }
 function ncNew(d={}){
   return{
@@ -491,6 +509,8 @@ let st={
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
   // Clientes Nuevos
   activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,
+  // LC Consumo
+  showLCModal:false,lcDraft:null,
   showProyecciones:false,showNotifPanel:false
 };
 
@@ -565,6 +585,40 @@ function toast(msg){
   document.body.appendChild(t);setTimeout(()=>t.remove(),2000);
 }
 
+// ── LC SYNC DRAFT (reads DOM into state) ──
+function lcSyncDraft(){
+  if(!st.lcDraft)return;
+  // Sync ARS rows
+  st.lcDraft.cuentasARS=st.lcDraft.cuentasARS.map((r,i)=>{
+    const cli=document.querySelector(`.lc-ars-cli[data-idx="${i}"]`);
+    const plat=document.querySelector(`.lc-ars-plat[data-idx="${i}"]`);
+    const monto=document.querySelector(`.lc-ars-monto[data-idx="${i}"]`);
+    return{
+      cliente:cli?cli.value:r.cliente,
+      plataforma:plat?plat.value:r.plataforma,
+      monto:monto?monto.value.replace(/[.,]/g,''):r.monto
+    };
+  });
+  // Sync USD rows
+  st.lcDraft.cuentasUSD=st.lcDraft.cuentasUSD.map((r,i)=>{
+    const cli=document.querySelector(`.lc-usd-cli[data-idx="${i}"]`);
+    const plat=document.querySelector(`.lc-usd-plat[data-idx="${i}"]`);
+    const monto=document.querySelector(`.lc-usd-monto[data-idx="${i}"]`);
+    return{
+      cliente:cli?cli.value:r.cliente,
+      plataforma:plat?plat.value:r.plataforma,
+      monto:monto?monto.value:r.monto
+    };
+  });
+  // Sync header fields
+  const lp=document.getElementById('lc-periodo');
+  const ld=document.getElementById('lc-desde');
+  const lh=document.getElementById('lc-hasta');
+  if(lp)st.lcDraft.periodo=lp.value;
+  if(ld)st.lcDraft.desde=ld.value;
+  if(lh)st.lcDraft.hasta=lh.value;
+}
+
 // ── GENERAR INFORME ──
 function generarInforme(){
   const fl=applyFilters(clients);
@@ -583,7 +637,7 @@ function generarInforme(){
   const pendCot=fl.filter(c=>c.estado==='Pendiente cotización');
   const pendMeet=fl.filter(c=>c.estado==='Meet coordinada');
   const sinResp=fl.filter(c=>c.estado==='Sin respuesta');
-  const convBase=cerradas.length+enviadas+fl.filter(c=>c.estado==='En negociación').length;
+  const convBase=cerradas.length+enviadas+enNeg.length+perdidas.length;
   const convRate=convBase>0?Math.round(cerradas.length/convBase*100):0;
   const convColor=convRate>=30?'#4ade80':convRate>=15?'#fb923c':'#ef4444';
   const montoTotal=fl.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
@@ -750,18 +804,73 @@ function generarInforme(){
     p('</div>');
   }
   p('</div></div></div>');
+  // S7 LC CONSUMO (si hay datos del período)
+  const lcPeriodo=(()=>{
+    const sorted=[...lcData.periodos].sort((a,b)=>b.id.localeCompare(a.id));
+    if(f.dateFrom||f.dateTo){
+      const fromM=f.dateFrom?f.dateFrom.substring(0,7):'0000-00';
+      const toM=f.dateTo?f.dateTo.substring(0,7):'9999-99';
+      return sorted.find(p=>p.id>=fromM&&p.id<=toM)||null;
+    }
+    return sorted[0]||null;
+  })();
+  const totalSlides=lcPeriodo?7:6;
+  if(lcPeriodo){
+    const fmtARS=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
+    const fmtUSD=n=>n?'USD '+parseFloat(n).toLocaleString('es-AR',{minimumFractionDigits:0}):'—';
+    const totARS=(lcPeriodo.cuentasARS||[]).reduce((a,r)=>a+(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0),0);
+    const totUSD=(lcPeriodo.cuentasUSD||[]).reduce((a,r)=>a+(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0),0);
+    p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">LC Consumo</span></div>');
+    p('<h2>Consumo LC &middot; '+lcPeriodo.label+'</h2>');
+    p('<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">');
+    // Totales
+    p('<div class="rc" style="background:rgba(106,159,216,.08);border:1px solid rgba(106,159,216,.4);padding:22px;border-radius:4px;text-align:center">');
+    p('<div class="rl" style="color:#6a9fd8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Total ARS</div>');
+    p('<div style="font-size:34px;font-weight:800;color:#6a9fd8;line-height:1">'+fmtARS(totARS)+'</div>');
+    p('<div style="font-size:11px;color:#444;margin-top:6px">'+((lcPeriodo.cuentasARS||[]).length)+' cuentas</div></div>');
+    p('<div class="rc" style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.4);padding:22px;border-radius:4px;text-align:center">');
+    p('<div class="rl" style="color:#4ade80;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Total USD</div>');
+    p('<div style="font-size:34px;font-weight:800;color:#4ade80;line-height:1">'+fmtUSD(totUSD)+'</div>');
+    p('<div style="font-size:11px;color:#444;margin-top:6px">'+((lcPeriodo.cuentasUSD||[]).length)+' cuentas</div></div>');
+    p('</div>');
+    // Tablas
+    p('<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;overflow:hidden">');
+    // ARS table
+    p('<div><div style="font-size:11px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(106,159,216,.4)">Cuentas ARS</div>');
+    p('<div style="overflow-y:auto;max-height:240px">');
+    if((lcPeriodo.cuentasARS||[]).length){
+      (lcPeriodo.cuentasARS||[]).forEach(function(r){
+        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">');
+        p('<div><div style="font-size:12px;font-weight:600;color:#fff">'+r.cliente+'</div><div style="font-size:10px;color:#555;margin-top:1px">'+r.plataforma+'</div></div>');
+        p('<span style="font-size:13px;font-weight:700;color:#6a9fd8">'+fmtARS(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0)+'</span></div>');
+      });
+    } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
+    p('</div></div>');
+    // USD table
+    p('<div><div style="font-size:11px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(74,222,128,.4)">Cuentas USD</div>');
+    p('<div style="overflow-y:auto;max-height:240px">');
+    if((lcPeriodo.cuentasUSD||[]).length){
+      (lcPeriodo.cuentasUSD||[]).forEach(function(r){
+        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">');
+        p('<div><div style="font-size:12px;font-weight:600;color:#fff">'+r.cliente+'</div><div style="font-size:10px;color:#555;margin-top:1px">'+r.plataforma+'</div></div>');
+        p('<span style="font-size:13px;font-weight:700;color:#4ade80">'+fmtUSD(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0)+'</span></div>');
+      });
+    } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
+    p('</div></div>');
+    p('</div></div>');
+  }
   // NAV
   p('</div>');
   p('<div class="nav"><div class="nbs">');
   p('<button id="pb" onclick="go(-1)" disabled>&#x2190; Anterior</button>');
   p('<button onclick="go(1)" id="nb">Siguiente &#x2192;</button>');
   p('<button onclick="window.print()" style="background:rgba(74,222,128,.1);border-color:#4ade80;color:#4ade80">&#x1F4E5; Exportar PDF</button>');
-  p('</div><div style="font-size:11px;color:#444;font-weight:600"><span id="cn">1</span> / 6</div><div class="dots" id="dots"></div></div>');
+  p('</div><div style="font-size:11px;color:#444;font-weight:600"><span id="cn">1</span> / '+totalSlides+'</div><div class="dots" id="dots"></div></div>');
   p('</div>');
   p('<'+'script>');
-  p('var c=0,s=document.querySelectorAll(".slide");');
-  p('function go(n){s[c].classList.remove("on");c=Math.max(0,Math.min(c+n,5));s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===5;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});}');
-  p('var dc=document.getElementById("dots");for(var i=0;i<6;i++){var d=document.createElement("div");d.className="dot"+(i===0?" on":"");d.setAttribute("data-i",i);d.onclick=function(){var n=parseInt(this.getAttribute("data-i"));s[c].classList.remove("on");c=n;s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===5;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});};dc.appendChild(d);}');
+  p('var c=0,ts='+totalSlides+',s=document.querySelectorAll(".slide");');
+  p('function go(n){s[c].classList.remove("on");c=Math.max(0,Math.min(c+n,ts-1));s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===ts-1;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});}');
+  p('var dc=document.getElementById("dots");for(var i=0;i<ts;i++){var d=document.createElement("div");d.className="dot"+(i===0?" on":"");d.setAttribute("data-i",i);d.onclick=function(){var n=parseInt(this.getAttribute("data-i"));s[c].classList.remove("on");c=n;s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===ts-1;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});};dc.appendChild(d);}');
   p('document.addEventListener("keydown",function(e){if(e.key==="ArrowLeft")go(-1);if(e.key==="ArrowRight")go(1);});');
   p('<'+'/script></body></html>');
   const win=window.open('','_blank');
@@ -872,6 +981,7 @@ async function render(){
   if(st.showSbModal)app.insertAdjacentHTML('beforeend',rSbModal());
   if(st.showApiModal)app.insertAdjacentHTML('beforeend',rApiModal());
   if(st.showNewModal)app.insertAdjacentHTML('beforeend',rNewModal());
+  if(st.showLCModal)app.insertAdjacentHTML('beforeend',rLCModal());
   bind();
 }
 
@@ -951,6 +1061,7 @@ function rReportBar(fl,totalMonto){
     ${fl.filter(c=>c.tipo!=='LC').length?`<div class="report-stat"><div class="report-stat-n">${fl.filter(c=>c.tipo!=='LC').length}</div><div class="report-stat-l">Abonos</div></div>`:''}
     ${Object.entries(byEstado).map(([e,n])=>`<div class="report-stat"><div class="report-stat-n" style="font-size:11px">${n}</div><div class="report-stat-l">${e}</div></div>`).join('')}
     <button id="btn-generar-informe" style="margin-left:auto;background:var(--gold-dim);border:1px solid rgba(155,109,255,.5);border-radius:7px;padding:6px 12px;font-size:10px;color:var(--gold);font-family:'Montserrat',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.5px">📊 Informe</button>
+    <button id="btn-open-lc" style="background:rgba(106,159,216,.1);border:1px solid rgba(106,159,216,.4);border-radius:7px;padding:6px 12px;font-size:10px;color:#6a9fd8;font-family:'Montserrat',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.5px">💳 LC</button>
   </div>`;
 }
 
@@ -1479,6 +1590,64 @@ function rEditModal(){
   <button class="btn-outline" id="btn-cancel-edit">Cancelar</button>
   </div></div>`;
 }
+// ── LC MODAL ──
+function rLCModal(){
+  const d=st.lcDraft||{periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
+  const PLATS=['Meta','Google','TikTok','Pinterest','Otra'];
+  function rowARS(r,i){
+    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-ars="${i}">
+      <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
+      <select class="field-select lc-ars-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
+      <input class="field-input lc-ars-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto ARS" style="font-size:11px;padding:6px 8px" inputmode="numeric">
+      <button class="btn-sm lc-del-ars" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
+    </div>`;
+  }
+  function rowUSD(r,i){
+    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-usd="${i}">
+      <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
+      <select class="field-select lc-usd-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
+      <input class="field-input lc-usd-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto USD" style="font-size:11px;padding:6px 8px" inputmode="numeric">
+      <button class="btn-sm lc-del-usd" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
+    </div>`;
+  }
+  const totalARS=d.cuentasARS.reduce((a,r)=>a+(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0),0);
+  const totalUSD=d.cuentasUSD.reduce((a,r)=>a+(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0),0);
+  // Periodos guardados
+  const saved=lcData.periodos||[];
+  return`<div class="modal-overlay" id="lc-modal-overlay"><div class="modal" style="max-width:540px">
+    <div class="modal-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="modal-title" style="margin:0">💳 Consumo LC</div>
+      ${saved.length?`<select class="field-select" id="lc-load-select" style="font-size:10px;padding:4px 8px;width:auto">
+        <option value="">Cargar período guardado…</option>
+        ${saved.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}
+      </select>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="field"><label class="field-label">Período</label><input class="field-input" id="lc-periodo" value="${d.periodo||''}" placeholder="Ej: Abril 2026" style="font-size:11px"></div>
+      <div class="field"><label class="field-label">Desde</label><input class="field-input" id="lc-desde" type="date" value="${d.desde||''}"></div>
+      <div class="field"><label class="field-label">Hasta</label><input class="field-input" id="lc-hasta" type="date" value="${d.hasta||''}"></div>
+    </div>
+    <hr class="divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px">Cuentas en Pesos (ARS)</div>
+      ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
+    </div>
+    ${d.cuentasARS.length?d.cuentasARS.map((r,i)=>rowARS(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas ARS</div>'}
+    <button class="btn-sm" id="btn-lc-add-ars" style="margin-bottom:14px;color:#6a9fd8;border-color:rgba(106,159,216,.4)">+ Cuenta ARS</button>
+    <hr class="divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Cuentas en USD</div>
+      ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
+    </div>
+    ${d.cuentasUSD.length?d.cuentasUSD.map((r,i)=>rowUSD(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas USD</div>'}
+    <button class="btn-sm" id="btn-lc-add-usd" style="margin-bottom:14px;color:var(--green);border-color:rgba(74,171,122,.4)">+ Cuenta USD</button>
+    <hr class="divider">
+    <button class="btn-primary" id="btn-lc-save">Guardar período LC</button>
+    <button class="btn-outline" id="btn-lc-cancel">Cancelar</button>
+  </div></div>`;
+}
+
 function rDetail(){
   const c=gc();if(!c){st.view='list';render();return'';}
   const pr=sp(c);
@@ -1828,6 +1997,70 @@ function bind(){
   }
   $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $('#btn-generar-informe')?.addEventListener('click',generarInforme);
+  // LC Modal
+  $('#btn-open-lc')?.addEventListener('click',()=>{
+    const f=st.filters;
+    st.lcDraft={
+      periodo:'',
+      desde:f.dateFrom||'',hasta:f.dateTo||'',
+      cuentasARS:[],cuentasUSD:[]
+    };
+    st.showLCModal=true;render();
+  });
+  $('#lc-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='lc-modal-overlay'){st.showLCModal=false;render();}});
+  $('#btn-lc-cancel')?.addEventListener('click',()=>{st.showLCModal=false;render();});
+  // Load saved period
+  document.getElementById('lc-load-select')?.addEventListener('change',e=>{
+    const p=lcData.periodos.find(x=>x.id===e.target.value);
+    if(!p)return;
+    st.lcDraft={periodo:p.label,desde:p.desde,hasta:p.hasta,
+      cuentasARS:JSON.parse(JSON.stringify(p.cuentasARS||[])),
+      cuentasUSD:JSON.parse(JSON.stringify(p.cuentasUSD||[]))};
+    render();
+  });
+  // Add row ARS
+  document.getElementById('btn-lc-add-ars')?.addEventListener('click',()=>{
+    lcSyncDraft();
+    st.lcDraft.cuentasARS.push({cliente:'',plataforma:'Meta',monto:''});
+    render();
+  });
+  // Add row USD
+  document.getElementById('btn-lc-add-usd')?.addEventListener('click',()=>{
+    lcSyncDraft();
+    st.lcDraft.cuentasUSD.push({cliente:'',plataforma:'Meta',monto:''});
+    render();
+  });
+  // Delete ARS row
+  document.querySelectorAll('.lc-del-ars').forEach(btn=>btn.addEventListener('click',()=>{
+    lcSyncDraft();
+    const i=parseInt(btn.dataset.idx);
+    st.lcDraft.cuentasARS.splice(i,1);render();
+  }));
+  // Delete USD row
+  document.querySelectorAll('.lc-del-usd').forEach(btn=>btn.addEventListener('click',()=>{
+    lcSyncDraft();
+    const i=parseInt(btn.dataset.idx);
+    st.lcDraft.cuentasUSD.splice(i,1);render();
+  }));
+  // Save LC
+  document.getElementById('btn-lc-save')?.addEventListener('click',async()=>{
+    lcSyncDraft();
+    const d=st.lcDraft;
+    const label=document.getElementById('lc-periodo')?.value.trim()||d.periodo;
+    const desde=document.getElementById('lc-desde')?.value||d.desde;
+    const hasta=document.getElementById('lc-hasta')?.value||d.hasta;
+    if(!label){toast('Ingresá el período');return;}
+    // Build id from desde or label
+    const id=desde?desde.substring(0,7):label.toLowerCase().replace(/\s/g,'-');
+    const periodoData={id,label,desde,hasta,
+      cuentasARS:d.cuentasARS.filter(r=>r.cliente||r.monto),
+      cuentasUSD:d.cuentasUSD.filter(r=>r.cliente||r.monto)};
+    // Upsert
+    const idx=lcData.periodos.findIndex(p=>p.id===id);
+    if(idx>=0)lcData.periodos[idx]=periodoData;else lcData.periodos.unshift(periodoData);
+    await saveLCMaster();
+    st.showLCModal=false;toast('LC guardado ✓');render();
+  });
   $('#btn-open-new')?.addEventListener('click',()=>{st.showNewModal=true;render()});
   $('#btn-export')?.addEventListener('click',exportData);
   $('#btn-import')?.addEventListener('click',()=>document.getElementById('import-file')?.click());
@@ -2590,6 +2823,7 @@ async function initApp(){
   render();
   await loadC();
   await loadNC();
+  await loadLC();
   st.sbLoading=false;
   render();
   setTimeout(requestNotifPermission,2000);
