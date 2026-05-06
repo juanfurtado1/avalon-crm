@@ -1157,6 +1157,7 @@ function rList(){
       <span class="filt-select-arrow">▾</span>
     </div>
     ${st.filter!=='Todos'?`<div class="filt-active-badge"><span style="width:7px;height:7px;border-radius:50%;background:${ESTADO_COLOR_MAP[st.filter]||'#554f6e'};display:inline-block"></span>${st.filter} · ${sr.length} resultado${sr.length!==1?'s':''}<button id="btn-clear-estado-filter">✕</button></div>`:''}
+    ${st.filters.urgencia?`<div class="filt-active-badge" style="background:rgba(196,154,32,.12);border-color:rgba(196,154,32,.3);color:#c49a20">⚠ Sin contacto · ${sr.length} resultado${sr.length!==1?'s':''}<button id="btn-clear-urgencia-filter" style="color:#c49a20">✕</button></div>`:''}
     ${st.viewMode==='kanban'&&st.filter!=='Todos'?`<span class="filt-kanban-notice">↳ columnas filtradas</span>`:''}
   </div>
   ${rProyecciones(clients)}
@@ -1824,11 +1825,10 @@ function bind(){
   $('#btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render()});
   $('#btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render()});
   document.getElementById('btn-stat-sincontacto')?.addEventListener('click',()=>{
-    st.filters.urgencia=st.filters.urgencia==='sin-contacto'?'':' sin-contacto';
-    st.filters.urgencia='sin-contacto';
-    st.showFilters=false;
+    st.filters.urgencia=st.filters.urgencia==='sin-contacto'?'':'sin-contacto';
     render();
   });
+  document.getElementById('btn-clear-urgencia-filter')?.addEventListener('click',()=>{st.filters.urgencia='';render();});
   document.getElementById('btn-clear-estado-filter')?.addEventListener('click',()=>{st.filter='Todos';render();});
   $$('.filt').forEach(b=>b.addEventListener('click',()=>{st.filter=b.dataset.filter;render()}));
   $$('.card-v2').forEach(c=>c.addEventListener('click',()=>{st.activeClient=c.dataset.id;st.view='detail';st.activeTab='inv';render()}));
