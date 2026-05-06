@@ -546,7 +546,7 @@ function applyFilters(list){
     if(f.plataforma&&!(c.plataformas||[]).includes(f.plataforma))return false;
     if(f.moneda&&c.moneda!==f.moneda)return false;
     if(f.urgencia==='urgente'&&ul(ds(c.lastContact),c.estado)!=='hot')return false;
-    if(f.urgencia==='sin-contacto'&&ds(c.lastContact)<3)return false;
+    if(f.urgencia==='sin-contacto'&&(ds(c.lastContact)<=6||['Cerrada','Perdida'].includes(c.estado)))return false;
     if(f.dateFrom){const d=new Date(c.lastContact);if(d<new Date(f.dateFrom))return false;}
     if(f.dateTo){const d=new Date(c.lastContact);if(d>new Date(f.dateTo))return false;}
     return true;
@@ -930,7 +930,7 @@ function rFilterPanel(){
     <div><div class="filter-label">Urgencia</div>
       <div class="filter-row">
         <button class="filter-chip ${f.urgencia==='urgente'?'on':''}" data-furg="urgente">🔴 Urgentes (+7d)</button>
-        <button class="filter-chip ${f.urgencia==='sin-contacto'?'on':''}" data-furg="sin-contacto">🟡 Sin contacto (+3d)</button>
+        <button class="filter-chip ${f.urgencia==='sin-contacto'?'on':''}" data-furg="sin-contacto">🟡 Sin contacto (+6d)</button>
       </div>
     </div>
     <div style="display:flex;justify-content:flex-end">
