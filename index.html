@@ -510,7 +510,7 @@ let st={
   // Clientes Nuevos
   activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,
   // LC Consumo
-  showLCModal:false,lcDraft:null,
+  showLCModal:false,lcDraft:null,loadingLCImg:false,
   showProyecciones:false,showNotifPanel:false
 };
 
@@ -583,6 +583,56 @@ function toast(msg){
   t.textContent=msg;
   t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;border:1px solid #9b6dff;color:#9b6dff;padding:8px 16px;border-radius:8px;font-size:11px;z-index:999;white-space:nowrap;font-family:Montserrat,sans-serif;font-weight:700';
   document.body.appendChild(t);setTimeout(()=>t.remove(),2000);
+}
+
+// ── LC IMPORT FROM IMAGE ──
+async function lcImportFromImage(file){
+  const key=getApiKey();
+  if(!key){st.showApiModal=true;render();return;}
+  const base64=await new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+  const mediaType=(file.type||'image/png');
+  lcSyncDraft();
+  st.loadingLCImg=true;render();
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+            {type:'text',text:'De esta tabla extraé todas las filas de datos (ignorá encabezados y filas vacías). Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene exactamente: {"cuenta":"nombre de cuenta o cliente","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna Carga o carga tiene el monto numérico. La columna Divisa indica ARS o USD. Si no hay columna Divisa pero hay montos en USD (con USD en el nombre o contexto), ponés "USD", sino "ARS". Devolvé solo el JSON array, nada más.'}
+          ]
+        }]
+      })
+    });
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message);
+    const text=data.content?.[0]?.text||'[]';
+    const rows=JSON.parse(text.replace(/```json|```/g,'').trim());
+    const arsRows=rows.filter(r=>(r.divisa||'ARS').toUpperCase()==='ARS');
+    const usdRows=rows.filter(r=>(r.divisa||'').toUpperCase()==='USD');
+    if(!st.lcDraft)st.lcDraft={periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
+    st.lcDraft.cuentasARS=[...(st.lcDraft.cuentasARS||[]),...arsRows.map(r=>({
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(r.carga||0))
+    }))];
+    st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
+    }))];
+    toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)`);
+  }catch(e){
+    toast('Error al leer imagen: '+e.message);
+    console.error(e);
+  }
+  st.loadingLCImg=false;render();
 }
 
 // ── LC SYNC DRAFT (reads DOM into state) ──
@@ -1624,6 +1674,13 @@ function rLCModal(){
         ${saved.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}
       </select>`:''}
     </div>
+    <div style="background:rgba(155,109,255,.07);border:1px solid rgba(155,109,255,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <input type="file" id="lc-img-input" accept="image/*" style="display:none">
+      <button class="btn-sm" id="btn-lc-import-img" style="color:var(--gold);border-color:rgba(155,109,255,.4);${st.loadingLCImg?'opacity:.6;pointer-events:none':''}">
+        ${st.loadingLCImg?'<span style="display:flex;align-items:center;gap:6px"><div class="spinner" style="width:10px;height:10px;border-width:2px"></div> Procesando...</span>':'📷 Importar desde captura'}
+      </button>
+      <span style="font-size:10px;color:var(--text-muted);line-height:1.4">Subí una imagen <strong style="color:var(--text2)">o pegala con Ctrl+V</strong> — Claude extrae las cuentas ARS y USD automáticamente</span>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div class="field"><label class="field-label">Período</label><input class="field-input" id="lc-periodo" value="${d.periodo||''}" placeholder="Ej: Abril 2026" style="font-size:11px"></div>
       <div class="field"><label class="field-label">Desde</label><input class="field-input" id="lc-desde" type="date" value="${d.desde||''}"></div>
@@ -2031,6 +2088,27 @@ function bind(){
     st.lcDraft.cuentasUSD.push({cliente:'',plataforma:'Meta',monto:''});
     render();
   });
+  // Image import
+  document.getElementById('btn-lc-import-img')?.addEventListener('click',()=>{
+    document.getElementById('lc-img-input')?.click();
+  });
+  document.getElementById('lc-img-input')?.addEventListener('change',e=>{
+    const file=e.target.files[0];
+    if(file)lcImportFromImage(file);
+    e.target.value='';
+  });
+  // Paste image (Ctrl+V) when LC modal is open
+  if(st.showLCModal){
+    const pasteHandler=e=>{
+      const items=[...(e.clipboardData?.items||[])];
+      const imgItem=items.find(i=>i.type.startsWith('image/'));
+      if(!imgItem)return;
+      e.preventDefault();
+      const file=imgItem.getAsFile();
+      if(file)lcImportFromImage(file);
+    };
+    document.addEventListener('paste',pasteHandler,{once:true});
+  }
   // Delete ARS row
   document.querySelectorAll('.lc-del-ars').forEach(btn=>btn.addEventListener('click',()=>{
     lcSyncDraft();
