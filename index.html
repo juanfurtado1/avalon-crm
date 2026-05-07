@@ -2125,15 +2125,64 @@ async function genRubro(){
 }
 
 // ── TEAM EMAIL NOTIFY ──
-const TEAM_MEMBERS=[
-  {name:'Caro',email:'caro@avalon3.com'},
-  {name:'Salma',email:'salma@avalon3.com'},
-  {name:'Lucas',email:'lucas@avalon3.com'}
-];
+// ── TEAM DIRECTORY ──
+const TEAM_DIRECTORY={
+  'gisela':   {full:'Gisela Rubino',          email:'administracion@avalon3.com'},
+  'gerson':   {full:'Gerson Temperley',        email:'gersontemperley@gmail.com'},
+  'francesca':{full:'Francesca',               email:'fran.avalonagency@gmail.com'},
+  'fran':     {full:'Francesca',               email:'fran.avalonagency@gmail.com'},
+  'nicolas':  {full:'Nicolas Xavier Ardanaz',  email:'nico@avalon3.com'},
+  'nico':     {full:'Nicolas Xavier Ardanaz',  email:'nico@avalon3.com'},
+  'valentin': {full:'Valentin Marino',         email:'tato@avalon3.com'},
+  'tato':     {full:'Valentin Marino',         email:'tato@avalon3.com'},
+  'sebas':    {full:'Sebas Hidalgo',           email:'sebas.avalon3@gmail.com'},
+  'sebastian':{full:'Sebas Hidalgo',           email:'sebas.avalon3@gmail.com'},
+  'ivan':     {full:'Ivan Diaz',               email:'ivan.avalon3@gmail.com'},
+  'lucas':    {full:'Lucas Pucheta',           email:'lucas@avalon3.com'},
+  'elisa':    {full:'Elisa Gonzalez',          email:'eli@avalon3.com'},
+  'eli':      {full:'Elisa Gonzalez',          email:'eli@avalon3.com'},
+  'pilar':    {full:'Pilar Ceruso',            email:'pilar.avalon3@gmail.com'},
+  'noe':      {full:'Noe CM',                  email:'noe.avalonagency@gmail.com'},
+  'tizi':     {full:'Tizi',                    email:'tiziana.avalonagency@gmail.com'},
+  'tiziana':  {full:'Tizi',                    email:'tiziana.avalonagency@gmail.com'},
+  'mayra':    {full:'Mayra Novellino',         email:'may.avalon3@gmail.com'},
+  'may':      {full:'Mayra Novellino',         email:'may.avalon3@gmail.com'},
+  'salma':    {full:'Salma Vera',              email:'salma.avalon3@gmail.com'},
+  'martina':  {full:'Martina Loaldi',          email:'martina.avalon3@gmail.com'},
+  'martu':    {full:'Martina Loaldi',          email:'martina.avalon3@gmail.com'},
+  'mica':     {full:'Mica Medina',             email:'mica.avalon3@gmail.com'},
+  'carolina': {full:'Carolina Filippi',        email:'caro@avalon3.com'},
+  'caro':     {full:'Carolina Filippi',        email:'caro@avalon3.com'},
+};
+const PM_EMAILS={Caro:'caro@avalon3.com',Salma:'salma@avalon3.com',Lucas:'lucas@avalon3.com'};
+
 function sendTeamEmail(c){
-  const PM_EMAILS={Caro:'caro@avalon3.com',Salma:'salma@avalon3.com',Lucas:'lucas@avalon3.com'};
   const pmEmail=PM_EMAILS[c.pm];
   if(!pmEmail){toast('Asigná un PM primero');return;}
+
+  // Parse equipo field — one name per line
+  const equipoNames=(c.equipo||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const found=[];
+  const unknown=[];
+  const seenEmails=new Set([pmEmail]);
+
+  for(const name of equipoNames){
+    const key=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+    const member=TEAM_DIRECTORY[key];
+    if(member){
+      if(!seenEmails.has(member.email)){seenEmails.add(member.email);found.push(member);}
+    } else {
+      unknown.push(name);
+    }
+  }
+
+  // Warn about unknowns
+  if(unknown.length){
+    toast(`⚠️ Sin correo para: ${unknown.join(', ')} — cargalos en el directorio`);
+  }
+
+  const allTo=[pmEmail,...found.map(m=>m.email)].join(',');
+
   let subject,body;
   if(c.emailGenerado){
     const lines=c.emailGenerado.split('\n');
@@ -2144,8 +2193,11 @@ function sendTeamEmail(c){
     subject=`NUEVO CLIENTE: ${(c.company||c.name||'').toUpperCase()}`;
     body=`Hola ${c.pm},\n\nNuevo cliente listo para arrancar:\n\nCliente: ${c.name}\nEmpresa: ${c.company||'-'}\nRubro: ${c.rubro||'-'}\nScope: ${(c.scope||[]).join(', ')||'-'}\n\nPor favor coordiná el brief.\n\nAvalon CRM`;
   }
-  window.location.href=`mailto:${pmEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  toast(`📧 Abriendo mail para ${c.pm}...`);
+
+  const gmailUrl=`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(allTo)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(gmailUrl,'_blank');
+  const total=1+found.length;
+  toast(`📧 Gmail abierto — ${total} destinatario${total!==1?'s':''} cargado${total!==1?'s':''}`);
 }
 
 // ── BIND ──
