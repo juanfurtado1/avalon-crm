@@ -1143,6 +1143,12 @@ function rReportBar(fl,totalMonto){
 // ── PROYECCIONES BAR (cards compactas) ──
 function rProyecciones(allClients){
   const ESTADOS_ORD=['Cerrada','En negociación','Enviada','Meet coordinada','Pendiente cotización','Coordinando meet','Esperando respuesta','Activa','Sin respuesta','Sin definir','Perdida'];
+  // Current month filter for closed/lost — only count what happened THIS month
+  const now=new Date();
+  const curYear=now.getFullYear(),curMonth=now.getMonth();
+  function isThisMonth(d){if(!d)return false;const p=new Date(d);return p.getFullYear()===curYear&&p.getMonth()===curMonth;}
+  const mesLabel=now.toLocaleString('es-AR',{month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
+
   function fmtA(n,mon){
     if(!n)return null;
     const abs=Math.abs(n);
@@ -1151,7 +1157,13 @@ function rProyecciones(allClients){
   }
   if(!st.showProyecciones)return`<div class="proyec-bar"><div class="proyec-header" id="btn-toggle-proyec"><span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px">📊 Proyecciones</span><span style="font-size:9px;color:var(--text-muted)">▾</span></div></div>`;
   const rows=ESTADOS_ORD.map(est=>{
-    const pool=allClients.filter(c=>c.estado===est);
+    // Cerrada y Perdida: solo las del mes actual
+    const HISTORICOS=['Cerrada','Perdida'];
+    const pool=allClients.filter(c=>{
+      if(c.estado!==est)return false;
+      if(HISTORICOS.includes(est))return isThisMonth(c.lastContact);
+      return true;
+    });
     if(!pool.length)return null;
     const ars=pool.filter(c=>(c.moneda||'ARS')==='ARS').reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);
     const usd=pool.filter(c=>c.moneda==='USD'||c.moneda==='USDT').reduce((a,c)=>a+(parseInt(c.presupuesto||0)||0),0);
@@ -1163,7 +1175,7 @@ function rProyecciones(allClients){
   const grandUSD=rows.reduce((a,r)=>a+Math.round(r.usd*r.prob/100),0);
   return`<div class="proyec-bar">
     <div class="proyec-header" id="btn-toggle-proyec">
-      <span style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px">📊 Proyecciones</span>
+      <span style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px">📊 Proyecciones <span style="color:var(--text-muted);font-weight:600;text-transform:none;font-size:9px">· ${mesLabel}</span></span>
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:9px;color:var(--text-muted)">Ponderado: ${grandARS?`<strong style="color:var(--gold)">$${Math.round(grandARS/1000).toLocaleString('es-AR')}k ARS</strong>`:''} ${grandUSD?`<strong style="color:var(--blue)">USD ${Math.round(grandUSD/1000).toLocaleString('es-AR')}k</strong>`:''}</span>
         <span style="font-size:9px;color:var(--text-muted)">▴</span>
@@ -1172,6 +1184,7 @@ function rProyecciones(allClients){
     <div class="proyec-cards">
       ${rows.map(r=>{
         const arsStr=fmtA(r.ars,'ARS');const usdStr=fmtA(r.usd,'USD');
+        const isHist=['Cerrada','Perdida'].includes(r.est);
         return`<div class="proyec-card">
           <div class="proyec-card-top">
             <span style="width:6px;height:6px;border-radius:50%;background:${r.color};flex-shrink:0;display:inline-block"></span>
@@ -1181,7 +1194,7 @@ function rProyecciones(allClients){
           <div class="proyec-card-amt" style="color:${r.ars||r.usd?'var(--text)':'var(--text-muted)'}">${arsStr||usdStr||'—'}</div>
           ${usdStr&&arsStr?`<div class="proyec-card-sub">${usdStr}</div>`:''}
           <div class="proyec-card-bar"><div class="proyec-card-fill" style="width:${r.prob}%;background:${r.color}"></div></div>
-          <div class="proyec-card-pct">${r.prob}% cierre</div>
+          <div class="proyec-card-pct">${r.prob}% cierre${isHist?` <span style="opacity:.6">· ${mesLabel.split(' ')[0]}</span>`:''}</div>
         </div>`;
       }).join('')}
     </div>
