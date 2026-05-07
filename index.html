@@ -572,7 +572,7 @@ let st={
   activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,loadingRubro:false,
   // LC Consumo
   showLCModal:false,lcDraft:null,loadingLCImg:false,
-  showProyecciones:false,showNotifPanel:false,showEmailNotifyModal:false,showCerradaModal:false,cerradaClientId:null
+  showProyecciones:false,showNotifPanel:false,showEmailNotifyModal:false,showCerradaModal:false,cerradaClientId:null,showCerradasKanban:true
 };
 
 // ── HELPERS ──
@@ -1510,9 +1510,9 @@ function bindKanbanDrag(){
 
 function rKanbanCols(sr){
   const today=new Date().toISOString().split('T')[0];
-  // Si hay filtro activo de estado, respetar ese conjunto; si no, excluir Cerrada/Perdida
   const excludeInactive=!st.filter||st.filter==='Todos';
   const active=excludeInactive?sr.filter(c=>!['Cerrada','Perdida'].includes(c.estado)):sr;
+  const cerradasKanban=excludeInactive?sr.filter(c=>c.estado==='Cerrada'):[];
 
   const linkedin=active.filter(c=>c.heatLevel==='linkedin');
   const recuperar=active.filter(c=>c.heatLevel==='recuperar');
@@ -1614,7 +1614,32 @@ function rKanbanCols(sr){
 
   return`${alertBar()}${toggleBar}<div class="kanban-board" style="grid-template-columns:repeat(${gridCols},1fr)">
     ${visibleCols.map(col=>col_html(col.label,col.id,col.color,col.bg,col.items)).join('')}
-  </div>`;
+  </div>
+  ${cerradasKanban.length?`<div style="margin:10px 6px 0">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(74,171,122,.06);border:1px solid rgba(74,171,122,.2);border-radius:10px;cursor:pointer" id="btn-toggle-cerradas-kanban">
+      <span style="width:7px;height:7px;border-radius:50%;background:#4aab7a;flex-shrink:0;display:inline-block"></span>
+      <span style="font-size:10px;font-weight:700;color:#4aab7a;text-transform:uppercase;letter-spacing:.5px">✓ Cerradas</span>
+      <span style="font-size:9px;background:rgba(74,171,122,.15);color:#4aab7a;border-radius:4px;padding:1px 6px;font-weight:700">${cerradasKanban.length}</span>
+      <span style="font-size:10px;color:var(--text-muted);margin-left:auto">${st.showCerradasKanban?'▴':'▾'}</span>
+    </div>
+    ${st.showCerradasKanban?`<div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 4px">
+      ${cerradasKanban.map(c=>{
+        const alreadyIn=nuevos.find(n=>n.crmClientId===c.id);
+        const pr=fmtPresByMoneda(c.presupuesto,c.moneda);
+        return`<div class="kanban-card" data-id="${c.id}" style="opacity:.85;cursor:pointer;min-width:200px;max-width:240px;flex:1">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#4aab7a;border-radius:10px 0 0 10px"></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;margin-bottom:4px">
+            <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.company?`${c.company} · ${c.name}`:c.name}</div>
+            <span class="badge s-cerrada" style="font-size:7px;padding:2px 4px;flex-shrink:0">Cerrada</span>
+          </div>
+          ${pr?`<div style="font-size:10px;color:#4aab7a;font-weight:700;margin-bottom:5px">💰 ${pr}</div>`:''}
+          ${alreadyIn
+            ?`<button class="fu-alert-go" style="font-size:9px;background:rgba(74,171,122,.15);border-color:rgba(74,171,122,.35);color:#4aab7a" data-nc-go="${alreadyIn.id}">✓ En Nuevos Clientes →</button>`
+            :`<button class="fu-alert-go" style="font-size:9px" data-cerrada-mover="${c.id}">🚀 Pasar a Nuevos Clientes</button>`}
+        </div>`;
+      }).join('')}
+    </div>`:''}
+  </div>`:''}`;
 }
 
 function rNewModal(){
@@ -2155,6 +2180,7 @@ function rPipe(c){
       <button class="btn-sm btn-gold" id="btn-save-pip">💾 Guardar nota</button>
       <button class="btn-sm" id="btn-contacte-hoy">✓ Contacté hoy</button>
       <button class="btn-sm" id="btn-cycle-status">⟳ Estado</button>
+      ${c.estado==='Cerrada'?`<button class="btn-sm" id="btn-pip-a-nuevos" style="color:#4aab7a;border-color:rgba(74,171,122,.4);background:rgba(74,171,122,.07)">${nuevos.find(n=>n.crmClientId===c.id)?'✓ Ver en Nuevos Clientes':'🚀 Pasar a Nuevos Clientes'}</button>`:''}
       <button class="btn-sm" id="btn-delete-client" style="margin-left:auto;color:var(--red)">Eliminar</button>
     </div>
     <div style="background:${co}18;border:1px solid ${co}35;border-radius:8px;padding:9px 12px;font-size:11px;color:${co};margin-bottom:14px;display:flex;align-items:center;gap:6px;font-weight:600">
@@ -2650,6 +2676,22 @@ function bind(){
   document.getElementById('btn-cerrada-si')?.addEventListener('click',confirmCerrada);
   document.getElementById('btn-cerrada-ir')?.addEventListener('click',confirmCerrada);
   document.getElementById('btn-cerrada-no')?.addEventListener('click',()=>{st.showCerradaModal=false;render();});
+  // Pipeline "Pasar a Nuevos Clientes" button (already Cerrada)
+  document.getElementById('btn-pip-a-nuevos')?.addEventListener('click',()=>{
+    const c=gc();if(!c)return;
+    st.showCerradaModal=true;st.cerradaClientId=c.id;render();
+  });
+  // Kanban cerradas section toggle
+  document.getElementById('btn-toggle-cerradas-kanban')?.addEventListener('click',e=>{
+    e.stopPropagation();st.showCerradasKanban=!st.showCerradasKanban;render();
+  });
+  // Kanban cerradas "Pasar" / "Ver" buttons
+  document.querySelectorAll('[data-cerrada-mover]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();st.showCerradaModal=true;st.cerradaClientId=b.dataset.cerradaMover;render();
+  }));
+  document.querySelectorAll('[data-nc-go]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();st.activeNuevo=b.dataset.ncGo;st.view='nuevoDetail';render();
+  }));
   document.querySelectorAll('[data-fu-go]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
     st.activeClient=b.dataset.fuGo;st.view='detail';st.activeTab='pipeline';render();
