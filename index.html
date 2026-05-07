@@ -2160,8 +2160,10 @@ function sendTeamEmail(c){
   const pmEmail=PM_EMAILS[c.pm];
   if(!pmEmail){toast('Asigná un PM primero');return;}
 
-  // Parse equipo field — one name per line
-  const equipoNames=(c.equipo||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  // Read equipo from DOM in case it hasn't been saved yet
+  const equipoRaw=document.getElementById('nd-equipo')?.value||c.equipo||'';
+  const equipoNames=equipoRaw.split('\n').map(s=>s.trim()).filter(Boolean);
+
   const found=[];
   const unknown=[];
   const seenEmails=new Set([pmEmail]);
@@ -2176,9 +2178,8 @@ function sendTeamEmail(c){
     }
   }
 
-  // Warn about unknowns
   if(unknown.length){
-    toast(`⚠️ Sin correo para: ${unknown.join(', ')} — cargalos en el directorio`);
+    toast(`⚠️ Sin correo para: ${unknown.join(', ')} — avisame para cargarlo`);
   }
 
   const allTo=[pmEmail,...found.map(m=>m.email)].join(',');
@@ -2190,14 +2191,15 @@ function sendTeamEmail(c){
     subject=subjectLine.replace(/^Asunto:\s*/i,'').trim();
     body=lines.filter(l=>!l.trim().startsWith('Asunto:')).join('\n').trim();
   } else {
+    const equipoList=[c.pm,...found.map(m=>m.full)].join(', ');
     subject=`NUEVO CLIENTE: ${(c.company||c.name||'').toUpperCase()}`;
-    body=`Hola ${c.pm},\n\nNuevo cliente listo para arrancar:\n\nCliente: ${c.name}\nEmpresa: ${c.company||'-'}\nRubro: ${c.rubro||'-'}\nScope: ${(c.scope||[]).join(', ')||'-'}\n\nPor favor coordiná el brief.\n\nAvalon CRM`;
+    body=`Hola equipo,\n\nNuevo cliente listo para arrancar:\n\nCliente: ${c.name}\nEmpresa: ${c.company||'-'}\nRubro: ${c.rubro||'-'}\nPM: ${c.pm||'-'}\nScope: ${(c.scope||[]).join(', ')||'-'}\nEquipo: ${equipoList}\n\nPor favor coordiná el brief.\n\nAvalon CRM`;
   }
 
   const gmailUrl=`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(allTo)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.open(gmailUrl,'_blank');
   const total=1+found.length;
-  toast(`📧 Gmail abierto — ${total} destinatario${total!==1?'s':''} cargado${total!==1?'s':''}`);
+  toast(`📧 Gmail abierto — ${total} destinatario${total!==1?'s':''}: ${c.pm}${found.length?', '+found.map(m=>m.full.split(' ')[0]).join(', '):''}`);
 }
 
 // ── BIND ──
@@ -2981,7 +2983,7 @@ function rNuevoDetail(){
     ${ready?`<div class="email-notify-box">
       <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px">🎉 ¡${c.company||c.name} está listo para PM!</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Todos los pasos completados. Notificá al equipo para arrancar.</div>
-      <button class="btn-notify-team" id="btn-notify-team">📧 Notificar a ${c.pm||'PM'}</button>
+      <button class="btn-notify-team" id="btn-notify-team">📧 Notificar al equipo</button>
     </div>`:''}
     <div class="section-title">📧 Mail de presentación al equipo</div>
     ${st.loadingEmail
