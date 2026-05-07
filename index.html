@@ -310,6 +310,30 @@ body.is-dragging .kanban-card:not(.dragging){transition:opacity .1s}
 .nc-progress-fill{height:100%;border-radius:0 0 14px 14px;transition:width .4s ease}
 .ready-badge{background:rgba(74,171,122,.12);border:1px solid rgba(74,171,122,.4);color:var(--green);border-radius:6px;padding:3px 9px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .nc-divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+/* ── PASTE ZONES ── */
+.paste-zone{border:2px dashed var(--border2);border-radius:12px;padding:14px 12px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:12px;position:relative;user-select:none}
+.paste-zone:hover,.paste-zone.paste-highlight{border-color:rgba(155,109,255,.5);background:rgba(155,109,255,.04)}
+.paste-zone-row{display:flex;align-items:center;justify-content:center;gap:8px}
+.paste-zone-icon{font-size:16px}
+.paste-zone-label{font-size:10px;color:var(--text-muted);font-weight:600}
+.screenshots-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.screenshot-item{position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--surface2);display:flex;flex-direction:column}
+.screenshot-item img{display:block;max-width:160px;max-height:110px;width:auto;height:auto;object-fit:cover}
+.screenshot-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.75);border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer;padding:2px 6px;line-height:1.3;font-family:'Montserrat',sans-serif;font-weight:700}
+.screenshot-del:hover{background:rgba(217,95,95,.9)}
+.screenshot-label{font-size:8px;color:var(--text-muted);padding:3px 6px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+/* ── TEAM EMAIL NOTIFY ── */
+.email-notify-box{background:rgba(74,171,122,.07);border:1px solid rgba(74,171,122,.3);border-radius:12px;padding:14px;margin-bottom:12px}
+.btn-notify-team{width:100%;background:linear-gradient(135deg,#4aab7a 0%,#2e8a5a 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;box-shadow:0 3px 16px rgba(74,171,122,.3);transition:box-shadow .15s,transform .1s;margin-top:8px}
+.btn-notify-team:hover{box-shadow:0 5px 24px rgba(74,171,122,.5);transform:translateY(-1px)}
+/* ── EMAIL MODAL ── */
+.email-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .12s}
+.email-modal{background:var(--surface);border-radius:18px 18px 0 0;padding:20px 16px 40px;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;animation:slideUp .18s ease}
+.recipient-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:border-color .12s}
+.recipient-row:hover{border-color:rgba(155,109,255,.3)}
+.recipient-row input[type="checkbox"]{accent-color:var(--green);width:14px;height:14px;flex-shrink:0;cursor:pointer}
+.recipient-name{font-size:12px;font-weight:700;color:var(--text);flex:1}
+.recipient-email{font-size:10px;color:var(--text-muted);font-weight:600}
 </style>
 </head>
 <body>
@@ -442,7 +466,7 @@ function ncNew(d={}){
     onboarding:d.onboarding||{contrato:false,oc:false,altaAdmin:false,mailPresentacion:false,meetBrief:false},
     mision:d.mision||'',vision:d.vision||'',
     diferenciales:d.diferenciales||'',objetivos:d.objetivos||'',contexto:d.contexto||'',
-    emailGenerado:d.emailGenerado||'',
+    emailGenerado:d.emailGenerado||'',scopeCtx:d.scopeCtx||'',
     crmClientId:d.crmClientId||null,fromCRM:d.fromCRM||false
   };
 }
@@ -478,8 +502,8 @@ function nc(d={}){
     note:d.note||'',
     notes:d.notes||(d.note?[{date:d.lastContact||new Date().toISOString().split('T')[0],text:d.note}]:[]),
     investigacion:d.investigacion||{contexto:'',resultado:'',preguntas:[]},
-    reunion:d.reunion||{notasVivo:'',checkedQs:[]},
-    propuesta:d.propuesta||{transcripcion:'',brief:'',data:null},
+    reunion:d.reunion||{notasVivo:'',checkedQs:[],screenshots:[]},
+    propuesta:d.propuesta||{transcripcion:'',brief:'',data:null,screenshots:[]},
     servicio:d.servicio||'',
     detalle:d.detalle||'',
     meetDiscovery:d.meetDiscovery||'',
@@ -508,10 +532,10 @@ let st={
   dragClient:null,
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
   // Clientes Nuevos
-  activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,
+  activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,loadingRubro:false,
   // LC Consumo
   showLCModal:false,lcDraft:null,loadingLCImg:false,
-  showProyecciones:false,showNotifPanel:false
+  showProyecciones:false,showNotifPanel:false,showEmailNotifyModal:false
 };
 
 // ── HELPERS ──
@@ -1789,12 +1813,50 @@ function rReunion(c){
     <div class="section-title">Notas generales</div>
     <textarea class="field-textarea" id="reunion-notas" style="min-height:130px" placeholder="Señales de presupuesto, objeciones, impresiones generales...">${c.reunion?.notasVivo||''}</textarea>
     <button class="btn-primary" id="btn-save-notas" style="margin-top:8px">Guardar notas</button>
+    <hr class="divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="section-title" style="margin:0">📸 Capturas de la conversación</div>
+      <span style="font-size:9px;color:var(--text-muted);font-weight:600">${(c.reunion?.screenshots||[]).length} imagen${(c.reunion?.screenshots||[]).length!==1?'es':''}</span>
+    </div>
+    ${(c.reunion?.screenshots||[]).length?`<div class="screenshots-grid">
+      ${(c.reunion.screenshots).map((s,i)=>`<div class="screenshot-item">
+        <img src="data:${s.mediaType};base64,${s.base64}" alt="captura ${i+1}">
+        <div class="screenshot-label">${s.date||''}</div>
+        <button class="screenshot-del" data-tab-del="reunion" data-sidx="${i}">✕</button>
+      </div>`).join('')}
+    </div>`:''}
+    <div class="paste-zone" id="reunion-paste-zone">
+      <input type="file" id="reunion-file-input" accept="image/*" style="display:none" multiple>
+      <div class="paste-zone-row">
+        <span class="paste-zone-icon">📋</span>
+        <span class="paste-zone-label">Ctrl+V para pegar · o hacé clic para adjuntar captura</span>
+      </div>
+    </div>
   </div>`;
 }
 
 function rProp(c){
   const show=st.activeTab==='propuesta',pd=c.propuesta?.data;
+  const shots=c.propuesta?.screenshots||[];
   return`<div class="tab-content ${show?'active':''}" id="tab-propuesta">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="section-title" style="margin:0">📸 Capturas de la propuesta</div>
+      <span style="font-size:9px;color:var(--text-muted);font-weight:600">${shots.length} imagen${shots.length!==1?'es':''}</span>
+    </div>
+    ${shots.length?`<div class="screenshots-grid">
+      ${shots.map((s,i)=>`<div class="screenshot-item">
+        <img src="data:${s.mediaType};base64,${s.base64}" alt="captura ${i+1}">
+        <div class="screenshot-label">${s.date||''}</div>
+        <button class="screenshot-del" data-tab-del="propuesta" data-sidx="${i}">✕</button>
+      </div>`).join('')}
+    </div>`:''}
+    <div class="paste-zone" id="propuesta-paste-zone">
+      <input type="file" id="propuesta-file-input" accept="image/*" style="display:none" multiple>
+      <div class="paste-zone-row">
+        <span class="paste-zone-icon">📋</span>
+        <span class="paste-zone-label">Ctrl+V para pegar propuesta armada · o hacé clic para adjuntar</span>
+      </div>
+    </div>
     <div class="section-title">Transcripción de la reunión</div>
     <textarea class="field-textarea" id="prop-transcripcion" style="min-height:100px" placeholder="Pegá la transcripción o resumen de la meet...">${c.propuesta?.transcripcion||''}</textarea>
     <button class="btn-primary" id="btn-generar-brief" ${st.loadingPropuesta?'disabled':''}>${st.loadingPropuesta?'Generando propuesta...':'✦ Generar propuesta'}</button>
@@ -2009,6 +2071,81 @@ function rPipe(c){
             <button class="btn-outline" id="btn-regen-fu">↻ Regenerar todo</button>`
           :`<button class="btn-primary" id="btn-gen-followup">✦ Generar 3 opciones</button>`}
   </div>`;
+}
+
+// ── SCREENSHOT HELPERS ──
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+async function addReunionScreenshot(file){
+  const c=gc();if(!c)return;
+  try{
+    const base64=await fileToBase64(file);
+    if(!c.reunion.screenshots)c.reunion.screenshots=[];
+    c.reunion.screenshots.push({base64,mediaType:file.type||'image/png',date:new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+    await sv(c);render();toast('📸 Captura agregada ✓');
+  }catch(e){toast('Error al cargar imagen');}
+}
+async function addPropuestaScreenshot(file){
+  const c=gc();if(!c)return;
+  try{
+    const base64=await fileToBase64(file);
+    if(!c.propuesta.screenshots)c.propuesta.screenshots=[];
+    c.propuesta.screenshots.push({base64,mediaType:file.type||'image/png',date:new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+    await sv(c);render();toast('📸 Captura agregada ✓');
+  }catch(e){toast('Error al cargar imagen');}
+}
+async function delScreenshot(tab,idx){
+  const c=gc();if(!c)return;
+  if(tab==='reunion'){if(c.reunion.screenshots)c.reunion.screenshots.splice(idx,1);}
+  else if(tab==='propuesta'){if(c.propuesta.screenshots)c.propuesta.screenshots.splice(idx,1);}
+  await sv(c);render();
+}
+
+// ── RUBRO IA ──
+async function genRubro(){
+  const c=gnc();if(!c)return;
+  const company=gi('nd-company')||c.company;
+  const web=gi('nd-web')||c.web;
+  const ig=gi('nd-ig')||c.instagram;
+  if(!company&&!web&&!ig){toast('Completá empresa, web o IG primero');return;}
+  st.loadingRubro=true;render();
+  try{
+    const t=await claude([{role:'user',content:`En base a estos datos de un cliente, describí su rubro en máximo 6 palabras (ejemplos: "Indumentaria deportiva femenina", "Restaurante de comida japonesa", "Estudio contable para PyMEs", "E-commerce de cosmética natural"). Solo el rubro, sin explicación. Empresa: ${company||'n/a'}, Web: ${web||'n/a'}, Instagram: ${ig||'n/a'}`}]);
+    const rubroEl=document.getElementById('nd-rubro');
+    if(rubroEl){rubroEl.value=t.trim().replace(/^["'`]|["'`]$/g,'').split('\n')[0].trim();}
+    toast('Rubro sugerido ✓');
+  }catch(e){if(e.message!=='Sin API key')toast('Error: '+e.message);}
+  st.loadingRubro=false;render();
+}
+
+// ── TEAM EMAIL NOTIFY ──
+const TEAM_MEMBERS=[
+  {name:'Caro',email:'caro@avalon3.com'},
+  {name:'Salma',email:'salma@avalon3.com'},
+  {name:'Lucas',email:'lucas@avalon3.com'}
+];
+function sendTeamEmail(c){
+  const PM_EMAILS={Caro:'caro@avalon3.com',Salma:'salma@avalon3.com',Lucas:'lucas@avalon3.com'};
+  const pmEmail=PM_EMAILS[c.pm];
+  if(!pmEmail){toast('Asigná un PM primero');return;}
+  let subject,body;
+  if(c.emailGenerado){
+    const lines=c.emailGenerado.split('\n');
+    const subjectLine=lines.find(l=>l.trim().startsWith('Asunto:'))||'';
+    subject=subjectLine.replace(/^Asunto:\s*/i,'').trim();
+    body=lines.filter(l=>!l.trim().startsWith('Asunto:')).join('\n').trim();
+  } else {
+    subject=`NUEVO CLIENTE: ${(c.company||c.name||'').toUpperCase()}`;
+    body=`Hola ${c.pm},\n\nNuevo cliente listo para arrancar:\n\nCliente: ${c.name}\nEmpresa: ${c.company||'-'}\nRubro: ${c.rubro||'-'}\nScope: ${(c.scope||[]).join(', ')||'-'}\n\nPor favor coordiná el brief.\n\nAvalon CRM`;
+  }
+  window.location.href=`mailto:${pmEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  toast(`📧 Abriendo mail para ${c.pm}...`);
 }
 
 // ── BIND ──
@@ -2235,6 +2372,20 @@ function bind(){
     document.querySelectorAll('[data-qans]').forEach(el=>{c.reunion.answers[el.dataset.qans]=el.value;});
     await sv(c);toast('Notas guardadas ✓');
   });
+  // Reunion paste zone
+  document.getElementById('reunion-paste-zone')?.addEventListener('click',()=>document.getElementById('reunion-file-input')?.click());
+  document.getElementById('reunion-file-input')?.addEventListener('change',async e=>{
+    for(const f of e.target.files)await addReunionScreenshot(f);
+    e.target.value='';
+  });
+  $$('[data-tab-del="reunion"]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();await delScreenshot('reunion',parseInt(b.dataset.sidx));render();}));
+  // Propuesta paste zone
+  document.getElementById('propuesta-paste-zone')?.addEventListener('click',()=>document.getElementById('propuesta-file-input')?.click());
+  document.getElementById('propuesta-file-input')?.addEventListener('change',async e=>{
+    for(const f of e.target.files)await addPropuestaScreenshot(f);
+    e.target.value='';
+  });
+  $$('[data-tab-del="propuesta"]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();await delScreenshot('propuesta',parseInt(b.dataset.sidx));}));
 
   // Propuesta
   $('#btn-generar-brief')?.addEventListener('click',genBrief);
@@ -2446,8 +2597,9 @@ async function analizar(){
 
 async function genBrief(){
   const c=gc();if(!c)return;
-  const tr=gi('prop-transcripcion');if(!tr){alert('Pegá la transcripción.');return;}
-  c.propuesta.transcripcion=tr;await sv(c);
+  const tr=gi('prop-transcripcion');
+  if(!tr&&!(c.propuesta?.screenshots||[]).length){alert('Pegá la transcripción o adjuntá una captura de la propuesta.');return;}
+  if(tr)c.propuesta.transcripcion=tr;await sv(c);
   st.loadingPropuesta=true;render();
   const nt=c.needs?.length?`\nNecesidades: ${c.needs.join(', ')}`:''
   const tipo=c.tipo==='LC'?`\nTipo LC: no incluir Paid Media salvo que se haya mencionado gestión`:'';
@@ -2455,7 +2607,7 @@ async function genBrief(){
 Análisis previo: ${c.investigacion.resultado?c.investigacion.resultado.substring(0,500)+'...':'no disponible'}
 Respuestas discovery: ${Object.entries(c.reunion?.answers||{}).map(([k,v])=>v?'P'+(parseInt(k)+1)+': '+v:'').filter(Boolean).join(' | ')||'no disponibles'}
 Notas reunión: ${c.reunion?.notasVivo||'no disponibles'}
-Transcripción: ${tr}
+Transcripción: ${tr||'(ver capturas adjuntas)'}
 
 Respondé SOLO con JSON válido sin backticks ni markdown:
 {
@@ -2471,7 +2623,24 @@ Respondé SOLO con JSON válido sin backticks ni markdown:
 }
 Servicios disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre. Usá 3-6 servicios, contenido ULTRA específico al rubro.`;
   try{
-    const t=await claude([{role:'user',content:p}]);
+    const shots=c.propuesta?.screenshots||[];
+    let t;
+    if(shots.length){
+      // Include screenshots as images in the vision call
+      const key=getApiKey();
+      if(!key){st.showApiModal=true;st.loadingPropuesta=false;render();return;}
+      const imgContent=shots.map(s=>({type:'image',source:{type:'base64',media_type:s.mediaType,data:s.base64}}));
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:SP,messages:[{role:'user',content:[...imgContent,{type:'text',text:p}]}]})
+      });
+      const d=await resp.json();
+      if(d.error)throw new Error(d.error.message);
+      t=d.content?.[0]?.text||'Error.';
+    } else {
+      t=await claude([{role:'user',content:p}]);
+    }
     const data=JSON.parse(t.replace(/```json|```/g,'').trim());
     c.propuesta.data=data;c.propuesta.brief=JSON.stringify(data);
     await sv(c);
@@ -2704,7 +2873,15 @@ function rNuevoDetail(){
         <div class="field"><label class="field-label">Nombre</label><input class="field-input" id="nd-name" value="${c.name||''}"></div>
         <div class="field"><label class="field-label">Empresa</label><input class="field-input" id="nd-company" value="${c.company||''}"></div>
       </div>
-      <div class="field"><label class="field-label">Rubro</label><input class="field-input" id="nd-rubro" value="${c.rubro||''}" placeholder="Ej: Indumentaria mayorista"></div>
+      <div class="field">
+        <label class="field-label" style="display:flex;align-items:center;justify-content:space-between">
+          Rubro
+          <button class="btn-sm" id="btn-gen-rubro" style="font-size:8px;padding:3px 8px" ${st.loadingRubro?'disabled':''}>
+            ${st.loadingRubro?'<span style="display:flex;align-items:center;gap:4px"><span class="spinner" style="width:9px;height:9px"></span>Analizando...</span>':'✦ Sugerir con IA'}
+          </button>
+        </label>
+        <input class="field-input" id="nd-rubro" value="${c.rubro||''}" placeholder="Ej: Indumentaria mayorista">
+      </div>
       <div class="field-row">
         <div class="field"><label class="field-label">Web</label><input class="field-input" id="nd-web" value="${c.web||''}" placeholder="https://..."></div>
         <div class="field"><label class="field-label">Instagram</label><input class="field-input" id="nd-ig" value="${c.instagram||''}" placeholder="@usuario"></div>
@@ -2734,6 +2911,10 @@ function rNuevoDetail(){
       <div class="needs-grid" id="nd-scope-grid">
         ${NC_SCOPE.map(s=>`<div class="scope-toggle-btn ${(c.scope||[]).includes(s)?'on':''}" data-scope="${s}">${s}</div>`).join('')}
       </div>
+      <div style="margin-top:10px">
+        <div style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Contexto adicional del scope / equipo (opcional)</div>
+        <textarea class="field-textarea" id="nd-scope-ctx" style="min-height:60px;font-size:11px" placeholder="Pegá acá detalles del scope o equipo para incluir en el mail generado...">${c.scopeCtx||''}</textarea>
+      </div>
     </div>
     <div class="nc-section">
       <div class="nc-section-title">✨ Esencia de marca <span style="color:var(--text-muted);font-size:8px;font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· para generar el mail</span></div>
@@ -2745,6 +2926,11 @@ function rNuevoDetail(){
     </div>
     <button class="btn-sm btn-gold" id="btn-nd-save" style="width:100%;justify-content:center;padding:10px;margin-bottom:14px;font-size:11px">💾 Guardar datos</button>
     <hr class="nc-divider">
+    ${ready?`<div class="email-notify-box">
+      <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px">🎉 ¡${c.company||c.name} está listo para PM!</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Todos los pasos completados. Notificá al equipo para arrancar.</div>
+      <button class="btn-notify-team" id="btn-notify-team">📧 Notificar a ${c.pm||'PM'}</button>
+    </div>`:''}
     <div class="section-title">📧 Mail de presentación al equipo</div>
     ${st.loadingEmail
       ?`<div class="ai-box loading"><div class="spinner"></div>Generando mail de presentación...</div>`
@@ -2775,6 +2961,7 @@ async function saveNuevoDetail(){
   c.pm=document.getElementById('nd-pm')?.value||'';
   c.fechaInicio=document.getElementById('nd-fecha')?.value||'';
   c.equipo=gi('nd-equipo')||'';
+  c.scopeCtx=gi('nd-scope-ctx')||'';
   c.scope=[...document.querySelectorAll('#nd-scope-grid .scope-toggle-btn.on')].map(t=>t.dataset.scope);
   c.mision=gi('nd-mision')||'';c.vision=gi('nd-vision')||'';
   c.diferenciales=gi('nd-diferenciales')||'';c.objetivos=gi('nd-objetivos')||'';c.contexto=gi('nd-contexto')||'';
@@ -2805,7 +2992,7 @@ async function genEmail(){
   const equipo=c.equipo?c.equipo.split('\n').filter(Boolean):(c.pm&&NC_PM_TEAMS[c.pm]?NC_PM_TEAMS[c.pm]:[]);
   const scopeSecciones=c.scope.filter(s=>['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn'].includes(s));
   const scopeContenido=c.scope.filter(s=>['CM y Diseño','Filmmaker','CRM'].includes(s));
-  const p=`Generá un mail interno de presentación de nuevo cliente para el equipo de Avalon World Agency, exactamente con este formato y estructura.\n\nDATOS DEL CLIENTE:\n- Nombre del contacto: ${c.name}\n- Marca/Empresa: ${c.company||''}\n- Rubro: ${c.rubro||'no especificado'}\n- Fecha de alta: ${fecha}\n- Web: ${c.web||'no disponible'}\n- Instagram: ${c.instagram||'no disponible'}\n- TikTok: ${c.tiktok||'no disponible'}\n- WhatsApp contacto: ${c.phone||'no disponible'}\n- PM asignado: ${c.pm||'a definir'}\n- Equipo: ${equipo.join(', ')||'a definir'}\n- Scope: ${c.scope.join(', ')||'a definir'}\n- Misión: ${c.mision||''}\n- Visión: ${c.vision||''}\n- Diferenciales: ${c.diferenciales||''}\n- Objetivos: ${c.objetivos||''}\n- Contexto: ${c.contexto||''}\n\nFORMATO: Asunto: NUEVO CLIENTE: [MARCA EN MAYÚSCULAS]\n\nDescripción, contacto, esencia de marca, diferenciales, objetivos, estado operativo (scope), equipo asignado, meet de brief, grupo de WhatsApp, contexto adicional.\n\nRespondé SOLO con el mail completo, empezando por "Asunto:". Sin explicaciones. En español. Tono profesional y directo.`;
+  const p=`Generá un mail interno de presentación de nuevo cliente para el equipo de Avalon World Agency, exactamente con este formato y estructura.\n\nDATOS DEL CLIENTE:\n- Nombre del contacto: ${c.name}\n- Marca/Empresa: ${c.company||''}\n- Rubro: ${c.rubro||'no especificado'}\n- Fecha de alta: ${fecha}\n- Web: ${c.web||'no disponible'}\n- Instagram: ${c.instagram||'no disponible'}\n- TikTok: ${c.tiktok||'no disponible'}\n- WhatsApp contacto: ${c.phone||'no disponible'}\n- PM asignado: ${c.pm||'a definir'}\n- Equipo: ${equipo.join(', ')||'a definir'}\n- Scope: ${c.scope.join(', ')||'a definir'}\n${c.scopeCtx?`- Detalle scope/equipo: ${c.scopeCtx}\n`:''}- Misión: ${c.mision||''}\n- Visión: ${c.vision||''}\n- Diferenciales: ${c.diferenciales||''}\n- Objetivos: ${c.objetivos||''}\n- Contexto: ${c.contexto||''}\n\nFORMATO: Asunto: NUEVO CLIENTE: [MARCA EN MAYÚSCULAS]\n\nDescripción, contacto, esencia de marca, diferenciales, objetivos, estado operativo (scope), equipo asignado, meet de brief, grupo de WhatsApp, contexto adicional.\n\nRespondé SOLO con el mail completo, empezando por "Asunto:". Sin explicaciones. En español. Tono profesional y directo.`;
   try{
     const t=await claude([{role:'user',content:p}]);
     c.emailGenerado=t;await svNC(c);
@@ -2840,7 +3027,27 @@ function bindNuevos(){
   $('#btn-gen-email')?.addEventListener('click',genEmail);
   $('#btn-regen-email')?.addEventListener('click',async()=>{const c=gnc();if(!c)return;c.emailGenerado='';await svNC(c);genEmail()});
   $('#btn-copy-email')?.addEventListener('click',()=>cpT(gnc()?.emailGenerado||'','copiedEmail'));
+  $('#btn-gen-rubro')?.addEventListener('click',genRubro);
+  $('#btn-notify-team')?.addEventListener('click',()=>{const c=gnc();if(c)sendTeamEmail(c);});
 }
+
+// ── GLOBAL PASTE HANDLER (screenshots for reunion/propuesta) ──
+document.addEventListener('paste',function(e){
+  if(st.view!=='detail')return;
+  if(st.activeTab!=='reunion'&&st.activeTab!=='propuesta')return;
+  const items=[...(e.clipboardData?.items||[])];
+  const imgItem=items.find(i=>i.type.startsWith('image/'));
+  if(!imgItem)return;
+  e.preventDefault();
+  const file=imgItem.getAsFile();
+  if(!file)return;
+  if(st.activeTab==='reunion')addReunionScreenshot(file);
+  else addPropuestaScreenshot(file);
+  // Highlight the paste zone briefly
+  const zoneId=st.activeTab==='reunion'?'reunion-paste-zone':'propuesta-paste-zone';
+  const zone=document.getElementById(zoneId);
+  if(zone){zone.classList.add('paste-highlight');setTimeout(()=>zone.classList.remove('paste-highlight'),800);}
+});
 
 // ── INIT ──
 // Document-level delegation for col-toggle buttons (survives re-renders)
