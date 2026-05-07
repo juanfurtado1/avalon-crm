@@ -502,6 +502,7 @@ function ncNew(d={}){
     mision:d.mision||'',vision:d.vision||'',
     diferenciales:d.diferenciales||'',objetivos:d.objetivos||'',contexto:d.contexto||'',
     emailGenerado:d.emailGenerado||'',scopeCtx:d.scopeCtx||'',
+    presentacionScreenshots:d.presentacionScreenshots||[],
     crmClientId:d.crmClientId||null,fromCRM:d.fromCRM||false
   };
 }
@@ -3229,6 +3230,23 @@ function rNuevoDetail(){
       <button class="btn-notify-team" id="btn-notify-team">📧 Notificar al equipo</button>
     </div>`:''}
     <div class="section-title">📧 Mail de presentación al equipo</div>
+    <div class="nc-section" style="margin-bottom:12px">
+      <div class="nc-section-title">🖼 Cargar presentación <span style="font-size:8px;color:var(--text-muted);font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· pegá capturas o adjuntá imágenes</span></div>
+      ${(c.presentacionScreenshots||[]).length?`<div class="screenshots-grid" style="margin-bottom:10px">
+        ${(c.presentacionScreenshots||[]).map((s,i)=>`<div class="screenshot-item">
+          <img src="data:${s.mediaType};base64,${s.base64}" alt="presentación ${i+1}" style="max-width:200px;max-height:140px;cursor:pointer" onclick="this.closest('.screenshot-item').querySelector('img').requestFullscreen?.()">
+          <div class="screenshot-label">${s.date||''}</div>
+          <button class="screenshot-del" data-pres-del="${i}">✕</button>
+        </div>`).join('')}
+      </div>`:''}
+      <div class="paste-zone" id="pres-paste-zone">
+        <input type="file" id="pres-file-input" accept="image/*" multiple style="display:none">
+        <div class="paste-zone-row">
+          <span class="paste-zone-icon">🖼</span>
+          <span class="paste-zone-label">Ctrl+V para pegar · o hacé clic para adjuntar imagen</span>
+        </div>
+      </div>
+    </div>
     ${st.loadingEmail
       ?`<div class="ai-box loading"><div class="spinner"></div>Generando mail de presentación...</div>`
       :c.emailGenerado
@@ -3237,6 +3255,19 @@ function rNuevoDetail(){
            <button class="btn-outline" id="btn-regen-email">↻ Regenerar</button>`
         :`<button class="btn-primary" id="btn-gen-email">✦ Generar mail de presentación</button>`}
   </div>`;
+}
+
+async function addPresentacionScreenshot(file){
+  const c=gnc();if(!c)return;
+  const base64=await fileToBase64(file);
+  if(!c.presentacionScreenshots)c.presentacionScreenshots=[];
+  c.presentacionScreenshots.push({base64,mediaType:file.type||'image/png',date:new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+  await svNC(c);render();
+}
+async function delPresentacionScreenshot(idx){
+  const c=gnc();if(!c)return;
+  if(c.presentacionScreenshots)c.presentacionScreenshots.splice(idx,1);
+  await svNC(c);render();
 }
 
 // ── CLIENTES NUEVOS — ACTIONS ──
@@ -3326,10 +3357,27 @@ function bindNuevos(){
   $('#btn-copy-email')?.addEventListener('click',()=>cpT(gnc()?.emailGenerado||'','copiedEmail'));
   $('#btn-gen-rubro')?.addEventListener('click',genRubro);
   $('#btn-notify-team')?.addEventListener('click',()=>{const c=gnc();if(c)sendTeamEmail(c);});
+  // Presentacion screenshots
+  $('#pres-paste-zone')?.addEventListener('click',()=>$('#pres-file-input')?.click());
+  $('#pres-file-input')?.addEventListener('change',async e=>{for(const f of e.target.files)await addPresentacionScreenshot(f);e.target.value='';});
+  $$('[data-pres-del]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();await delPresentacionScreenshot(parseInt(b.dataset.presDel));}));
 }
 
-// ── GLOBAL PASTE HANDLER (screenshots for reunion/propuesta) ──
+// ── GLOBAL PASTE HANDLER (screenshots for reunion/propuesta/presentacion) ──
 document.addEventListener('paste',function(e){
+  // Handle paste in nuevoDetail (presentacion screenshots)
+  if(st.view==='nuevoDetail'){
+    const items=[...(e.clipboardData?.items||[])];
+    const imgItem=items.find(i=>i.type.startsWith('image/'));
+    if(!imgItem)return;
+    e.preventDefault();
+    const file=imgItem.getAsFile();
+    if(!file)return;
+    addPresentacionScreenshot(file);
+    const zone=document.getElementById('pres-paste-zone');
+    if(zone){zone.classList.add('paste-highlight');setTimeout(()=>zone.classList.remove('paste-highlight'),800);}
+    return;
+  }
   if(st.view!=='detail')return;
   if(st.activeTab!=='reunion'&&st.activeTab!=='propuesta')return;
   const items=[...(e.clipboardData?.items||[])];
