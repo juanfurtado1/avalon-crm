@@ -310,7 +310,42 @@ body.is-dragging .kanban-card:not(.dragging){transition:opacity .1s}
 .nc-progress-fill{height:100%;border-radius:0 0 14px 14px;transition:width .4s ease}
 .ready-badge{background:rgba(74,171,122,.12);border:1px solid rgba(74,171,122,.4);color:var(--green);border-radius:6px;padding:3px 9px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .nc-divider{border:none;border-top:1px solid var(--border);margin:14px 0}
-/* ── PASTE ZONES ── */
+/* ── CERRADA MODAL ── */
+.cerrada-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .15s}
+.cerrada-modal{background:linear-gradient(155deg,#181828 0%,#0c0c16 100%);border:1px solid rgba(74,171,122,.3);border-radius:18px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 8px 60px rgba(0,0,0,.8),0 0 0 1px rgba(74,171,122,.1);position:relative;animation:slideUp .2s cubic-bezier(.22,.68,0,1.2)}
+.cerrada-modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(74,171,122,.5),transparent);border-radius:18px 18px 0 0}
+.cerrada-icon{font-size:40px;text-align:center;margin-bottom:12px}
+.cerrada-title{font-size:17px;font-weight:800;color:var(--green);text-align:center;margin-bottom:6px;letter-spacing:-.3px}
+.cerrada-sub{font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:20px;line-height:1.5}
+.cerrada-client-preview{background:var(--surface2);border:1px solid rgba(74,171,122,.2);border-radius:10px;padding:12px 14px;margin-bottom:20px}
+.cerrada-client-name{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
+.cerrada-client-meta{font-size:10px;color:var(--text-muted);font-weight:600;display:flex;gap:8px;flex-wrap:wrap}
+.btn-cerrada-si{width:100%;background:linear-gradient(135deg,#4aab7a 0%,#2e8a5a 100%);color:#fff;border:none;border-radius:10px;padding:13px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;box-shadow:0 3px 16px rgba(74,171,122,.4);transition:box-shadow .15s,transform .1s;margin-bottom:8px}
+.btn-cerrada-si:hover{box-shadow:0 5px 24px rgba(74,171,122,.55);transform:translateY(-1px)}
+.btn-cerrada-no{width:100%;background:transparent;color:var(--text-muted);border:1px solid var(--border2);border-radius:10px;padding:10px;font-family:'Montserrat',sans-serif;font-size:11px;cursor:pointer;font-weight:600}
+.btn-cerrada-no:hover{border-color:#555;color:var(--text)}
+
+.followup-box{border-radius:10px;padding:12px 14px;margin-bottom:12px;border:1px solid}
+.followup-box.fu-ok{background:rgba(74,171,122,.07);border-color:rgba(74,171,122,.3)}
+.followup-box.fu-soon{background:rgba(196,154,32,.07);border-color:rgba(196,154,32,.3)}
+.followup-box.fu-today{background:rgba(155,109,255,.09);border-color:rgba(155,109,255,.4)}
+.followup-box.fu-overdue{background:rgba(217,95,95,.09);border-color:rgba(217,95,95,.35)}
+.followup-status{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.followup-icon{font-size:16px;flex-shrink:0}
+.followup-label{font-size:12px;font-weight:700;flex:1}
+.followup-days{font-size:10px;font-weight:700;border-radius:5px;padding:2px 8px}
+.fu-badge{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:.3px;flex-shrink:0}
+.fu-badge-ok{background:rgba(74,171,122,.15);color:#4aab7a}
+.fu-badge-soon{background:rgba(196,154,32,.15);color:#c49a20}
+.fu-badge-today{background:rgba(155,109,255,.2);color:#9b6dff}
+.fu-badge-overdue{background:rgba(217,95,95,.15);color:#d95f5f}
+/* ── FOLLOW-UP ALERT BAR ── */
+.fu-alert-bar{background:rgba(217,95,95,.07);border-bottom:1px solid rgba(217,95,95,.2);padding:8px 14px;display:flex;flex-direction:column;gap:6px}
+.fu-alert-item{display:flex;align-items:center;gap:8px;font-size:11px}
+.fu-alert-name{font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fu-alert-date{font-size:9px;color:var(--text-muted);font-weight:600;flex-shrink:0}
+.fu-alert-go{background:rgba(155,109,255,.12);border:1px solid rgba(155,109,255,.3);color:var(--gold);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif;flex-shrink:0}
+
 .paste-zone{border:2px dashed var(--border2);border-radius:12px;padding:14px 12px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:12px;position:relative;user-select:none}
 .paste-zone:hover,.paste-zone.paste-highlight{border-color:rgba(155,109,255,.5);background:rgba(155,109,255,.04)}
 .paste-zone-row{display:flex;align-items:center;justify-content:center;gap:8px}
@@ -513,8 +548,10 @@ function nc(d={}){
     followupChannel:d.followupChannel||'email',
     followupText:d.followupText||'',
     followupOptions:d.followupOptions||[],
-    heatLevel:d.heatLevel||null,      // null=auto, 'hot'/'warm'/'cold'=manual
-    heatIgnored:d.heatIgnored||false   // true = user dismissed the alert
+    heatLevel:d.heatLevel||null,
+    heatIgnored:d.heatIgnored||false,
+    followupDate:d.followupDate||'',
+    followupNote:d.followupNote||''
   };
 }
 
@@ -535,7 +572,7 @@ let st={
   activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,loadingRubro:false,
   // LC Consumo
   showLCModal:false,lcDraft:null,loadingLCImg:false,
-  showProyecciones:false,showNotifPanel:false,showEmailNotifyModal:false
+  showProyecciones:false,showNotifPanel:false,showEmailNotifyModal:false,showCerradaModal:false,cerradaClientId:null
 };
 
 // ── HELPERS ──
@@ -1056,6 +1093,7 @@ async function render(){
   if(st.showApiModal)app.insertAdjacentHTML('beforeend',rApiModal());
   if(st.showNewModal)app.insertAdjacentHTML('beforeend',rNewModal());
   if(st.showLCModal)app.insertAdjacentHTML('beforeend',rLCModal());
+  if(st.showCerradaModal)app.insertAdjacentHTML('beforeend',rCerradaModal());
   bind();
 }
 
@@ -1359,6 +1397,7 @@ function rList(){
     ${st.filters.urgencia?`<div class="filt-active-badge" style="background:rgba(196,154,32,.12);border-color:rgba(196,154,32,.3);color:#c49a20">⚠ Sin contacto · ${sr.length} resultado${sr.length!==1?'s':''}<button id="btn-clear-urgencia-filter" style="color:#c49a20">✕</button></div>`:''}
     ${st.viewMode==='kanban'&&st.filter!=='Todos'?`<span class="filt-kanban-notice">↳ columnas filtradas</span>`:''}
   </div>
+  ${rFollowupAlertBar(clients)}
   ${rProyecciones(clients)}
   <div id="cards-area">
   ${st.viewMode==='kanban'?rKanbanCols(sr):`<div class="cards">${sr.length===0
@@ -1404,6 +1443,7 @@ function rCardV2(c){
         ${c.canal&&c.canal!=='Airtable Form'?`<span class="need-chip" style="color:var(--blue)">${c.canal}</span>`:''}
         ${(meetDOverdue||hasMeetD)?`<span class="meet-badge ${meetDOverdue?'meet-overdue':'meet-discovery'}">🔍 Discovery ${meetDOverdue?'vencida':fmtDate(c.meetDiscovery)}</span>`:''}
         ${(meetBOverdue||hasMeetB)?`<span class="meet-badge ${meetBOverdue?'meet-overdue':'meet-budget'}">💼 Budget ${meetBOverdue?'vencida':fmtDate(c.meetBudget)}</span>`:''}
+        ${(()=>{const fu=fuStatus(c.followupDate);return fu?`<span class="fu-badge ${fu.badgeCls}">📅 ${fu.label}</span>`:'';})()} 
       </div>
     </div>
     <div class="progress-bar"><div class="progress-fill" style="width:${progPct}%;background:${co}"></div></div>
@@ -1536,7 +1576,9 @@ function rKanbanCols(sr){
         ${hasMeetD?`<span style="font-size:8px;color:var(--blue);font-weight:700">🔍${fmtDate(c.meetDiscovery)}</span>`:''}
         ${hasMeetB?`<span style="font-size:8px;color:var(--gold);font-weight:700">💼${fmtDate(c.meetBudget)}</span>`:''}
         ${c.heatLevel?`<span style="font-size:8px;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-weight:600">manual</span>`:''}
+        ${(()=>{const fu=fuStatus(c.followupDate);return fu?`<span class="fu-badge ${fu.badgeCls}" style="font-size:8px">📅 ${fu.label}</span>`:'';})()} 
       </div>
+    </div>`;
     </div>`;
   }
 
@@ -1957,6 +1999,67 @@ function rMeetStatus(c){
   }
   return`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${parts.join('')}</div>`;
 }
+
+// ── FOLLOW-UP DATE HELPERS ──
+function fuStatus(dateStr){
+  if(!dateStr)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const d=new Date(dateStr);d.setHours(0,0,0,0);
+  const diff=Math.round((d-today)/86400000);
+  if(diff<0)return{cls:'fu-overdue',icon:'🔴',label:'Vencido',days:Math.abs(diff),txt:`Venció hace ${Math.abs(diff)}d`,color:'#d95f5f',badgeCls:'fu-badge-overdue'};
+  if(diff===0)return{cls:'fu-today',icon:'🔔',label:'¡Hoy!',days:0,txt:'Seguimiento HOY',color:'#9b6dff',badgeCls:'fu-badge-today'};
+  if(diff<=3)return{cls:'fu-soon',icon:'🟡',label:`En ${diff}d`,days:diff,txt:`Seguimiento en ${diff}d — ${fmtDate(dateStr)}`,color:'#c49a20',badgeCls:'fu-badge-soon'};
+  return{cls:'fu-ok',icon:'🟢',label:`En ${diff}d`,days:diff,txt:`Seguimiento el ${fmtDate(dateStr)} (en ${diff}d)`,color:'#4aab7a',badgeCls:'fu-badge-ok'};
+}
+function rFollowupDate(c){
+  const fu=fuStatus(c.followupDate);
+  return`<div class="section-title">📅 Recordatorio de seguimiento</div>
+  ${fu?`<div class="followup-box ${fu.cls}">
+    <div class="followup-status">
+      <span class="followup-icon">${fu.icon}</span>
+      <span class="followup-label" style="color:${fu.color}">${fu.txt}</span>
+      <button class="btn-sm" id="btn-clear-followup" style="font-size:9px;padding:2px 7px;color:var(--text-muted)">✕ Quitar</button>
+    </div>
+    ${c.followupNote?`<div style="font-size:11px;color:var(--text-muted);line-height:1.5;border-top:1px solid rgba(255,255,255,.05);padding-top:7px;margin-top:2px">📝 ${c.followupNote}</div>`:''}
+  </div>`:''}
+  <div style="display:flex;gap:8px;align-items:flex-end">
+    <div class="field" style="flex:1;margin:0">
+      <label class="field-label">${fu?'Cambiar fecha':'Nueva fecha'}</label>
+      <input class="field-input" id="pip-followup-date" type="date" value="${c.followupDate||''}" min="${new Date().toISOString().split('T')[0]}">
+    </div>
+    <button class="btn-sm btn-gold" id="btn-save-followup" style="padding:9px 12px;white-space:nowrap;margin-bottom:0">💾 Guardar</button>
+  </div>
+  <div class="field" style="margin-top:8px">
+    <label class="field-label">Nota del recordatorio (opcional)</label>
+    <input class="field-input" id="pip-followup-note" value="${c.followupNote||''}" placeholder="Ej: Llamar para cerrar presupuesto">
+  </div>`;
+}
+
+function rFollowupAlertBar(clientList){
+  const today=new Date();today.setHours(0,0,0,0);
+  const due=clientList.filter(c=>{
+    if(!c.followupDate||['Cerrada','Perdida'].includes(c.estado))return false;
+    const d=new Date(c.followupDate);d.setHours(0,0,0,0);
+    return d<=today;
+  }).sort((a,b)=>new Date(a.followupDate)-new Date(b.followupDate));
+  if(!due.length)return'';
+  return`<div class="fu-alert-bar">
+    <div style="font-size:10px;font-weight:700;color:#d95f5f;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px">
+      🔔 ${due.length} seguimiento${due.length>1?'s':''} pendiente${due.length>1?'s':''}
+    </div>
+    ${due.map(c=>{
+      const fu=fuStatus(c.followupDate);
+      return`<div class="fu-alert-item">
+        <span style="font-size:9px">${fu?.icon||'📅'}</span>
+        <span class="fu-alert-name">${c.company?c.company+' · '+c.name:c.name}</span>
+        <span class="fu-alert-date">${fmtDate(c.followupDate)}</span>
+        ${c.followupNote?`<span style="font-size:9px;color:var(--text-muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">💬 ${c.followupNote}</span>`:''}
+        <button class="fu-alert-go" data-fu-go="${c.id}">Ver →</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 function notasHtml(notes){
   if(!notes||!notes.length)return'<div style="font-size:11px;color:var(--text-muted);font-style:italic">Sin notas aún</div>';
   const last=notes[notes.length-1];
@@ -2059,6 +2162,8 @@ function rPipe(c){
       <span class="dot" style="background:${co}"></span>${ula(d,c.estado)}
     </div>
     <hr class="divider">
+    ${rFollowupDate(c)}
+    <hr class="divider">
     <div class="section-title">Redactar seguimiento</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div class="channel-btn ${c.followupChannel==='email'?'active':''}" data-ch="email"><div class="channel-icon">📧</div>Email</div>
@@ -2084,6 +2189,62 @@ function rPipe(c){
             <button class="btn-outline" id="btn-regen-fu">↻ Regenerar todo</button>`
           :`<button class="btn-primary" id="btn-gen-followup">✦ Generar 3 opciones</button>`}
   </div>`;
+}
+
+// ── CERRADA → NUEVOS CLIENTES MODAL ──
+function rCerradaModal(){
+  if(!st.showCerradaModal)return'';
+  const c=clients.find(x=>x.id===st.cerradaClientId);
+  if(!c)return'';
+  const alreadyIn=nuevos.find(n=>n.crmClientId===c.id);
+  return`<div class="cerrada-modal-overlay" id="cerrada-overlay">
+    <div class="cerrada-modal">
+      <div class="cerrada-icon">🚀</div>
+      <div class="cerrada-title">¡Propuesta cerrada!</div>
+      <div class="cerrada-sub">${alreadyIn?'Este cliente ya está en Nuevos Clientes.':'¿Querés pasarlo a <strong style="color:var(--green)">Nuevos Clientes</strong> para iniciar el onboarding?'}</div>
+      <div class="cerrada-client-preview">
+        <div class="cerrada-client-name">${c.company?`${c.company} · ${c.name}`:c.name}</div>
+        <div class="cerrada-client-meta">
+          ${c.presupuesto?`<span>💰 ${fmtPresByMoneda(c.presupuesto,c.moneda)}</span>`:''}
+          ${c.servicio||c.service?`<span>📌 ${c.servicio||c.service}</span>`:''}
+          ${c.mesIngreso?`<span>📅 ${c.mesIngreso}</span>`:''}
+          ${(c.plataformas||[]).length?`<span>🔧 ${c.plataformas.join(', ')}</span>`:''}
+        </div>
+      </div>
+      ${alreadyIn
+        ?`<button class="btn-cerrada-si" id="btn-cerrada-ir">👁 Ver en Nuevos Clientes</button>`
+        :`<button class="btn-cerrada-si" id="btn-cerrada-si">✓ Sí, mover a Nuevos Clientes</button>`}
+      <button class="btn-cerrada-no" id="btn-cerrada-no">Solo cerrar el estado</button>
+    </div>
+  </div>`;
+}
+
+async function confirmCerrada(){
+  const c=clients.find(x=>x.id===st.cerradaClientId);
+  if(!c){st.showCerradaModal=false;render();return;}
+  // Check if already exists
+  const existing=nuevos.find(n=>n.crmClientId===c.id);
+  if(existing){
+    st.showCerradaModal=false;st.view='nuevoDetail';st.activeNuevo=existing.id;render();return;
+  }
+  // Create new entry with all CRM data
+  const n=ncNew({
+    name:c.name,company:c.company,
+    phone:c.phone||'',email:c.email||'',
+    web:c.web||'',instagram:c.instagram||'',
+    rubro:c.rubro||'',
+    pm:'',
+    fechaInicio:new Date().toISOString().split('T')[0],
+    scope:c.plataformas?.length?c.plataformas:[],
+    contexto:c.investigacion?.resultado?c.investigacion.resultado.substring(0,600):'',
+    crmClientId:c.id,fromCRM:true
+  });
+  nuevos.unshift(n);
+  await svNC(n);
+  st.showCerradaModal=false;
+  st.activeNuevo=n.id;st.view='nuevoDetail';
+  toast('🚀 Pasado a Nuevos Clientes ✓');
+  render();
 }
 
 // ── SCREENSHOT HELPERS ──
@@ -2471,6 +2632,29 @@ function bind(){
   // Pipeline
   $('#btn-save-pip')?.addEventListener('click',async()=>{await savePip();toast('Guardado ✓')});
   $('#btn-contacte-hoy')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.lastContact=new Date().toISOString().split('T')[0];await savePip();render()});
+  // Follow-up date
+  $('#btn-save-followup')?.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    const d=document.getElementById('pip-followup-date')?.value;
+    const n=document.getElementById('pip-followup-note')?.value.trim()||'';
+    if(!d){toast('Seleccioná una fecha');return;}
+    c.followupDate=d;c.followupNote=n;
+    await sv(c);toast('📅 Recordatorio guardado ✓');render();
+  });
+  $('#btn-clear-followup')?.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    c.followupDate='';c.followupNote='';
+    await sv(c);toast('Recordatorio eliminado');render();
+  });
+  // Cerrada → Nuevos Clientes modal
+  document.getElementById('cerrada-overlay')?.addEventListener('click',e=>{if(e.target.id==='cerrada-overlay'){st.showCerradaModal=false;render();}});
+  document.getElementById('btn-cerrada-si')?.addEventListener('click',confirmCerrada);
+  document.getElementById('btn-cerrada-ir')?.addEventListener('click',confirmCerrada);
+  document.getElementById('btn-cerrada-no')?.addEventListener('click',()=>{st.showCerradaModal=false;render();});
+  document.querySelectorAll('[data-fu-go]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();
+    st.activeClient=b.dataset.fuGo;st.view='detail';st.activeTab='pipeline';render();
+  }));
   $('#btn-cycle-status')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.estado=ESTADOS[(ESTADOS.indexOf(c.estado)+1)%ESTADOS.length];await savePip();render()});
   $('#btn-delete-client')?.addEventListener('click',async()=>{
     if(!confirm('¿Eliminar este prospecto?'))return;
@@ -2544,7 +2728,12 @@ function bind(){
     const c=gc();if(!c)return;
     const prev=c.estado,next=el.dataset.csel;
     if(prev!==next)addNotif(c,next);
-    c.estado=next;st.estadoOpen=false;await sv(c);render();
+    c.estado=next;st.estadoOpen=false;await sv(c);
+    // Show modal when closing a deal
+    if(next==='Cerrada'&&prev!=='Cerrada'){
+      st.showCerradaModal=true;st.cerradaClientId=c.id;
+    }
+    render();
   }));
   $$('[data-cselbdrop]').forEach(el=>el.addEventListener('click',()=>{st.estadoOpen=false;render();}));
   ['pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes'].forEach(id=>
