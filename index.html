@@ -304,6 +304,8 @@ body.is-dragging .kanban-card:not(.dragging){transition:opacity .1s}
 .scope-chip{display:inline-flex;align-items:center;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted)}
 .scope-toggle-btn{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 11px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.3px;transition:all .12s;display:flex;align-items:center;gap:5px}
 .scope-toggle-btn.on{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+.cuenta-pub-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:8px 16px;font-size:10px;color:var(--text-muted);cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;transition:all .12s;flex:1;text-align:center}
+.cuenta-pub-btn.on{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);box-shadow:0 0 12px rgba(155,109,255,.2)}
 .nc-section{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;margin-bottom:12px}
 .nc-section-title{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:10px;font-weight:700;display:flex;align-items:center;gap:6px}
 .nc-progress{height:3px;background:var(--surface3);border-radius:0 0 14px 14px;overflow:hidden}
@@ -503,6 +505,14 @@ function ncNew(d={}){
     diferenciales:d.diferenciales||'',objetivos:d.objetivos||'',contexto:d.contexto||'',
     emailGenerado:d.emailGenerado||'',scopeCtx:d.scopeCtx||'',
     presentacionScreenshots:d.presentacionScreenshots||[],
+    brandbookScreenshots:d.brandbookScreenshots||[],
+    statusDigital:d.statusDigital||'',
+    observaciones:d.observaciones||'',
+    objetivo1:d.objetivo1||'',objetivo2:d.objetivo2||'',objetivo3:d.objetivo3||'',
+    cuentaPublicitaria:d.cuentaPublicitaria||'',
+    montoMeta:d.montoMeta||'',montoGoogle:d.montoGoogle||'',
+    montoOtros:d.montoOtros||'',montoOtrosDetalle:d.montoOtrosDetalle||'',
+    fechaBriefMeet:d.fechaBriefMeet||'',
     crmClientId:d.crmClientId||null,fromCRM:d.fromCRM||false
   };
 }
@@ -3168,8 +3178,15 @@ function rNuevoDetail(){
     <div class="nc-section">
       <div class="nc-section-title">👤 Datos del cliente</div>
       <div class="field-row">
-        <div class="field"><label class="field-label">Nombre</label><input class="field-input" id="nd-name" value="${c.name||''}"></div>
-        <div class="field"><label class="field-label">Empresa</label><input class="field-input" id="nd-company" value="${c.company||''}"></div>
+        <div class="field"><label class="field-label">Nombre contacto</label><input class="field-input" id="nd-name" value="${c.name||''}"></div>
+        <div class="field"><label class="field-label">Empresa / Marca</label><input class="field-input" id="nd-company" value="${c.company||''}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Teléfono / WhatsApp</label>
+          <input class="field-input" id="nd-phone" value="${c.phone||''}" type="tel">
+          ${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}
+        </div>
+        <div class="field"><label class="field-label">Mail contacto</label><input class="field-input" id="nd-email" value="${c.email||''}" type="email" placeholder="flor@marca.com"></div>
       </div>
       <div class="field">
         <label class="field-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -3178,7 +3195,7 @@ function rNuevoDetail(){
             ${st.loadingRubro?'<span style="display:flex;align-items:center;gap:4px"><span class="spinner" style="width:9px;height:9px"></span>Analizando...</span>':'✦ Sugerir con IA'}
           </button>
         </label>
-        <input class="field-input" id="nd-rubro" value="${c.rubro||''}" placeholder="Ej: Indumentaria mayorista">
+        <input class="field-input" id="nd-rubro" value="${c.rubro||''}" placeholder="Ej: Bronceado saludable · lifestyle">
       </div>
       <div class="field-row">
         <div class="field"><label class="field-label">Web</label><input class="field-input" id="nd-web" value="${c.web||''}" placeholder="https://..."></div>
@@ -3186,9 +3203,22 @@ function rNuevoDetail(){
       </div>
       <div class="field-row">
         <div class="field"><label class="field-label">TikTok</label><input class="field-input" id="nd-tiktok" value="${c.tiktok||''}" placeholder="@usuario"></div>
-        <div class="field"><label class="field-label">Teléfono</label>
-          <input class="field-input" id="nd-phone" value="${c.phone||''}" type="tel">
-          ${wl?`<a class="wa-link" href="${wl}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📘 Brandbook <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--text-muted);font-size:8px">— si lo tiene (adjuntá imagen/captura)</span></div>
+        ${(c.brandbookScreenshots||[]).length?`<div class="screenshots-grid" style="margin-bottom:8px">
+          ${(c.brandbookScreenshots||[]).map((s,i)=>`<div class="screenshot-item">
+            <img src="data:${s.mediaType};base64,${s.base64}" alt="brandbook ${i+1}" style="max-width:200px;max-height:130px">
+            <div class="screenshot-label">${s.date||''}</div>
+            <button class="screenshot-del" data-bb-del="${i}">✕</button>
+          </div>`).join('')}
+        </div>`:''}
+        <div class="paste-zone" id="bb-paste-zone" style="padding:10px">
+          <input type="file" id="bb-file-input" accept="image/*" multiple style="display:none">
+          <div class="paste-zone-row">
+            <span class="paste-zone-icon">📘</span>
+            <span class="paste-zone-label">Clic para adjuntar imagen del brandbook</span>
+          </div>
         </div>
       </div>
     </div>
@@ -3200,8 +3230,12 @@ function rNuevoDetail(){
         </div>
         <div class="field"><label class="field-label">Fecha de inicio</label><input class="field-input" id="nd-fecha" type="date" value="${c.fechaInicio||''}"></div>
       </div>
-      <div class="field"><label class="field-label">Equipo asignado (uno por línea)</label>
-        <textarea class="field-textarea" id="nd-equipo" style="min-height:70px" placeholder="Mica\nTizi\nEli...">${c.equipo||''}</textarea>
+      <div class="field"><label class="field-label">Equipo asignado <span style="font-weight:500;color:var(--text-muted)">(uno por línea)</span></label>
+        <textarea class="field-textarea" id="nd-equipo" style="min-height:70px" placeholder="Gustavo&#10;Caro&#10;Francesca">${c.equipo||''}</textarea>
+      </div>
+      <div class="field"><label class="field-label">📅 Fecha y hora · Brief Meet</label>
+        <input class="field-input" id="nd-brief-meet" type="datetime-local" value="${c.fechaBriefMeet||''}">
+        ${c.fechaBriefMeet?`<div style="font-size:10px;color:var(--gold);font-weight:600;margin-top:4px">📌 ${new Date(c.fechaBriefMeet).toLocaleString('es-AR',{weekday:'long',day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'})}</div>`:''}
       </div>
     </div>
     <div class="nc-section">
@@ -3210,17 +3244,48 @@ function rNuevoDetail(){
         ${NC_SCOPE.map(s=>`<div class="scope-toggle-btn ${(c.scope||[]).includes(s)?'on':''}" data-scope="${s}">${s}</div>`).join('')}
       </div>
       <div style="margin-top:10px">
-        <div style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Contexto adicional del scope / equipo (opcional)</div>
-        <textarea class="field-textarea" id="nd-scope-ctx" style="min-height:60px;font-size:11px" placeholder="Pegá acá detalles del scope o equipo para incluir en el mail generado...">${c.scopeCtx||''}</textarea>
+        <div style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Contexto adicional del scope (opcional)</div>
+        <textarea class="field-textarea" id="nd-scope-ctx" style="min-height:60px;font-size:11px" placeholder="Detalles del scope para incluir en el mail...">${c.scopeCtx||''}</textarea>
       </div>
     </div>
     <div class="nc-section">
-      <div class="nc-section-title">✨ Esencia de marca <span style="color:var(--text-muted);font-size:8px;font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· para generar el mail</span></div>
-      <div class="field"><label class="field-label">Misión</label><textarea class="field-textarea" id="nd-mision" style="min-height:55px" placeholder="Ej: Ofrecer indumentaria de sastrería moderna...">${c.mision||''}</textarea></div>
-      <div class="field"><label class="field-label">Visión</label><textarea class="field-textarea" id="nd-vision" style="min-height:55px" placeholder="Ej: Posicionarse como referente...">${c.vision||''}</textarea></div>
-      <div class="field"><label class="field-label">Diferenciales</label><textarea class="field-textarea" id="nd-diferenciales" style="min-height:70px" placeholder="Un diferencial por línea...">${c.diferenciales||''}</textarea></div>
-      <div class="field"><label class="field-label">Objetivos principales</label><textarea class="field-textarea" id="nd-objetivos" style="min-height:70px" placeholder="Un objetivo por línea...">${c.objetivos||''}</textarea></div>
-      <div class="field"><label class="field-label">Contexto adicional</label><textarea class="field-textarea" id="nd-contexto" style="min-height:70px" placeholder="Información extra para el equipo...">${c.contexto||''}</textarea></div>
+      <div class="nc-section-title">💰 Inversión publicitaria</div>
+      <div class="field" style="margin-bottom:10px">
+        <label class="field-label" style="margin-bottom:6px">Cuenta publicitaria</label>
+        <div style="display:flex;gap:6px">
+          <button class="cuenta-pub-btn ${c.cuentaPublicitaria==='PROPIA'?'on':''}" data-cuenta="PROPIA">✓ PROPIA</button>
+          <button class="cuenta-pub-btn ${c.cuentaPublicitaria==='LC Avalon'?'on':''}" data-cuenta="LC Avalon">LC AVALON</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Inversión Meta Ads</label><input class="field-input" id="nd-monto-meta" value="${c.montoMeta||''}" placeholder="Ej: $500.000"></div>
+        <div class="field"><label class="field-label">Inversión Google Ads</label><input class="field-input" id="nd-monto-google" value="${c.montoGoogle||''}" placeholder="Ej: $300.000"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Inversión otros</label><input class="field-input" id="nd-monto-otros" value="${c.montoOtros||''}" placeholder="Monto"></div>
+        <div class="field"><label class="field-label">Plataforma</label><input class="field-input" id="nd-monto-otros-detalle" value="${c.montoOtrosDetalle||''}" placeholder="Ej: TikTok Ads"></div>
+      </div>
+    </div>
+    <div class="nc-section">
+      <div class="nc-section-title">📝 Briefing del cliente <span style="color:var(--text-muted);font-size:8px;font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· para generar el mail</span></div>
+      <div class="field"><label class="field-label">Descripción general y contexto</label>
+        <textarea class="field-textarea" id="nd-contexto" style="min-height:80px" placeholder="Descripción del negocio, etapa actual, contexto de la marca...">${c.contexto||''}</textarea>
+      </div>
+      <div class="field"><label class="field-label">Diferencial / Distintivo</label>
+        <textarea class="field-textarea" id="nd-diferenciales" style="min-height:60px" placeholder="Un diferencial por línea...">${c.diferenciales||''}</textarea>
+      </div>
+      <div class="field"><label class="field-label">Status digital</label>
+        <textarea class="field-textarea" id="nd-status-digital" style="min-height:55px" placeholder="Estado actual de redes, ads, web, presencia online...">${c.statusDigital||''}</textarea>
+      </div>
+      <div class="field">
+        <label class="field-label" style="margin-bottom:6px">Objetivos</label>
+        <input class="field-input" id="nd-obj1" value="${c.objetivo1||''}" placeholder="Objetivo principal" style="margin-bottom:6px">
+        <input class="field-input" id="nd-obj2" value="${c.objetivo2||''}" placeholder="Objetivo secundario" style="margin-bottom:6px">
+        <input class="field-input" id="nd-obj3" value="${c.objetivo3||''}" placeholder="Objetivo 3 (opcional)">
+      </div>
+      <div class="field"><label class="field-label">Observaciones estratégicas</label>
+        <textarea class="field-textarea" id="nd-observaciones" style="min-height:70px" placeholder="Puntos clave, lógica acordada, contexto importante para el equipo...">${c.observaciones||''}</textarea>
+      </div>
     </div>
     <button class="btn-sm btn-gold" id="btn-nd-save" style="width:100%;justify-content:center;padding:10px;margin-bottom:14px;font-size:11px">💾 Guardar datos</button>
     <hr class="nc-divider">
@@ -3257,6 +3322,19 @@ function rNuevoDetail(){
   </div>`;
 }
 
+async function addBrandbookScreenshot(file){
+  const c=gnc();if(!c)return;
+  const base64=await fileToBase64(file);
+  if(!c.brandbookScreenshots)c.brandbookScreenshots=[];
+  c.brandbookScreenshots.push({base64,mediaType:file.type||'image/png',date:new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+  await svNC(c);render();
+}
+async function delBrandbookScreenshot(idx){
+  const c=gnc();if(!c)return;
+  if(c.brandbookScreenshots)c.brandbookScreenshots.splice(idx,1);
+  await svNC(c);render();
+}
+
 async function addPresentacionScreenshot(file){
   const c=gnc();if(!c)return;
   const base64=await fileToBase64(file);
@@ -3285,14 +3363,20 @@ async function saveNuevoDetail(){
   const c=gnc();if(!c)return;
   c.name=gi('nd-name')||c.name;c.company=gi('nd-company')||c.company;
   c.rubro=gi('nd-rubro')||'';c.web=gi('nd-web')||'';c.instagram=gi('nd-ig')||'';
-  c.tiktok=gi('nd-tiktok')||'';c.phone=gi('nd-phone')||'';
+  c.tiktok=gi('nd-tiktok')||'';c.phone=gi('nd-phone')||'';c.email=gi('nd-email')||'';
   c.pm=document.getElementById('nd-pm')?.value||'';
   c.fechaInicio=document.getElementById('nd-fecha')?.value||'';
+  c.fechaBriefMeet=document.getElementById('nd-brief-meet')?.value||'';
   c.equipo=gi('nd-equipo')||'';
   c.scopeCtx=gi('nd-scope-ctx')||'';
   c.scope=[...document.querySelectorAll('#nd-scope-grid .scope-toggle-btn.on')].map(t=>t.dataset.scope);
-  c.mision=gi('nd-mision')||'';c.vision=gi('nd-vision')||'';
-  c.diferenciales=gi('nd-diferenciales')||'';c.objetivos=gi('nd-objetivos')||'';c.contexto=gi('nd-contexto')||'';
+  c.contexto=gi('nd-contexto')||'';
+  c.diferenciales=gi('nd-diferenciales')||'';
+  c.statusDigital=gi('nd-status-digital')||'';
+  c.objetivo1=gi('nd-obj1')||'';c.objetivo2=gi('nd-obj2')||'';c.objetivo3=gi('nd-obj3')||'';
+  c.observaciones=gi('nd-observaciones')||'';
+  c.montoMeta=gi('nd-monto-meta')||'';c.montoGoogle=gi('nd-monto-google')||'';
+  c.montoOtros=gi('nd-monto-otros')||'';c.montoOtrosDetalle=gi('nd-monto-otros-detalle')||'';
   await svNC(c);toast('Guardado ✓');
 }
 
@@ -3318,9 +3402,51 @@ async function genEmail(){
   st.loadingEmail=true;render();
   const fecha=c.fechaInicio?new Date(c.fechaInicio).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'hoy';
   const equipo=c.equipo?c.equipo.split('\n').filter(Boolean):(c.pm&&NC_PM_TEAMS[c.pm]?NC_PM_TEAMS[c.pm]:[]);
-  const scopeSecciones=c.scope.filter(s=>['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn'].includes(s));
-  const scopeContenido=c.scope.filter(s=>['CM y Diseño','Filmmaker','CRM'].includes(s));
-  const p=`Generá un mail interno de presentación de nuevo cliente para el equipo de Avalon World Agency, exactamente con este formato y estructura.\n\nDATOS DEL CLIENTE:\n- Nombre del contacto: ${c.name}\n- Marca/Empresa: ${c.company||''}\n- Rubro: ${c.rubro||'no especificado'}\n- Fecha de alta: ${fecha}\n- Web: ${c.web||'no disponible'}\n- Instagram: ${c.instagram||'no disponible'}\n- TikTok: ${c.tiktok||'no disponible'}\n- WhatsApp contacto: ${c.phone||'no disponible'}\n- PM asignado: ${c.pm||'a definir'}\n- Equipo: ${equipo.join(', ')||'a definir'}\n- Scope: ${c.scope.join(', ')||'a definir'}\n${c.scopeCtx?`- Detalle scope/equipo: ${c.scopeCtx}\n`:''}- Misión: ${c.mision||''}\n- Visión: ${c.vision||''}\n- Diferenciales: ${c.diferenciales||''}\n- Objetivos: ${c.objetivos||''}\n- Contexto: ${c.contexto||''}\n\nFORMATO: Asunto: NUEVO CLIENTE: [MARCA EN MAYÚSCULAS]\n\nDescripción, contacto, esencia de marca, diferenciales, objetivos, estado operativo (scope), equipo asignado, meet de brief, grupo de WhatsApp, contexto adicional.\n\nRespondé SOLO con el mail completo, empezando por "Asunto:". Sin explicaciones. En español. Tono profesional y directo.`;
+  let briefMeetStr='A confirmar';
+  if(c.fechaBriefMeet){try{briefMeetStr=new Date(c.fechaBriefMeet).toLocaleString('es-AR',{weekday:'long',day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'});}catch(e){briefMeetStr=c.fechaBriefMeet;}}
+  const inversion=[];
+  if(c.montoMeta)inversion.push(`Meta Ads: ${c.montoMeta}`);
+  if(c.montoGoogle)inversion.push(`Google Ads: ${c.montoGoogle}`);
+  if(c.montoOtros)inversion.push(`${c.montoOtrosDetalle||'Otros'}: ${c.montoOtros}`);
+  const objetivos=[c.objetivo1,c.objetivo2,c.objetivo3].filter(Boolean);
+  const p=`Generá un mail interno de presentación de nuevo cliente para el equipo de Avalon World Agency. El mail debe ser exactamente como el que manda el Account Manager Juan a su equipo interno. Tono profesional, directo, sin paja.
+
+DATOS DEL CLIENTE:
+- Marca/Empresa: ${c.company||''}
+- Rubro: ${c.rubro||'no especificado'}
+- Contacto: ${c.name}${c.email?` · ${c.email}`:''}${c.phone?` · WhatsApp: ${c.phone}`:''}
+- Web: ${c.web||'no disponible'}
+- Instagram: ${c.instagram||'no disponible'}${c.tiktok?`\n- TikTok: ${c.tiktok}`:''}
+- Fecha de alta: ${fecha}
+
+DESCRIPCIÓN GENERAL Y CONTEXTO:
+${c.contexto||'A definir en brief inicial'}
+
+DIFERENCIAL / DISTINTIVO:
+${c.diferenciales||'A relevar en primera reunión'}
+
+STATUS DIGITAL:
+${c.statusDigital||'A relevar en brief'}
+
+OBJETIVOS:
+${objetivos.length?objetivos.map((o,i)=>`${i+1}. ${o}`).join('\n'):'A definir con el cliente en meet de brief'}
+
+CONFIGURACIÓN OPERATIVA:
+- Scope: ${c.scope.join(', ')||'a definir'}${c.scopeCtx?`\n- Detalle scope: ${c.scopeCtx}`:''}
+- PM asignado: ${c.pm||'a definir'}
+- Equipo: ${equipo.join(', ')||'a definir'}
+- Cuenta publicitaria: ${c.cuentaPublicitaria||'a definir'}${inversion.length?`\n- Inversión inicial: ${inversion.join(' / ')}`:''}
+- Brief Meet: ${briefMeetStr}
+
+OBSERVACIONES ESTRATÉGICAS:
+${c.observaciones||'Sin observaciones adicionales'}
+
+FORMATO DEL MAIL:
+Asunto: NUEVO CLIENTE: [MARCA EN MAYÚSCULAS]
+
+Incluir: descripción general y contexto, contacto principal (nombre + tel + mail), web + instagram, diferencial/distintivo, status digital, objetivos (numerados), scope/servicios contratados, cuenta publicitaria e inversión inicial, equipo asignado, fecha de brief meet, observaciones estratégicas, próximos pasos sugeridos.
+
+Respondé SOLO con el mail completo, empezando por "Asunto:". Sin explicaciones. En español. Tono interno de agencia, profesional y directo.`;
   try{
     const t=await claude([{role:'user',content:p}]);
     c.emailGenerado=t;await svNC(c);
@@ -3357,6 +3483,16 @@ function bindNuevos(){
   $('#btn-copy-email')?.addEventListener('click',()=>cpT(gnc()?.emailGenerado||'','copiedEmail'));
   $('#btn-gen-rubro')?.addEventListener('click',genRubro);
   $('#btn-notify-team')?.addEventListener('click',()=>{const c=gnc();if(c)sendTeamEmail(c);});
+  // Cuenta publicitaria toggle
+  $$('[data-cuenta]').forEach(b=>b.addEventListener('click',async()=>{
+    const c=gnc();if(!c)return;
+    c.cuentaPublicitaria=b.dataset.cuenta;
+    await svNC(c);render();
+  }));
+  // Brandbook screenshots
+  $('#bb-paste-zone')?.addEventListener('click',()=>$('#bb-file-input')?.click());
+  $('#bb-file-input')?.addEventListener('change',async e=>{for(const f of e.target.files)await addBrandbookScreenshot(f);e.target.value='';});
+  $$('[data-bb-del]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();await delBrandbookScreenshot(parseInt(b.dataset.bbDel));}));
   // Presentacion screenshots
   $('#pres-paste-zone')?.addEventListener('click',()=>$('#pres-file-input')?.click());
   $('#pres-file-input')?.addEventListener('change',async e=>{for(const f of e.target.files)await addPresentacionScreenshot(f);e.target.value='';});
