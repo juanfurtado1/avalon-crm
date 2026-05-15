@@ -681,7 +681,7 @@ async function lcImportFromImage(file){
           role:'user',
           content:[
             {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
-            {type:'text',text:'De esta tabla extraé todas las filas de datos (ignorá encabezados y filas vacías). Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene exactamente: {"cuenta":"nombre de cuenta o cliente","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna Carga o carga tiene el monto numérico. La columna Divisa indica ARS o USD. Si no hay columna Divisa pero hay montos en USD (con USD en el nombre o contexto), ponés "USD", sino "ARS". Devolvé solo el JSON array, nada más.'}
+            {type:'text',text:'De esta tabla extraé todas las filas de datos (ignorá encabezados y filas vacías). Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene exactamente: {"cuenta":"nombre de cuenta publicitaria","cliente":"nombre del cliente o propietario (columna clientes si existe, sino vacío)","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna Carga o carga tiene el monto numérico. La columna Divisa indica ARS o USD. Si no hay columna Divisa pero hay montos en USD (con USD en el nombre o contexto), ponés "USD", sino "ARS". Si hay una columna "clientes" o "cliente" o "propietario", usá ese valor para el campo cliente. Devolvé solo el JSON array, nada más.'}
           ]
         }]
       })
@@ -694,10 +694,10 @@ async function lcImportFromImage(file){
     const usdRows=rows.filter(r=>(r.divisa||'').toUpperCase()==='USD');
     if(!st.lcDraft)st.lcDraft={periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
     st.lcDraft.cuentasARS=[...(st.lcDraft.cuentasARS||[]),...arsRows.map(r=>({
-      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(r.carga||0))
+      clienteNombre:r.cliente||'',cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(r.carga||0))
     }))];
     st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
-      cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
+      clienteNombre:r.cliente||'',cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
     }))];
     toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)`);
   }catch(e){
@@ -712,10 +712,12 @@ function lcSyncDraft(){
   if(!st.lcDraft)return;
   // Sync ARS rows
   st.lcDraft.cuentasARS=st.lcDraft.cuentasARS.map((r,i)=>{
+    const owner=document.querySelector(`.lc-ars-owner[data-idx="${i}"]`);
     const cli=document.querySelector(`.lc-ars-cli[data-idx="${i}"]`);
     const plat=document.querySelector(`.lc-ars-plat[data-idx="${i}"]`);
     const monto=document.querySelector(`.lc-ars-monto[data-idx="${i}"]`);
     return{
+      clienteNombre:owner?owner.value:(r.clienteNombre||''),
       cliente:cli?cli.value:r.cliente,
       plataforma:plat?plat.value:r.plataforma,
       monto:monto?monto.value.replace(/[.,]/g,''):r.monto
@@ -723,10 +725,12 @@ function lcSyncDraft(){
   });
   // Sync USD rows
   st.lcDraft.cuentasUSD=st.lcDraft.cuentasUSD.map((r,i)=>{
+    const owner=document.querySelector(`.lc-usd-owner[data-idx="${i}"]`);
     const cli=document.querySelector(`.lc-usd-cli[data-idx="${i}"]`);
     const plat=document.querySelector(`.lc-usd-plat[data-idx="${i}"]`);
     const monto=document.querySelector(`.lc-usd-monto[data-idx="${i}"]`);
     return{
+      clienteNombre:owner?owner.value:(r.clienteNombre||''),
       cliente:cli?cli.value:r.cliente,
       plataforma:plat?plat.value:r.plataforma,
       monto:monto?monto.value:r.monto
@@ -955,27 +959,63 @@ function generarInforme(){
     p('<div style="font-size:34px;font-weight:800;color:#4ade80;line-height:1">'+fmtUSD(totUSD)+'</div>');
     p('<div style="font-size:11px;color:#444;margin-top:6px">'+((lcPeriodo.cuentasUSD||[]).length)+' cuentas</div></div>');
     p('</div>');
-    // Tablas
+    // Tablas agrupadas por propietario
     p('<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;overflow:hidden">');
-    // ARS table
-    p('<div><div style="font-size:11px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(106,159,216,.4)">Cuentas ARS</div>');
+    // ARS table - grouped by clienteNombre
+    p('<div><div style="font-size:11px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(106,159,216,.4)">Cuentas ARS · por Cliente</div>');
     p('<div style="overflow-y:auto;max-height:240px">');
     if((lcPeriodo.cuentasARS||[]).length){
+      // Group by clienteNombre
+      const arsGrupos={};
       (lcPeriodo.cuentasARS||[]).forEach(function(r){
-        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">');
-        p('<div><div style="font-size:12px;font-weight:600;color:#fff">'+r.cliente+'</div><div style="font-size:10px;color:#555;margin-top:1px">'+r.plataforma+'</div></div>');
-        p('<span style="font-size:13px;font-weight:700;color:#6a9fd8">'+fmtARS(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0)+'</span></div>');
+        const key=(r.clienteNombre||'').trim()||r.cliente||'—';
+        if(!arsGrupos[key])arsGrupos[key]={rows:[],total:0};
+        const monto=parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0;
+        arsGrupos[key].rows.push({cliente:r.cliente,plataforma:r.plataforma,montoNum:monto});
+        arsGrupos[key].total+=monto;
+      });
+      Object.entries(arsGrupos).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(entry){
+        const clienteName=entry[0],grupo=entry[1];
+        const hasMulti=grupo.rows.length>1;
+        p('<div style="margin-bottom:8px">');
+        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(106,159,216,.35)">');
+        p('<div style="font-size:12px;font-weight:800;color:#c4a0ff">👤 '+clienteName+'</div>');
+        p('<span style="font-size:13px;font-weight:800;color:#6a9fd8">'+fmtARS(grupo.total)+'</span></div>');
+        if(hasMulti){grupo.rows.forEach(function(r){
+          p('<div style="display:flex;justify-content:space-between;padding:3px 0 3px 10px;border-bottom:1px solid rgba(255,255,255,.04)">');
+          p('<div style="font-size:10px;color:#666">↳ '+r.cliente+'<span style="font-size:9px;color:#444;margin-left:5px">'+r.plataforma+'</span></div>');
+          p('<span style="font-size:10px;color:#5a8fbf">'+fmtARS(r.montoNum)+'</span></div>');
+        });}
+        p('</div>');
       });
     } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
     p('</div></div>');
-    // USD table
-    p('<div><div style="font-size:11px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(74,222,128,.4)">Cuentas USD</div>');
+    // USD table - grouped by clienteNombre
+    p('<div><div style="font-size:11px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(74,222,128,.4)">Cuentas USD · por Cliente</div>');
     p('<div style="overflow-y:auto;max-height:240px">');
     if((lcPeriodo.cuentasUSD||[]).length){
+      // Group by clienteNombre
+      const usdGrupos={};
       (lcPeriodo.cuentasUSD||[]).forEach(function(r){
-        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">');
-        p('<div><div style="font-size:12px;font-weight:600;color:#fff">'+r.cliente+'</div><div style="font-size:10px;color:#555;margin-top:1px">'+r.plataforma+'</div></div>');
-        p('<span style="font-size:13px;font-weight:700;color:#4ade80">'+fmtUSD(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0)+'</span></div>');
+        const key=(r.clienteNombre||'').trim()||r.cliente||'—';
+        if(!usdGrupos[key])usdGrupos[key]={rows:[],total:0};
+        const monto=parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0;
+        usdGrupos[key].rows.push({cliente:r.cliente,plataforma:r.plataforma,montoNum:monto});
+        usdGrupos[key].total+=monto;
+      });
+      Object.entries(usdGrupos).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(entry){
+        const clienteName=entry[0],grupo=entry[1];
+        const hasMulti=grupo.rows.length>1;
+        p('<div style="margin-bottom:8px">');
+        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(74,222,128,.35)">');
+        p('<div style="font-size:12px;font-weight:800;color:#c4a0ff">👤 '+clienteName+'</div>');
+        p('<span style="font-size:13px;font-weight:800;color:#4ade80">'+fmtUSD(grupo.total)+'</span></div>');
+        if(hasMulti){grupo.rows.forEach(function(r){
+          p('<div style="display:flex;justify-content:space-between;padding:3px 0 3px 10px;border-bottom:1px solid rgba(255,255,255,.04)">');
+          p('<div style="font-size:10px;color:#666">↳ '+r.cliente+'<span style="font-size:9px;color:#444;margin-left:5px">'+r.plataforma+'</span></div>');
+          p('<span style="font-size:10px;color:#3aad6a">'+fmtUSD(r.montoNum)+'</span></div>');
+        });}
+        p('</div>');
       });
     } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
     p('</div></div>');
@@ -1760,16 +1800,18 @@ function rLCModal(){
   const d=st.lcDraft||{periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
   const PLATS=['Meta','Google','TikTok','Pinterest','Otra'];
   function rowARS(r,i){
-    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-ars="${i}">
-      <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
+    return`<div style="display:grid;grid-template-columns:1fr 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:5px" data-ars="${i}">
+      <input class="field-input lc-ars-owner" data-idx="${i}" value="${r.clienteNombre||''}" placeholder="Cliente (ej: Gastón Mames)" style="font-size:11px;padding:6px 8px;background:rgba(155,109,255,.07);border-color:rgba(155,109,255,.3)" title="Nombre del cliente dueño de esta cuenta">
+      <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cuenta publicitaria" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-ars-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
       <input class="field-input lc-ars-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto ARS" style="font-size:11px;padding:6px 8px" inputmode="numeric">
       <button class="btn-sm lc-del-ars" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
     </div>`;
   }
   function rowUSD(r,i){
-    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-usd="${i}">
-      <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
+    return`<div style="display:grid;grid-template-columns:1fr 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:5px" data-usd="${i}">
+      <input class="field-input lc-usd-owner" data-idx="${i}" value="${r.clienteNombre||''}" placeholder="Cliente (ej: Gastón Mames)" style="font-size:11px;padding:6px 8px;background:rgba(74,171,122,.07);border-color:rgba(74,171,122,.3)" title="Nombre del cliente dueño de esta cuenta">
+      <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cuenta publicitaria" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-usd-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
       <input class="field-input lc-usd-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto USD" style="font-size:11px;padding:6px 8px" inputmode="numeric">
       <button class="btn-sm lc-del-usd" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
@@ -1777,6 +1819,16 @@ function rLCModal(){
   }
   const totalARS=d.cuentasARS.reduce((a,r)=>a+(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0),0);
   const totalUSD=d.cuentasUSD.reduce((a,r)=>a+(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0),0);
+  // Column headers helper
+  function colHeaders(color){
+    return`<div style="display:grid;grid-template-columns:1fr 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:3px;padding:0 2px">
+      <span style="font-size:8px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.5px">Cliente</span>
+      <span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Cuenta publicitaria</span>
+      <span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;width:90px;display:block">Plataforma</span>
+      <span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Monto</span>
+      <span></span>
+    </div>`;
+  }
   // Periodos guardados
   const saved=lcData.periodos||[];
   return`<div class="modal-overlay" id="lc-modal-overlay"><div class="modal" style="max-width:540px">
@@ -1805,6 +1857,7 @@ function rLCModal(){
       <div style="font-size:10px;font-weight:700;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px">Cuentas en Pesos (ARS)</div>
       ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
     </div>
+    ${colHeaders('#6a9fd8')}
     ${d.cuentasARS.length?d.cuentasARS.map((r,i)=>rowARS(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas ARS</div>'}
     <button class="btn-sm" id="btn-lc-add-ars" style="margin-bottom:14px;color:#6a9fd8;border-color:rgba(106,159,216,.4)">+ Cuenta ARS</button>
     <hr class="divider">
@@ -1812,6 +1865,7 @@ function rLCModal(){
       <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Cuentas en USD</div>
       ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
     </div>
+    ${colHeaders('var(--green)')}
     ${d.cuentasUSD.length?d.cuentasUSD.map((r,i)=>rowUSD(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas USD</div>'}
     <button class="btn-sm" id="btn-lc-add-usd" style="margin-bottom:14px;color:var(--green);border-color:rgba(74,171,122,.4)">+ Cuenta USD</button>
     <hr class="divider">
@@ -2480,13 +2534,13 @@ function bind(){
   // Add row ARS
   document.getElementById('btn-lc-add-ars')?.addEventListener('click',()=>{
     lcSyncDraft();
-    st.lcDraft.cuentasARS.push({cliente:'',plataforma:'Meta',monto:''});
+    st.lcDraft.cuentasARS.push({clienteNombre:'',cliente:'',plataforma:'Meta',monto:''});
     render();
   });
   // Add row USD
   document.getElementById('btn-lc-add-usd')?.addEventListener('click',()=>{
     lcSyncDraft();
-    st.lcDraft.cuentasUSD.push({cliente:'',plataforma:'Meta',monto:''});
+    st.lcDraft.cuentasUSD.push({clienteNombre:'',cliente:'',plataforma:'Meta',monto:''});
     render();
   });
   // Image import
