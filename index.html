@@ -1851,17 +1851,23 @@ function rLCModal(){
       <div class="field"><label class="field-label">Hasta</label><input class="field-input" id="lc-hasta" type="date" value="${d.hasta||''}"></div>
     </div>
     <hr class="divider">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div style="font-size:10px;font-weight:700;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px">Cuentas en Pesos (ARS)</div>
-      ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
+      <div style="display:flex;align-items:center;gap:6px">
+        ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
+        ${d.cuentasARS.length?`<button class="btn-sm" id="btn-lc-bulk-ars" style="font-size:9px;color:var(--gold);border-color:rgba(155,109,255,.3)" title="Asignar mismo cliente a filas seleccionadas">✏️ Asignar cliente masivo</button>`:''}
+      </div>
     </div>
     ${colHeaders('#6a9fd8')}
     ${d.cuentasARS.length?d.cuentasARS.map((r,i)=>rowARS(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas ARS</div>'}
     <button class="btn-sm" id="btn-lc-add-ars" style="margin-bottom:14px;color:#6a9fd8;border-color:rgba(106,159,216,.4)">+ Cuenta ARS</button>
     <hr class="divider">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Cuentas en USD</div>
-      ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
+      <div style="display:flex;align-items:center;gap:6px">
+        ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
+        ${d.cuentasUSD.length?`<button class="btn-sm" id="btn-lc-bulk-usd" style="font-size:9px;color:var(--green);border-color:rgba(74,171,122,.3)" title="Asignar mismo cliente a filas seleccionadas">✏️ Asignar cliente masivo</button>`:''}
+      </div>
     </div>
     ${colHeaders('var(--green)')}
     ${d.cuentasUSD.length?d.cuentasUSD.map((r,i)=>rowUSD(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas USD</div>'}
@@ -2528,6 +2534,30 @@ function bind(){
       cuentasARS:JSON.parse(JSON.stringify(p.cuentasARS||[])),
       cuentasUSD:JSON.parse(JSON.stringify(p.cuentasUSD||[]))};
     render();
+  });
+  // Bulk assign client ARS
+  document.getElementById('btn-lc-bulk-ars')?.addEventListener('click',()=>{
+    lcSyncDraft();
+    const nombre=prompt('Nombre del cliente para asignar a TODAS las filas ARS sin cliente (o escribí una cuenta para filtrar):');
+    if(!nombre)return;
+    const target=prompt('¿A qué cuentas asignar?\n• Dejá vacío → a TODAS las filas sin cliente\n• Escribí un texto → solo las que contengan ese texto en la cuenta (ej: "World Mats")');
+    st.lcDraft.cuentasARS=st.lcDraft.cuentasARS.map(r=>{
+      const match=target?r.cliente.toLowerCase().includes(target.toLowerCase()):!r.clienteNombre;
+      return match?{...r,clienteNombre:nombre}:r;
+    });
+    render();toast(`✓ Cliente "${nombre}" asignado`);
+  });
+  // Bulk assign client USD
+  document.getElementById('btn-lc-bulk-usd')?.addEventListener('click',()=>{
+    lcSyncDraft();
+    const nombre=prompt('Nombre del cliente para asignar:');
+    if(!nombre)return;
+    const target=prompt('¿A qué cuentas asignar?\n• Dejá vacío → a TODAS las filas sin cliente\n• Escribí un texto → solo las que contengan ese texto en la cuenta (ej: "World Mats")');
+    st.lcDraft.cuentasUSD=st.lcDraft.cuentasUSD.map(r=>{
+      const match=target?r.cliente.toLowerCase().includes(target.toLowerCase()):!r.clienteNombre;
+      return match?{...r,clienteNombre:nombre}:r;
+    });
+    render();toast(`✓ Cliente "${nombre}" asignado`);
   });
   // Add row ARS
   document.getElementById('btn-lc-add-ars')?.addEventListener('click',()=>{
