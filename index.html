@@ -976,16 +976,15 @@ function generarInforme(){
       });
       Object.entries(arsGrupos).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(entry){
         const clienteName=entry[0],grupo=entry[1];
-        const hasMulti=grupo.rows.length>1;
-        p('<div style="margin-bottom:8px">');
+        p('<div style="margin-bottom:10px">');
         p('<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(106,159,216,.35)">');
         p('<div style="font-size:12px;font-weight:800;color:#c4a0ff">👤 '+clienteName+'</div>');
         p('<span style="font-size:13px;font-weight:800;color:#6a9fd8">'+fmtARS(grupo.total)+'</span></div>');
-        if(hasMulti){grupo.rows.forEach(function(r){
+        grupo.rows.forEach(function(r){
           p('<div style="display:flex;justify-content:space-between;padding:3px 0 3px 10px;border-bottom:1px solid rgba(255,255,255,.04)">');
           p('<div style="font-size:10px;color:#666">↳ '+r.cliente+'<span style="font-size:9px;color:#444;margin-left:5px">'+r.plataforma+'</span></div>');
           p('<span style="font-size:10px;color:#5a8fbf">'+fmtARS(r.montoNum)+'</span></div>');
-        });}
+        });
         p('</div>');
       });
     } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
@@ -1005,16 +1004,15 @@ function generarInforme(){
       });
       Object.entries(usdGrupos).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(entry){
         const clienteName=entry[0],grupo=entry[1];
-        const hasMulti=grupo.rows.length>1;
-        p('<div style="margin-bottom:8px">');
+        p('<div style="margin-bottom:10px">');
         p('<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(74,222,128,.35)">');
         p('<div style="font-size:12px;font-weight:800;color:#c4a0ff">👤 '+clienteName+'</div>');
         p('<span style="font-size:13px;font-weight:800;color:#4ade80">'+fmtUSD(grupo.total)+'</span></div>');
-        if(hasMulti){grupo.rows.forEach(function(r){
+        grupo.rows.forEach(function(r){
           p('<div style="display:flex;justify-content:space-between;padding:3px 0 3px 10px;border-bottom:1px solid rgba(255,255,255,.04)">');
           p('<div style="font-size:10px;color:#666">↳ '+r.cliente+'<span style="font-size:9px;color:#444;margin-left:5px">'+r.plataforma+'</span></div>');
           p('<span style="font-size:10px;color:#3aad6a">'+fmtUSD(r.montoNum)+'</span></div>');
-        });}
+        });
         p('</div>');
       });
     } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
