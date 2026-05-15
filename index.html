@@ -1043,6 +1043,113 @@ function generarInforme(){
   win.document.open();win.document.write(S.join(''));win.document.close();
 }
 
+function exportarLCHtml(){
+  const f=st.filters;
+  const sorted=[...lcData.periodos].sort((a,b)=>b.id.localeCompare(a.id));
+  const lcPeriodo=(()=>{
+    if(f.dateFrom||f.dateTo){
+      const fromM=f.dateFrom?f.dateFrom.substring(0,7):"0000-00";
+      const toM=f.dateTo?f.dateTo.substring(0,7):"9999-99";
+      return sorted.find(p=>p.id>=fromM&&p.id<=toM)||null;
+    }
+    return sorted[0]||null;
+  })();
+  if(!lcPeriodo){toast("No hay período LC para exportar");return;}
+  const fmtARS=n=>n?"$"+parseInt(n).toLocaleString("es-AR"):"—";
+  const fmtUSD=n=>n!=null?"USD "+parseFloat(n).toLocaleString("es-AR",{minimumFractionDigits:0,maximumFractionDigits:2}):"—";
+  const totARS=(lcPeriodo.cuentasARS||[]).reduce((a,r)=>a+(parseInt((r.monto||"").toString().replace(/[.,]/g,""))||0),0);
+  const totUSD=(lcPeriodo.cuentasUSD||[]).reduce((a,r)=>a+(parseFloat((r.monto||"").toString().replace(/,/g,"."))||0),0);
+  function buildGrupos(rows,isUSD){
+    const g={};
+    rows.forEach(r=>{
+      const key=(r.clienteNombre||"").trim()||r.cliente||"—";
+      if(!g[key])g[key]={rows:[],total:0};
+      const m=isUSD?parseFloat((r.monto||"").toString().replace(/,/g,"."))||0:parseInt((r.monto||"").toString().replace(/[.,]/g,""))||0;
+      g[key].rows.push({cuenta:r.cliente,plataforma:r.plataforma,m});
+      g[key].total+=m;
+    });
+    return Object.entries(g).sort((a,b)=>b[1].total-a[1].total);
+  }
+  function barSection(grupos,total,accent,fmtFn){
+    if(!grupos.length)return"<p style=\"color:#555;font-style:italic;padding:20px 0\">Sin cuentas</p>";
+    return grupos.map(([name,g])=>{
+      const pct=total>0?Math.round(g.total/total*100):0;
+      const rows=g.rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:5px 0 5px 16px;border-bottom:1px solid rgba(255,255,255,.04)"><span style="font-size:12px;color:#777">\u21b3 ${r.cuenta} <span style="font-size:10px;color:#444;margin-left:4px">${r.plataforma}</span></span><span style="font-size:12px;color:${accent};opacity:.75">${fmtFn(r.m)}</span></div>`).join("");
+      return`<div style="margin-bottom:16px;background:rgba(255,255,255,.02);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.06)"><div style="padding:14px 16px 10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:14px;font-weight:800;color:#c4a0ff">&#128100; ${name}</div><div style="text-align:right"><div style="font-size:18px;font-weight:800;color:${accent}">${fmtFn(g.total)}</div><div style="font-size:10px;color:#555;font-weight:700">${pct}% del total</div></div></div><div style="background:rgba(255,255,255,.08);border-radius:4px;height:7px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${accent};border-radius:4px"></div></div></div><div style="border-top:1px solid rgba(255,255,255,.06)">${rows}</div></div>`;
+    }).join("");
+  }
+  const arsGrupos=buildGrupos(lcPeriodo.cuentasARS||[],false);
+  const usdGrupos=buildGrupos(lcPeriodo.cuentasUSD||[],true);
+  const genDate=new Date().toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  const html=`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LC Consumo \u00b7 ${lcPeriodo.label}</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Montserrat,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh}
+.page{max-width:1100px;margin:0 auto;padding:32px 24px 80px}
+.header{margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}
+h1{font-size:30px;font-weight:800;letter-spacing:-1px}
+h1 span{color:#9333ea}
+.sub{font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:5px}
+.totals{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:30px}
+.tc{padding:22px;border-radius:10px;text-align:center}
+.tc.ars{background:rgba(106,159,216,.08);border:1px solid rgba(106,159,216,.3)}
+.tc.usd{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3)}
+.tl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px}
+.tv{font-size:34px;font-weight:800;line-height:1}
+.ts{font-size:11px;color:#555;margin-top:5px;font-weight:600}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.ct{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding-bottom:9px;margin-bottom:12px;border-bottom:2px solid}
+input.srch{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#fff;font-family:inherit;font-size:12px;margin-bottom:12px;outline:none}
+input.srch:focus{border-color:rgba(155,109,255,.5)}
+@media(max-width:700px){.cols,.totals{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <h1>Consumo LC &nbsp;<span>\u00b7</span>&nbsp; ${lcPeriodo.label}</h1>
+    <div class="sub">Avalon World Agency &nbsp;\u00b7&nbsp; Generado ${genDate}</div>
+  </div>
+  <div class="totals">
+    <div class="tc ars"><div class="tl" style="color:#6a9fd8">Total ARS</div><div class="tv" style="color:#6a9fd8">${fmtARS(totARS)}</div><div class="ts">${(lcPeriodo.cuentasARS||[]).length} cargas &middot; ${arsGrupos.length} clientes</div></div>
+    <div class="tc usd"><div class="tl" style="color:#4ade80">Total USD</div><div class="tv" style="color:#4ade80">${fmtUSD(totUSD)}</div><div class="ts">${(lcPeriodo.cuentasUSD||[]).length} cargas &middot; ${usdGrupos.length} clientes</div></div>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="ct" style="color:#6a9fd8;border-color:rgba(106,159,216,.4)">Cuentas ARS &middot; por Cliente</div>
+      <input class="srch" placeholder="Buscar..." oninput="fil(this,'ars')">
+      <div id="ars">${barSection(arsGrupos,totARS,"#6a9fd8",fmtARS)}</div>
+    </div>
+    <div>
+      <div class="ct" style="color:#4ade80;border-color:rgba(74,222,128,.4)">Cuentas USD &middot; por Cliente</div>
+      <input class="srch" placeholder="Buscar..." oninput="fil(this,'usd')">
+      <div id="usd">${barSection(usdGrupos,totUSD,"#4ade80",fmtUSD)}</div>
+    </div>
+  </div>
+</div>
+<script>
+function fil(input,col){
+  const q=input.value.toLowerCase();
+  document.querySelectorAll("#"+col+">div").forEach(card=>{
+    card.style.display=card.textContent.toLowerCase().includes(q)?"":"none";
+  });
+}
+<\/script>
+</body>
+</html>`;
+  const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="LC_Consumo_"+lcPeriodo.label.replace(/\s+/g,"_")+".html";
+  a.click();URL.revokeObjectURL(a.href);
+  toast("\ud83d\udce5 LC_Consumo_"+lcPeriodo.label+".html descargado");
+}
+
 // ── RENDER LIST ONLY (preserves search focus) ──
 function renderListOnly(){
   const fl=applyFilters(clients);
@@ -1386,6 +1493,7 @@ function rList(){
       <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
       <button class="btn-sm" id="btn-go-nuevos" style="background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
       <button class="btn-sm" id="btn-generar-informe" style="background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:var(--gold);font-weight:800">📊 Informe</button>
+      ${lcData.periodos?.length?`<button class="btn-sm" id="btn-export-lc-html" style="background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800" title="Exportar datos LC como HTML interactivo">📥 LC HTML</button>`:''}
       <button class="btn-sm" id="btn-open-lc" style="background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800">💳 LC</button>
       <button class="btn-add" id="btn-open-new">+ Prospecto</button>
     </div>
@@ -2542,6 +2650,7 @@ function bind(){
   }
   $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $('#btn-generar-informe')?.addEventListener('click',generarInforme);
+  $('#btn-export-lc-html')?.addEventListener('click',exportarLCHtml);
   // LC Modal
   $('#btn-open-lc')?.addEventListener('click',()=>{
     const f=st.filters;
