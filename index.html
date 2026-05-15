@@ -1180,16 +1180,36 @@ function rSbModal(){
 
 function rFilterPanel(){
   const f=st.filters;
+  const now=new Date();
+  // Generate last 6 months + current month for quick navigation
+  const meses=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const label=d.toLocaleDateString('es-AR',{month:'short',year:'2-digit'}).replace('.','\u200b');
+    const from=d.toISOString().split('T')[0];
+    const lastDay=new Date(d.getFullYear(),d.getMonth()+1,0);
+    const to=(i===0?now:lastDay).toISOString().split('T')[0];
+    const isActive=f.dateFrom===from&&f.dateTo===to;
+    meses.push({label,from,to,isActive,isCurrent:i===0});
+  }
   return`<div class="filter-panel">
-    <div><div class="filter-label">Período — último contacto</div>
-      <div class="filter-row">
-        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Desde</span>
-        <input type="date" class="filter-input-sm" id="f-date-from" value="${f.dateFrom||''}">
-        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Hasta</span>
-        <input type="date" class="filter-input-sm" id="f-date-to" value="${f.dateTo||''}">
-        <button class="filter-chip" id="f-week">Semana</button>
-        <button class="filter-chip" id="f-month">Mes</button>
+    <div>
+      <div class="filter-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Período — último contacto</span>
+        ${f.dateFrom||f.dateTo?`<button style="font-size:9px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0" id="f-clear-dates">✕ Limpiar</button>`:''}
       </div>
+      <div class="filter-row" style="flex-wrap:wrap;gap:5px">
+        ${meses.map(m=>`<button class="filter-chip ${m.isActive?'on':''}" data-fmes-from="${m.from}" data-fmes-to="${m.to}" style="${m.isCurrent?'border-color:rgba(155,109,255,.5)':''}">${m.label}${m.isCurrent?' <span style="font-size:8px;opacity:.7">▶</span>':''}</button>`).join('')}
+        <button class="filter-chip" id="f-week">Sem.</button>
+      </div>
+      ${f.dateFrom||f.dateTo?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px">
+        <span>📅 ${f.dateFrom?f.dateFrom.split('-').reverse().join('/'):'—'} → ${f.dateTo?f.dateTo.split('-').reverse().join('/'):'—'}</span>
+        <input type="date" class="filter-input-sm" id="f-date-from" value="${f.dateFrom||''}" style="font-size:9px;padding:2px 5px">
+        <input type="date" class="filter-input-sm" id="f-date-to" value="${f.dateTo||''}" style="font-size:9px;padding:2px 5px">
+      </div>`:`<div style="display:flex;gap:5px;margin-top:4px">
+        <input type="date" class="filter-input-sm" id="f-date-from" value="" placeholder="Desde" style="font-size:9px;padding:2px 5px;flex:1">
+        <input type="date" class="filter-input-sm" id="f-date-to" value="" placeholder="Hasta" style="font-size:9px;padding:2px 5px;flex:1">
+      </div>`}
     </div>
     <div><div class="filter-label">Tipo de cliente</div>
       <div class="filter-row">${['Abono','LC'].map(t=>`<button class="filter-chip ${f.tipo===t?'on':''}" data-ftipo="${t}">${t==='LC'?'LC — Línea de Crédito':t}</button>`).join('')}</div>
@@ -1838,10 +1858,13 @@ function rLCModal(){
     <div class="modal-handle"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="modal-title" style="margin:0">💳 Consumo LC</div>
-      ${saved.length?`<select class="field-select" id="lc-load-select" style="font-size:10px;padding:4px 8px;width:auto">
-        <option value="">Cargar período guardado…</option>
-        ${saved.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}
-      </select>`:''}
+      ${saved.length?`<div style="display:flex;align-items:center;gap:6px">
+        <select class="field-select" id="lc-load-select" style="font-size:10px;padding:4px 8px;width:auto">
+          <option value="">Cargar período guardado…</option>
+          ${saved.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}
+        </select>
+        <button class="btn-sm" id="btn-lc-del-periodo" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 8px;font-size:11px;opacity:.4;pointer-events:none" title="Borrar período seleccionado">🗑️</button>
+      </div>`:''}
     </div>
     <div style="background:rgba(155,109,255,.07);border:1px solid rgba(155,109,255,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <input type="file" id="lc-img-input" accept="image/*,application/pdf" style="display:none">
@@ -2534,10 +2557,28 @@ function bind(){
   // Load saved period
   document.getElementById('lc-load-select')?.addEventListener('change',e=>{
     const p=lcData.periodos.find(x=>x.id===e.target.value);
+    const delBtn=document.getElementById('btn-lc-del-periodo');
+    if(delBtn){
+      if(p){delBtn.style.opacity='1';delBtn.style.pointerEvents='auto';}
+      else{delBtn.style.opacity='.4';delBtn.style.pointerEvents='none';}
+    }
     if(!p)return;
     st.lcDraft={periodo:p.label,desde:p.desde,hasta:p.hasta,
       cuentasARS:JSON.parse(JSON.stringify(p.cuentasARS||[])),
       cuentasUSD:JSON.parse(JSON.stringify(p.cuentasUSD||[]))};
+    render();
+  });
+  // Delete saved period
+  document.getElementById('btn-lc-del-periodo')?.addEventListener('click',async()=>{
+    const sel=document.getElementById('lc-load-select');
+    const id=sel?.value;
+    if(!id)return;
+    const p=lcData.periodos.find(x=>x.id===id);
+    if(!confirm(`¿Borrar el período "${p?.label||id}"? Esta acción no se puede deshacer.`))return;
+    lcData.periodos=lcData.periodos.filter(x=>x.id!==id);
+    await saveLCMaster();
+    st.lcDraft={periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
+    toast(`Período "${p?.label||id}" eliminado`);
     render();
   });
   // Bulk assign client ARS
@@ -2890,13 +2931,15 @@ function bind(){
   $('#btn-clear-filters')?.addEventListener('click',()=>{st.filters={dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:'',meets:''};render()});
   $('#f-date-from')?.addEventListener('change',e=>{st.filters.dateFrom=e.target.value;render()});
   $('#f-date-to')?.addEventListener('change',e=>{st.filters.dateTo=e.target.value;render()});
+  $('#f-clear-dates')?.addEventListener('click',()=>{st.filters.dateFrom='';st.filters.dateTo='';render()});
+  $$('[data-fmes-from]').forEach(b=>b.addEventListener('click',()=>{
+    st.filters.dateFrom=b.dataset.fmesFrom;
+    st.filters.dateTo=b.dataset.fmesTo;
+    render();
+  }));
   $('#f-week')?.addEventListener('click',()=>{
     const now=new Date(),week=new Date(now-7*86400000);
     st.filters.dateFrom=week.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];render();
-  });
-  $('#f-month')?.addEventListener('click',()=>{
-    const now=new Date(),month=new Date(now.getFullYear(),now.getMonth(),1);
-    st.filters.dateFrom=month.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];render();
   });
   $$('[data-ftipo]').forEach(b=>b.addEventListener('click',()=>{st.filters.tipo=st.filters.tipo===b.dataset.ftipo?'':b.dataset.ftipo;render()}));
   $$('[data-fplat]').forEach(b=>b.addEventListener('click',()=>{st.filters.plataforma=st.filters.plataforma===b.dataset.fplat?'':b.dataset.fplat;render()}));
