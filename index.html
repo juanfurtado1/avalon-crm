@@ -661,27 +661,32 @@ function toast(msg){
 async function lcImportFromImage(file){
   const key=getApiKey();
   if(!key){st.showApiModal=true;render();return;}
+  const isPDF=file.type==='application/pdf'||file.name?.toLowerCase().endsWith('.pdf');
   const base64=await new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>res(r.result.split(',')[1]);
     r.onerror=()=>rej(new Error('Read failed'));
     r.readAsDataURL(file);
   });
-  const mediaType=(file.type||'image/png');
+  const mediaType=isPDF?'application/pdf':(file.type||'image/png');
   lcSyncDraft();
   st.loadingLCImg=true;render();
   try{
+    // Build content block: document for PDF, image for everything else
+    const fileBlock=isPDF
+      ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
+      :{type:'image',source:{type:'base64',media_type:mediaType,data:base64}};
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
-        max_tokens:2000,
+        max_tokens:4000,
         messages:[{
           role:'user',
           content:[
-            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
-            {type:'text',text:'De esta tabla extraé todas las filas de datos (ignorá encabezados y filas vacías). Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene exactamente: {"cuenta":"nombre de cuenta publicitaria","cliente":"nombre del cliente o propietario (columna clientes si existe, sino vacío)","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna Carga o carga tiene el monto numérico. La columna Divisa indica ARS o USD. Si no hay columna Divisa pero hay montos en USD (con USD en el nombre o contexto), ponés "USD", sino "ARS". Si hay una columna "clientes" o "cliente" o "propietario", usá ese valor para el campo cliente. Devolvé solo el JSON array, nada más.'}
+            fileBlock,
+            {type:'text',text:'De esta tabla extraé todas las filas de datos (ignorá encabezados y filas vacías). Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene exactamente: {"cuenta":"nombre de cuenta publicitaria","cliente":"nombre del cliente o propietario (columna clientes si existe, sino vacío)","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna Carga o carga tiene el monto numérico. La columna Divisa indica ARS o USD. Si no hay columna Divisa pero hay montos en USD (con USD en el nombre o contexto), ponés "USD", sino "ARS". Si hay una columna "clientes" o "cliente" o "propietario", usá ese valor para el campo cliente. Si el archivo tiene múltiples hojas o páginas, procesá todas. Devolvé solo el JSON array, nada más.'}
           ]
         }]
       })
@@ -699,9 +704,9 @@ async function lcImportFromImage(file){
     st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
       clienteNombre:r.cliente||'',cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
     }))];
-    toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)`);
+    toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)${isPDF?' desde PDF':''}`);
   }catch(e){
-    toast('Error al leer imagen: '+e.message);
+    toast('Error al leer archivo: '+e.message);
     console.error(e);
   }
   st.loadingLCImg=false;render();
@@ -1839,11 +1844,11 @@ function rLCModal(){
       </select>`:''}
     </div>
     <div style="background:rgba(155,109,255,.07);border:1px solid rgba(155,109,255,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <input type="file" id="lc-img-input" accept="image/*" style="display:none">
+      <input type="file" id="lc-img-input" accept="image/*,application/pdf" style="display:none">
       <button class="btn-sm" id="btn-lc-import-img" style="color:var(--gold);border-color:rgba(155,109,255,.4);${st.loadingLCImg?'opacity:.6;pointer-events:none':''}">
-        ${st.loadingLCImg?'<span style="display:flex;align-items:center;gap:6px"><div class="spinner" style="width:10px;height:10px;border-width:2px"></div> Procesando...</span>':'📷 Importar desde captura'}
+        ${st.loadingLCImg?'<span style="display:flex;align-items:center;gap:6px"><div class="spinner" style="width:10px;height:10px;border-width:2px"></div> Procesando...</span>':'📄 Importar imagen o PDF'}
       </button>
-      <span style="font-size:10px;color:var(--text-muted);line-height:1.4">Subí una imagen <strong style="color:var(--text2)">o pegala con Ctrl+V</strong> — Claude extrae las cuentas ARS y USD automáticamente</span>
+      <span style="font-size:10px;color:var(--text-muted);line-height:1.4">Subí una imagen o PDF <strong style="color:var(--text2)">— o pegá con Ctrl+V</strong> — Claude extrae las cuentas ARS y USD automáticamente</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div class="field"><label class="field-label">Período</label><input class="field-input" id="lc-periodo" value="${d.periodo||''}" placeholder="Ej: Abril 2026" style="font-size:11px"></div>
