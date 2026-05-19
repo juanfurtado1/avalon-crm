@@ -661,32 +661,27 @@ function toast(msg){
 async function lcImportFromImage(file){
   const key=getApiKey();
   if(!key){st.showApiModal=true;render();return;}
-  const isPDF=file.type==='application/pdf'||file.name?.toLowerCase().endsWith('.pdf');
   const base64=await new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>res(r.result.split(',')[1]);
     r.onerror=()=>rej(new Error('Read failed'));
     r.readAsDataURL(file);
   });
-  const mediaType=isPDF?'application/pdf':(file.type||'image/png');
+  const mediaType=(file.type||'image/png');
   lcSyncDraft();
   st.loadingLCImg=true;render();
   try{
-    // Build content block: document for PDF, image for everything else
-    const fileBlock=isPDF
-      ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
-      :{type:'image',source:{type:'base64',media_type:mediaType,data:base64}};
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
-        max_tokens:4000,
+        max_tokens:2000,
         messages:[{
           role:'user',
           content:[
-            fileBlock,
-            {type:'text',text:'De esta tabla extraé todas las filas de datos (ignorá encabezados y filas vacías). Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene exactamente: {"cuenta":"nombre de cuenta publicitaria","cliente":"nombre del cliente o propietario (columna clientes si existe, sino vacío)","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna Carga o carga tiene el monto numérico. La columna Divisa indica ARS o USD. Si no hay columna Divisa pero hay montos en USD (con USD en el nombre o contexto), ponés "USD", sino "ARS". Si hay una columna "clientes" o "cliente" o "propietario", usá ese valor para el campo cliente. Si el archivo tiene múltiples hojas o páginas, procesá todas. Devolvé solo el JSON array, nada más.'}
+            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+            {type:'text',text:'De esta tabla extraé todas las filas de datos (ignorá encabezados y filas vacías). Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene exactamente: {"cuenta":"nombre de cuenta o cliente","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna Carga o carga tiene el monto numérico. La columna Divisa indica ARS o USD. Si no hay columna Divisa pero hay montos en USD (con USD en el nombre o contexto), ponés "USD", sino "ARS". Devolvé solo el JSON array, nada más.'}
           ]
         }]
       })
@@ -699,14 +694,14 @@ async function lcImportFromImage(file){
     const usdRows=rows.filter(r=>(r.divisa||'').toUpperCase()==='USD');
     if(!st.lcDraft)st.lcDraft={periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
     st.lcDraft.cuentasARS=[...(st.lcDraft.cuentasARS||[]),...arsRows.map(r=>({
-      clienteNombre:r.cliente||'',cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(r.carga||0))
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(r.carga||0))
     }))];
     st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
-      clienteNombre:r.cliente||'',cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
     }))];
-    toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)${isPDF?' desde PDF':''}`);
+    toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)`);
   }catch(e){
-    toast('Error al leer archivo: '+e.message);
+    toast('Error al leer imagen: '+e.message);
     console.error(e);
   }
   st.loadingLCImg=false;render();
@@ -717,12 +712,10 @@ function lcSyncDraft(){
   if(!st.lcDraft)return;
   // Sync ARS rows
   st.lcDraft.cuentasARS=st.lcDraft.cuentasARS.map((r,i)=>{
-    const owner=document.querySelector(`.lc-ars-owner[data-idx="${i}"]`);
     const cli=document.querySelector(`.lc-ars-cli[data-idx="${i}"]`);
     const plat=document.querySelector(`.lc-ars-plat[data-idx="${i}"]`);
     const monto=document.querySelector(`.lc-ars-monto[data-idx="${i}"]`);
     return{
-      clienteNombre:owner?owner.value:(r.clienteNombre||''),
       cliente:cli?cli.value:r.cliente,
       plataforma:plat?plat.value:r.plataforma,
       monto:monto?monto.value.replace(/[.,]/g,''):r.monto
@@ -730,12 +723,10 @@ function lcSyncDraft(){
   });
   // Sync USD rows
   st.lcDraft.cuentasUSD=st.lcDraft.cuentasUSD.map((r,i)=>{
-    const owner=document.querySelector(`.lc-usd-owner[data-idx="${i}"]`);
     const cli=document.querySelector(`.lc-usd-cli[data-idx="${i}"]`);
     const plat=document.querySelector(`.lc-usd-plat[data-idx="${i}"]`);
     const monto=document.querySelector(`.lc-usd-monto[data-idx="${i}"]`);
     return{
-      clienteNombre:owner?owner.value:(r.clienteNombre||''),
       cliente:cli?cli.value:r.cliente,
       plataforma:plat?plat.value:r.plataforma,
       monto:monto?monto.value:r.monto
@@ -772,13 +763,13 @@ function generarInforme(){
   const convRate=convBase>0?Math.round(cerradas.length/convBase*100):0;
   const convColor=convRate>=30?'#4ade80':convRate>=15?'#fb923c':'#ef4444';
   const montoTotal=fl.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
-  const montoHot=fl.filter(c=>ul(ds(c.lastContact),c.estado)==='hot'&&c.estado==='Enviada').reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
+  const montoHot=fl.filter(c=>['Enviada','En negociación'].includes(c.estado)).reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
   const montoCerradas=cerradas.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
   const montoPerdidas=perdidas.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
   const diferencia=montoCerradas-montoPerdidas;
-  const hotC=fl.filter(c=>ul(ds(c.lastContact),c.estado)==='hot'&&!['Cerrada','Perdida'].includes(c.estado));
-  const warmC=fl.filter(c=>ul(ds(c.lastContact),c.estado)==='warm'&&!['Cerrada','Perdida'].includes(c.estado));
-  const coldC=fl.filter(c=>['ok','cold'].includes(ul(ds(c.lastContact),c.estado))&&!['Cerrada','Perdida'].includes(c.estado));
+  const hotC=fl.filter(c=>c.estado==='Enviada');
+  const warmC=fl.filter(c=>c.estado==='En negociación');
+  const coldC=fl.filter(c=>!['Cerrada','Perdida','Enviada','En negociación'].includes(c.estado));
   const byCanal={};fl.forEach(c=>{if(c.canal)byCanal[c.canal]=(byCanal[c.canal]||0)+1;});
   const fmtM=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
   const S=[];const p=x=>S.push(x);
@@ -858,28 +849,28 @@ function generarInforme(){
   p('<h2>Performance del Per&#237;odo</h2><div class="cgrid">');
   p('<div class="cc"><div class="cl">&#x1F4CA; Prospectos</div><div class="crow"><span class="cp">Abonos</span><span class="cv">'+abonos+'</span></div><div class="crow"><span class="cp">LC</span><span class="cv">'+lc+'</span></div><div class="crow"><span class="cp">Total</span><span class="cv" style="font-size:17px">'+total+'</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F3AF; Conversi&#243;n</div><div class="crow"><span class="cp">Cerradas</span><span class="cv" style="color:#4ade80">'+cerradas.length+'</span></div><div class="crow"><span class="cp">Perdidas</span><span class="cv" style="color:#ef4444">'+perdidas.length+'</span></div><div class="crow"><span class="cp">Tasa</span><span class="cv" style="color:'+convColor+';font-size:17px">'+convRate+'%</span></div></div>');
-  p('<div class="cc"><div class="cl">&#x1F525; Pipeline</div><div class="crow"><span class="cp">Hot</span><span class="cv" style="color:#d95f5f">'+hotC.length+'</span></div><div class="crow"><span class="cp">Warm</span><span class="cv" style="color:#c49a20">'+warmC.length+'</span></div><div class="crow"><span class="cp">Cold</span><span class="cv" style="color:#6a9fd8">'+coldC.length+'</span></div></div>');
+  p('<div class="cc"><div class="cl">&#x1F4C4; Pipeline</div><div class="crow"><span class="cp">Enviada</span><span class="cv" style="color:#d95f5f">'+hotC.length+'</span></div><div class="crow"><span class="cp">En negoc.</span><span class="cv" style="color:#c49a20">'+warmC.length+'</span></div><div class="crow"><span class="cp">Activos</span><span class="cv" style="color:#6a9fd8">'+coldC.length+'</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F4B0; Montos</div><div class="crow"><span class="cp">Cerradas</span><span class="cv" style="color:#4ade80">'+fmtM(montoCerradas)+'</span></div><div class="crow"><span class="cp">Perdidas</span><span class="cv" style="color:#ef4444">'+fmtM(montoPerdidas)+'</span></div><div class="crow"><span class="cp">Neto</span><span class="'+(diferencia>=0?'pos':'neg')+'">'+(diferencia>=0?'+':'')+fmtM(Math.abs(diferencia))+'</span></div></div>');
-  p('</div><div class="met"><div class="ml">Pipeline activo estimado (Hot + Warm &middot; Enviada)</div><div class="mn">'+(montoHot?fmtM(montoHot):'Sin presupuestos cargados')+'</div>');
+  p('</div><div class="met"><div class="ml">Pipeline activo estimado (Enviada + En negociaci&oacute;n)</div><div class="mn">'+(montoHot?fmtM(montoHot):'Sin presupuestos cargados')+'</div>');
   const canalStr=Object.keys(byCanal).length?'Canales: '+Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).map(function(e){return e[0]+' ('+e[1]+')'}).join(' &middot; '):'';
   p('<div style="font-size:12px;color:#555;margin-top:6px">'+canalStr+'</div></div></div>');
   // S3 PIPELINE
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Pipeline</span></div>');
   p('<h2>Pipeline Activo ('+(hotC.length+warmC.length+coldC.length)+')</h2><div class="pg">');
-  p('<div class="ps"><h3>&#x1F534; Hot</h3><div class="psi">');
+  p('<div class="ps"><h3>&#x1F4E4; Enviada</h3><div class="psi">');
   if(hotC.length)hotC.forEach(function(c){p('<div class="pi"><span class="pn">'+c.name+(c.company?' <span style="font-weight:400;color:#777">· '+c.company+'</span>':'')+'</span>'+(c.presupuesto?'<span style="color:#d95f5f;font-size:12px;font-weight:700">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</div>');});
   else p('<div style="font-size:12px;color:#333;font-style:italic;padding:18px 0;text-align:center">Sin prospectos</div>');
   p('</div>');
   const hM=hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0);
   if(hM)p('<div class="pt"><span style="font-size:10px;color:#555;font-weight:700;text-transform:uppercase">Valor est.</span><span style="font-size:17px;color:var(--p);font-weight:800">'+fmtM(hM)+'</span></div>');
-  p('</div><div class="ps"><h3>&#x1F7E1; Warm</h3><div class="psi">');
+  p('</div><div class="ps"><h3>&#x1F91D; En negociaci&#243;n</h3><div class="psi">');
   if(warmC.length)warmC.forEach(function(c){p('<div class="pi"><span class="pn">'+c.name+(c.company?' <span style="font-weight:400;color:#777">· '+c.company+'</span>':'')+'</span>'+(c.presupuesto?'<span style="color:#c49a20;font-size:12px;font-weight:700">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</div>');});
   else p('<div style="font-size:12px;color:#333;font-style:italic;padding:18px 0;text-align:center">Sin prospectos</div>');
   p('</div>');
   const wM=warmC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0);
   if(wM)p('<div class="pt"><span style="font-size:10px;color:#555;font-weight:700;text-transform:uppercase">Valor est.</span><span style="font-size:17px;color:var(--p);font-weight:800">'+fmtM(wM)+'</span></div>');
-  p('</div><div class="ps"><h3>&#x1F535; Cold + Pendientes</h3><div class="psi">');
-  const coldAll=coldC.concat(enNeg,pendCot,pendMeet);
+  p('</div><div class="ps"><h3>&#x1F7E3; Activos + Pendientes</h3><div class="psi">');
+  const coldAll=coldC;
   if(coldAll.length)coldAll.forEach(function(c){p('<div class="pi"><span class="pn">'+c.name+(c.company?' <span style="font-weight:400;color:#777">· '+c.company+'</span>':'')+'</span><span class="pst scold">'+c.estado+'</span></div>');});
   else p('<div style="font-size:12px;color:#333;font-style:italic;padding:18px 0;text-align:center">Sin prospectos</div>');
   p('</div></div></div>');
@@ -914,7 +905,7 @@ function generarInforme(){
   // S6 CONVERSIÓN
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Conversi&#243;n</span></div>');
   p('<h2>Conversi&#243;n &amp; Proyecci&#243;n</h2><div class="rg">');
-  p('<div><div class="rc" style="margin-bottom:16px"><div class="rl">Tasa de conversi&#243;n</div><div class="rv" style="color:'+convColor+'">'+convRate+'%</div><div style="font-size:12px;color:#555;margin-top:4px">'+cerradas.length+' cerradas / '+enviadas+' enviadas</div></div>');
+  p('<div><div class="rc" style="margin-bottom:16px"><div class="rl">Tasa de conversi&#243;n</div><div class="rv" style="color:'+convColor+'">'+convRate+'%</div><div style="font-size:12px;color:#555;margin-top:4px">'+cerradas.length+' cerradas / '+convBase+' propuestas totales</div></div>');
   p('<div style="background:rgba(147,51,234,.05);border:1px solid rgba(147,51,234,.3);padding:16px;border-radius:4px">');
   p('<div style="font-size:11px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Por estado</div>');
   [['En negociaci&#243;n',enNeg.length,'#5090c8'],['Pend. cotizaci&#243;n',pendCot.length,'#e6823a'],['Meet coordinada',pendMeet.length,'#9b6dff'],['Sin respuesta',sinResp.length,'#d95f5f']].forEach(function(r){
@@ -923,8 +914,8 @@ function generarInforme(){
   p('</div></div><div>');
   p('<div style="background:rgba(147,51,234,.05);border-left:5px solid var(--p);padding:22px;border-radius:2px;margin-bottom:16px">');
   p('<div style="font-size:11px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Proyecci&#243;n</div>');
-  if(hotC.length)p('<div class="pri"><span class="prn">&#x1F534;</span> '+hotC.length+' hot — '+fmtM(hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
-  if(warmC.length)p('<div class="pri"><span class="prn">&#x1F7E1;</span> '+warmC.length+' warm — '+fmtM(warmC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
+  if(hotC.length)p('<div class="pri"><span class="prn">&#x1F4E4;</span> '+hotC.length+' enviada'+(hotC.length>1?'s':'')+' — '+fmtM(hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
+  if(warmC.length)p('<div class="pri"><span class="prn">&#x1F91D;</span> '+warmC.length+' en negociaci&#243;n — '+fmtM(warmC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
   if(enNeg.length)p('<div class="pri"><span class="prn">&#x1F4BC;</span> '+enNeg.length+' en negociaci&#243;n</div>');
   if(pendCot.length)p('<div class="pri"><span class="prn">&#x1F4CB;</span> '+pendCot.length+' pendientes cotizaci&#243;n</div>');
   p('<div class="pri" style="border-top:2px solid var(--p);margin-top:10px;padding-top:10px"><span class="prn">Total estimado: </span><strong style="color:var(--p)">'+fmtM(montoTotal)+'</strong></div></div>');
@@ -964,61 +955,27 @@ function generarInforme(){
     p('<div style="font-size:34px;font-weight:800;color:#4ade80;line-height:1">'+fmtUSD(totUSD)+'</div>');
     p('<div style="font-size:11px;color:#444;margin-top:6px">'+((lcPeriodo.cuentasUSD||[]).length)+' cuentas</div></div>');
     p('</div>');
-    // Tablas agrupadas por propietario
+    // Tablas
     p('<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;overflow:hidden">');
-    // ARS table - grouped by clienteNombre
-    p('<div><div style="font-size:11px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(106,159,216,.4)">Cuentas ARS · por Cliente</div>');
+    // ARS table
+    p('<div><div style="font-size:11px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(106,159,216,.4)">Cuentas ARS</div>');
     p('<div style="overflow-y:auto;max-height:240px">');
     if((lcPeriodo.cuentasARS||[]).length){
-      // Group by clienteNombre
-      const arsGrupos={};
       (lcPeriodo.cuentasARS||[]).forEach(function(r){
-        const key=(r.clienteNombre||'').trim()||r.cliente||'—';
-        if(!arsGrupos[key])arsGrupos[key]={rows:[],total:0};
-        const monto=parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0;
-        arsGrupos[key].rows.push({cliente:r.cliente,plataforma:r.plataforma,montoNum:monto});
-        arsGrupos[key].total+=monto;
-      });
-      Object.entries(arsGrupos).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(entry){
-        const clienteName=entry[0],grupo=entry[1];
-        p('<div style="margin-bottom:10px">');
-        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(106,159,216,.35)">');
-        p('<div style="font-size:12px;font-weight:800;color:#c4a0ff">👤 '+clienteName+'</div>');
-        p('<span style="font-size:13px;font-weight:800;color:#6a9fd8">'+fmtARS(grupo.total)+'</span></div>');
-        grupo.rows.forEach(function(r){
-          p('<div style="display:flex;justify-content:space-between;padding:3px 0 3px 10px;border-bottom:1px solid rgba(255,255,255,.04)">');
-          p('<div style="font-size:10px;color:#666">↳ '+r.cliente+'<span style="font-size:9px;color:#444;margin-left:5px">'+r.plataforma+'</span></div>');
-          p('<span style="font-size:10px;color:#5a8fbf">'+fmtARS(r.montoNum)+'</span></div>');
-        });
-        p('</div>');
+        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">');
+        p('<div><div style="font-size:12px;font-weight:600;color:#fff">'+r.cliente+'</div><div style="font-size:10px;color:#555;margin-top:1px">'+r.plataforma+'</div></div>');
+        p('<span style="font-size:13px;font-weight:700;color:#6a9fd8">'+fmtARS(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0)+'</span></div>');
       });
     } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
     p('</div></div>');
-    // USD table - grouped by clienteNombre
-    p('<div><div style="font-size:11px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(74,222,128,.4)">Cuentas USD · por Cliente</div>');
+    // USD table
+    p('<div><div style="font-size:11px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid rgba(74,222,128,.4)">Cuentas USD</div>');
     p('<div style="overflow-y:auto;max-height:240px">');
     if((lcPeriodo.cuentasUSD||[]).length){
-      // Group by clienteNombre
-      const usdGrupos={};
       (lcPeriodo.cuentasUSD||[]).forEach(function(r){
-        const key=(r.clienteNombre||'').trim()||r.cliente||'—';
-        if(!usdGrupos[key])usdGrupos[key]={rows:[],total:0};
-        const monto=parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0;
-        usdGrupos[key].rows.push({cliente:r.cliente,plataforma:r.plataforma,montoNum:monto});
-        usdGrupos[key].total+=monto;
-      });
-      Object.entries(usdGrupos).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(entry){
-        const clienteName=entry[0],grupo=entry[1];
-        p('<div style="margin-bottom:10px">');
-        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(74,222,128,.35)">');
-        p('<div style="font-size:12px;font-weight:800;color:#c4a0ff">👤 '+clienteName+'</div>');
-        p('<span style="font-size:13px;font-weight:800;color:#4ade80">'+fmtUSD(grupo.total)+'</span></div>');
-        grupo.rows.forEach(function(r){
-          p('<div style="display:flex;justify-content:space-between;padding:3px 0 3px 10px;border-bottom:1px solid rgba(255,255,255,.04)">');
-          p('<div style="font-size:10px;color:#666">↳ '+r.cliente+'<span style="font-size:9px;color:#444;margin-left:5px">'+r.plataforma+'</span></div>');
-          p('<span style="font-size:10px;color:#3aad6a">'+fmtUSD(r.montoNum)+'</span></div>');
-        });
-        p('</div>');
+        p('<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">');
+        p('<div><div style="font-size:12px;font-weight:600;color:#fff">'+r.cliente+'</div><div style="font-size:10px;color:#555;margin-top:1px">'+r.plataforma+'</div></div>');
+        p('<span style="font-size:13px;font-weight:700;color:#4ade80">'+fmtUSD(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0)+'</span></div>');
       });
     } else { p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cuentas</div>'); }
     p('</div></div>');
@@ -1041,113 +998,6 @@ function generarInforme(){
   const win=window.open('','_blank');
   if(!win){toast('Habilitá ventanas emergentes en el browser');return;}
   win.document.open();win.document.write(S.join(''));win.document.close();
-}
-
-function exportarLCHtml(){
-  const f=st.filters;
-  const sorted=[...lcData.periodos].sort((a,b)=>b.id.localeCompare(a.id));
-  const lcPeriodo=(()=>{
-    if(f.dateFrom||f.dateTo){
-      const fromM=f.dateFrom?f.dateFrom.substring(0,7):"0000-00";
-      const toM=f.dateTo?f.dateTo.substring(0,7):"9999-99";
-      return sorted.find(p=>p.id>=fromM&&p.id<=toM)||null;
-    }
-    return sorted[0]||null;
-  })();
-  if(!lcPeriodo){toast("No hay período LC para exportar");return;}
-  const fmtARS=n=>n?"$"+parseInt(n).toLocaleString("es-AR"):"—";
-  const fmtUSD=n=>n!=null?"USD "+parseFloat(n).toLocaleString("es-AR",{minimumFractionDigits:0,maximumFractionDigits:2}):"—";
-  const totARS=(lcPeriodo.cuentasARS||[]).reduce((a,r)=>a+(parseInt((r.monto||"").toString().replace(/[.,]/g,""))||0),0);
-  const totUSD=(lcPeriodo.cuentasUSD||[]).reduce((a,r)=>a+(parseFloat((r.monto||"").toString().replace(/,/g,"."))||0),0);
-  function buildGrupos(rows,isUSD){
-    const g={};
-    rows.forEach(r=>{
-      const key=(r.clienteNombre||"").trim()||r.cliente||"—";
-      if(!g[key])g[key]={rows:[],total:0};
-      const m=isUSD?parseFloat((r.monto||"").toString().replace(/,/g,"."))||0:parseInt((r.monto||"").toString().replace(/[.,]/g,""))||0;
-      g[key].rows.push({cuenta:r.cliente,plataforma:r.plataforma,m});
-      g[key].total+=m;
-    });
-    return Object.entries(g).sort((a,b)=>b[1].total-a[1].total);
-  }
-  function barSection(grupos,total,accent,fmtFn){
-    if(!grupos.length)return"<p style=\"color:#555;font-style:italic;padding:20px 0\">Sin cuentas</p>";
-    return grupos.map(([name,g])=>{
-      const pct=total>0?Math.round(g.total/total*100):0;
-      const rows=g.rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:5px 0 5px 16px;border-bottom:1px solid rgba(255,255,255,.04)"><span style="font-size:12px;color:#777">\u21b3 ${r.cuenta} <span style="font-size:10px;color:#444;margin-left:4px">${r.plataforma}</span></span><span style="font-size:12px;color:${accent};opacity:.75">${fmtFn(r.m)}</span></div>`).join("");
-      return`<div style="margin-bottom:16px;background:rgba(255,255,255,.02);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.06)"><div style="padding:14px 16px 10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:14px;font-weight:800;color:#c4a0ff">&#128100; ${name}</div><div style="text-align:right"><div style="font-size:18px;font-weight:800;color:${accent}">${fmtFn(g.total)}</div><div style="font-size:10px;color:#555;font-weight:700">${pct}% del total</div></div></div><div style="background:rgba(255,255,255,.08);border-radius:4px;height:7px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${accent};border-radius:4px"></div></div></div><div style="border-top:1px solid rgba(255,255,255,.06)">${rows}</div></div>`;
-    }).join("");
-  }
-  const arsGrupos=buildGrupos(lcPeriodo.cuentasARS||[],false);
-  const usdGrupos=buildGrupos(lcPeriodo.cuentasUSD||[],true);
-  const genDate=new Date().toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-  const html=`<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LC Consumo \u00b7 ${lcPeriodo.label}</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Montserrat,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh}
-.page{max-width:1100px;margin:0 auto;padding:32px 24px 80px}
-.header{margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}
-h1{font-size:30px;font-weight:800;letter-spacing:-1px}
-h1 span{color:#9333ea}
-.sub{font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:5px}
-.totals{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:30px}
-.tc{padding:22px;border-radius:10px;text-align:center}
-.tc.ars{background:rgba(106,159,216,.08);border:1px solid rgba(106,159,216,.3)}
-.tc.usd{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3)}
-.tl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px}
-.tv{font-size:34px;font-weight:800;line-height:1}
-.ts{font-size:11px;color:#555;margin-top:5px;font-weight:600}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-.ct{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding-bottom:9px;margin-bottom:12px;border-bottom:2px solid}
-input.srch{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#fff;font-family:inherit;font-size:12px;margin-bottom:12px;outline:none}
-input.srch:focus{border-color:rgba(155,109,255,.5)}
-@media(max-width:700px){.cols,.totals{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="header">
-    <h1>Consumo LC &nbsp;<span>\u00b7</span>&nbsp; ${lcPeriodo.label}</h1>
-    <div class="sub">Avalon World Agency &nbsp;\u00b7&nbsp; Generado ${genDate}</div>
-  </div>
-  <div class="totals">
-    <div class="tc ars"><div class="tl" style="color:#6a9fd8">Total ARS</div><div class="tv" style="color:#6a9fd8">${fmtARS(totARS)}</div><div class="ts">${(lcPeriodo.cuentasARS||[]).length} cargas &middot; ${arsGrupos.length} clientes</div></div>
-    <div class="tc usd"><div class="tl" style="color:#4ade80">Total USD</div><div class="tv" style="color:#4ade80">${fmtUSD(totUSD)}</div><div class="ts">${(lcPeriodo.cuentasUSD||[]).length} cargas &middot; ${usdGrupos.length} clientes</div></div>
-  </div>
-  <div class="cols">
-    <div>
-      <div class="ct" style="color:#6a9fd8;border-color:rgba(106,159,216,.4)">Cuentas ARS &middot; por Cliente</div>
-      <input class="srch" placeholder="Buscar..." oninput="fil(this,'ars')">
-      <div id="ars">${barSection(arsGrupos,totARS,"#6a9fd8",fmtARS)}</div>
-    </div>
-    <div>
-      <div class="ct" style="color:#4ade80;border-color:rgba(74,222,128,.4)">Cuentas USD &middot; por Cliente</div>
-      <input class="srch" placeholder="Buscar..." oninput="fil(this,'usd')">
-      <div id="usd">${barSection(usdGrupos,totUSD,"#4ade80",fmtUSD)}</div>
-    </div>
-  </div>
-</div>
-<script>
-function fil(input,col){
-  const q=input.value.toLowerCase();
-  document.querySelectorAll("#"+col+">div").forEach(card=>{
-    card.style.display=card.textContent.toLowerCase().includes(q)?"":"none";
-  });
-}
-<\/script>
-</body>
-</html>`;
-  const blob=new Blob([html],{type:"text/html;charset=utf-8"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="LC_Consumo_"+lcPeriodo.label.replace(/\s+/g,"_")+".html";
-  a.click();URL.revokeObjectURL(a.href);
-  toast("\ud83d\udce5 LC_Consumo_"+lcPeriodo.label+".html descargado");
 }
 
 // ── RENDER LIST ONLY (preserves search focus) ──
@@ -1287,35 +1137,16 @@ function rSbModal(){
 
 function rFilterPanel(){
   const f=st.filters;
-  const now=new Date();
-  // Generate current month + 1 previous (Abr + May)
-  const meses=[];
-  for(let i=1;i>=0;i--){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    const label=d.toLocaleDateString('es-AR',{month:'short',year:'2-digit'}).replace('.','');
-    const from=d.toISOString().split('T')[0];
-    const lastDay=new Date(d.getFullYear(),d.getMonth()+1,0);
-    const to=(i===0?now:lastDay).toISOString().split('T')[0];
-    const isActive=f.dateFrom===from&&f.dateTo===to;
-    meses.push({label,from,to,isActive,isCurrent:i===0});
-  }
-  const hasDate=!!(f.dateFrom||f.dateTo);
   return`<div class="filter-panel">
-    <div>
-      <div class="filter-label">Período — último contacto</div>
-      <div class="filter-row" style="flex-wrap:wrap;gap:5px">
-        ${meses.map(m=>`<button class="filter-chip ${m.isActive?'on':''}" data-fmes-from="${m.from}" data-fmes-to="${m.to}" style="${m.isCurrent?'border-color:rgba(155,109,255,.5)':''}">${m.label}${m.isCurrent?' ▶':''}</button>`).join('')}
-        <button class="filter-chip" id="f-week">Sem.</button>
-        <button class="filter-chip ${hasDate?'on':''}" id="f-clear-dates" style="${hasDate?'border-color:rgba(217,95,95,.5);color:#d95f5f;background:rgba(217,95,95,.08)':'opacity:.4'}" ${hasDate?'':'disabled'}>✕ Des-filtrar</button>
+    <div><div class="filter-label">Período — último contacto</div>
+      <div class="filter-row">
+        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Desde</span>
+        <input type="date" class="filter-input-sm" id="f-date-from" value="${f.dateFrom||''}">
+        <span style="font-size:10px;color:var(--text-muted);font-weight:600">Hasta</span>
+        <input type="date" class="filter-input-sm" id="f-date-to" value="${f.dateTo||''}">
+        <button class="filter-chip" id="f-week">Semana</button>
+        <button class="filter-chip" id="f-month">Mes</button>
       </div>
-      ${hasDate?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px">
-        <span>📅 ${f.dateFrom?f.dateFrom.split('-').reverse().join('/'):'—'} → ${f.dateTo?f.dateTo.split('-').reverse().join('/'):'—'}</span>
-        <input type="date" class="filter-input-sm" id="f-date-from" value="${f.dateFrom||''}" style="font-size:9px;padding:2px 5px">
-        <input type="date" class="filter-input-sm" id="f-date-to" value="${f.dateTo||''}" style="font-size:9px;padding:2px 5px">
-      </div>`:`<div style="display:flex;gap:5px;margin-top:4px">
-        <input type="date" class="filter-input-sm" id="f-date-from" value="" style="font-size:9px;padding:2px 5px;flex:1">
-        <input type="date" class="filter-input-sm" id="f-date-to" value="" style="font-size:9px;padding:2px 5px;flex:1">
-      </div>`}
     </div>
     <div><div class="filter-label">Tipo de cliente</div>
       <div class="filter-row">${['Abono','LC'].map(t=>`<button class="filter-chip ${f.tipo===t?'on':''}" data-ftipo="${t}">${t==='LC'?'LC — Línea de Crédito':t}</button>`).join('')}</div>
@@ -1492,7 +1323,6 @@ function rList(){
       <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
       <button class="btn-sm" id="btn-go-nuevos" style="background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
       <button class="btn-sm" id="btn-generar-informe" style="background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:var(--gold);font-weight:800">📊 Informe</button>
-      ${lcData.periodos?.length?`<button class="btn-sm" id="btn-export-lc-html" style="background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800" title="Exportar datos LC como HTML interactivo">📥 LC HTML</button>`:''}
       <button class="btn-sm" id="btn-open-lc" style="background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800">💳 LC</button>
       <button class="btn-add" id="btn-open-new">+ Prospecto</button>
     </div>
@@ -1930,18 +1760,16 @@ function rLCModal(){
   const d=st.lcDraft||{periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
   const PLATS=['Meta','Google','TikTok','Pinterest','Otra'];
   function rowARS(r,i){
-    return`<div style="display:grid;grid-template-columns:1fr 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:5px" data-ars="${i}">
-      <input class="field-input lc-ars-owner" data-idx="${i}" value="${r.clienteNombre||''}" placeholder="Cliente (ej: Gastón Mames)" style="font-size:11px;padding:6px 8px;background:rgba(155,109,255,.07);border-color:rgba(155,109,255,.3)" title="Nombre del cliente dueño de esta cuenta">
-      <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cuenta publicitaria" style="font-size:11px;padding:6px 8px">
+    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-ars="${i}">
+      <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-ars-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
       <input class="field-input lc-ars-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto ARS" style="font-size:11px;padding:6px 8px" inputmode="numeric">
       <button class="btn-sm lc-del-ars" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
     </div>`;
   }
   function rowUSD(r,i){
-    return`<div style="display:grid;grid-template-columns:1fr 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:5px" data-usd="${i}">
-      <input class="field-input lc-usd-owner" data-idx="${i}" value="${r.clienteNombre||''}" placeholder="Cliente (ej: Gastón Mames)" style="font-size:11px;padding:6px 8px;background:rgba(74,171,122,.07);border-color:rgba(74,171,122,.3)" title="Nombre del cliente dueño de esta cuenta">
-      <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cuenta publicitaria" style="font-size:11px;padding:6px 8px">
+    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-usd="${i}">
+      <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-usd-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
       <input class="field-input lc-usd-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto USD" style="font-size:11px;padding:6px 8px" inputmode="numeric">
       <button class="btn-sm lc-del-usd" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
@@ -1949,36 +1777,23 @@ function rLCModal(){
   }
   const totalARS=d.cuentasARS.reduce((a,r)=>a+(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0),0);
   const totalUSD=d.cuentasUSD.reduce((a,r)=>a+(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0),0);
-  // Column headers helper
-  function colHeaders(color){
-    return`<div style="display:grid;grid-template-columns:1fr 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:3px;padding:0 2px">
-      <span style="font-size:8px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.5px">Cliente</span>
-      <span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Cuenta publicitaria</span>
-      <span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;width:90px;display:block">Plataforma</span>
-      <span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Monto</span>
-      <span></span>
-    </div>`;
-  }
   // Periodos guardados
   const saved=lcData.periodos||[];
   return`<div class="modal-overlay" id="lc-modal-overlay"><div class="modal" style="max-width:540px">
     <div class="modal-handle"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="modal-title" style="margin:0">💳 Consumo LC</div>
-      ${saved.length?`<div style="display:flex;align-items:center;gap:6px">
-        <select class="field-select" id="lc-load-select" style="font-size:10px;padding:4px 8px;width:auto">
-          <option value="">Cargar período guardado…</option>
-          ${saved.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}
-        </select>
-        <button class="btn-sm" id="btn-lc-del-periodo" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 8px;font-size:11px;opacity:.4;pointer-events:none" title="Borrar período seleccionado">🗑️</button>
-      </div>`:''}
+      ${saved.length?`<select class="field-select" id="lc-load-select" style="font-size:10px;padding:4px 8px;width:auto">
+        <option value="">Cargar período guardado…</option>
+        ${saved.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}
+      </select>`:''}
     </div>
     <div style="background:rgba(155,109,255,.07);border:1px solid rgba(155,109,255,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <input type="file" id="lc-img-input" accept="image/*,application/pdf" style="display:none">
+      <input type="file" id="lc-img-input" accept="image/*" style="display:none">
       <button class="btn-sm" id="btn-lc-import-img" style="color:var(--gold);border-color:rgba(155,109,255,.4);${st.loadingLCImg?'opacity:.6;pointer-events:none':''}">
-        ${st.loadingLCImg?'<span style="display:flex;align-items:center;gap:6px"><div class="spinner" style="width:10px;height:10px;border-width:2px"></div> Procesando...</span>':'📄 Importar imagen o PDF'}
+        ${st.loadingLCImg?'<span style="display:flex;align-items:center;gap:6px"><div class="spinner" style="width:10px;height:10px;border-width:2px"></div> Procesando...</span>':'📷 Importar desde captura'}
       </button>
-      <span style="font-size:10px;color:var(--text-muted);line-height:1.4">Subí una imagen o PDF <strong style="color:var(--text2)">— o pegá con Ctrl+V</strong> — Claude extrae las cuentas ARS y USD automáticamente</span>
+      <span style="font-size:10px;color:var(--text-muted);line-height:1.4">Subí una imagen <strong style="color:var(--text2)">o pegala con Ctrl+V</strong> — Claude extrae las cuentas ARS y USD automáticamente</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div class="field"><label class="field-label">Período</label><input class="field-input" id="lc-periodo" value="${d.periodo||''}" placeholder="Ej: Abril 2026" style="font-size:11px"></div>
@@ -1986,25 +1801,17 @@ function rLCModal(){
       <div class="field"><label class="field-label">Hasta</label><input class="field-input" id="lc-hasta" type="date" value="${d.hasta||''}"></div>
     </div>
     <hr class="divider">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:10px;font-weight:700;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px">Cuentas en Pesos (ARS)</div>
-      <div style="display:flex;align-items:center;gap:6px">
-        ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
-        ${d.cuentasARS.length?`<button class="btn-sm" id="btn-lc-bulk-ars" style="font-size:9px;color:var(--gold);border-color:rgba(155,109,255,.3)" title="Asignar mismo cliente a filas seleccionadas">✏️ Asignar cliente masivo</button>`:''}
-      </div>
+      ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
     </div>
-    ${colHeaders('#6a9fd8')}
     ${d.cuentasARS.length?d.cuentasARS.map((r,i)=>rowARS(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas ARS</div>'}
     <button class="btn-sm" id="btn-lc-add-ars" style="margin-bottom:14px;color:#6a9fd8;border-color:rgba(106,159,216,.4)">+ Cuenta ARS</button>
     <hr class="divider">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Cuentas en USD</div>
-      <div style="display:flex;align-items:center;gap:6px">
-        ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
-        ${d.cuentasUSD.length?`<button class="btn-sm" id="btn-lc-bulk-usd" style="font-size:9px;color:var(--green);border-color:rgba(74,171,122,.3)" title="Asignar mismo cliente a filas seleccionadas">✏️ Asignar cliente masivo</button>`:''}
-      </div>
+      ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
     </div>
-    ${colHeaders('var(--green)')}
     ${d.cuentasUSD.length?d.cuentasUSD.map((r,i)=>rowUSD(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas USD</div>'}
     <button class="btn-sm" id="btn-lc-add-usd" style="margin-bottom:14px;color:var(--green);border-color:rgba(74,171,122,.4)">+ Cuenta USD</button>
     <hr class="divider">
@@ -2649,7 +2456,6 @@ function bind(){
   }
   $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $('#btn-generar-informe')?.addEventListener('click',generarInforme);
-  $('#btn-export-lc-html')?.addEventListener('click',exportarLCHtml);
   // LC Modal
   $('#btn-open-lc')?.addEventListener('click',()=>{
     const f=st.filters;
@@ -2665,64 +2471,22 @@ function bind(){
   // Load saved period
   document.getElementById('lc-load-select')?.addEventListener('change',e=>{
     const p=lcData.periodos.find(x=>x.id===e.target.value);
-    const delBtn=document.getElementById('btn-lc-del-periodo');
-    if(delBtn){
-      if(p){delBtn.style.opacity='1';delBtn.style.pointerEvents='auto';}
-      else{delBtn.style.opacity='.4';delBtn.style.pointerEvents='none';}
-    }
     if(!p)return;
     st.lcDraft={periodo:p.label,desde:p.desde,hasta:p.hasta,
       cuentasARS:JSON.parse(JSON.stringify(p.cuentasARS||[])),
       cuentasUSD:JSON.parse(JSON.stringify(p.cuentasUSD||[]))};
     render();
   });
-  // Delete saved period
-  document.getElementById('btn-lc-del-periodo')?.addEventListener('click',async()=>{
-    const sel=document.getElementById('lc-load-select');
-    const id=sel?.value;
-    if(!id)return;
-    const p=lcData.periodos.find(x=>x.id===id);
-    if(!confirm(`¿Borrar el período "${p?.label||id}"? Esta acción no se puede deshacer.`))return;
-    lcData.periodos=lcData.periodos.filter(x=>x.id!==id);
-    await saveLCMaster();
-    st.lcDraft={periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
-    toast(`Período "${p?.label||id}" eliminado`);
-    render();
-  });
-  // Bulk assign client ARS
-  document.getElementById('btn-lc-bulk-ars')?.addEventListener('click',()=>{
-    lcSyncDraft();
-    const nombre=prompt('Nombre del cliente para asignar a TODAS las filas ARS sin cliente (o escribí una cuenta para filtrar):');
-    if(!nombre)return;
-    const target=prompt('¿A qué cuentas asignar?\n• Dejá vacío → a TODAS las filas sin cliente\n• Escribí un texto → solo las que contengan ese texto en la cuenta (ej: "World Mats")');
-    st.lcDraft.cuentasARS=st.lcDraft.cuentasARS.map(r=>{
-      const match=target?r.cliente.toLowerCase().includes(target.toLowerCase()):!r.clienteNombre;
-      return match?{...r,clienteNombre:nombre}:r;
-    });
-    render();toast(`✓ Cliente "${nombre}" asignado`);
-  });
-  // Bulk assign client USD
-  document.getElementById('btn-lc-bulk-usd')?.addEventListener('click',()=>{
-    lcSyncDraft();
-    const nombre=prompt('Nombre del cliente para asignar:');
-    if(!nombre)return;
-    const target=prompt('¿A qué cuentas asignar?\n• Dejá vacío → a TODAS las filas sin cliente\n• Escribí un texto → solo las que contengan ese texto en la cuenta (ej: "World Mats")');
-    st.lcDraft.cuentasUSD=st.lcDraft.cuentasUSD.map(r=>{
-      const match=target?r.cliente.toLowerCase().includes(target.toLowerCase()):!r.clienteNombre;
-      return match?{...r,clienteNombre:nombre}:r;
-    });
-    render();toast(`✓ Cliente "${nombre}" asignado`);
-  });
   // Add row ARS
   document.getElementById('btn-lc-add-ars')?.addEventListener('click',()=>{
     lcSyncDraft();
-    st.lcDraft.cuentasARS.push({clienteNombre:'',cliente:'',plataforma:'Meta',monto:''});
+    st.lcDraft.cuentasARS.push({cliente:'',plataforma:'Meta',monto:''});
     render();
   });
   // Add row USD
   document.getElementById('btn-lc-add-usd')?.addEventListener('click',()=>{
     lcSyncDraft();
-    st.lcDraft.cuentasUSD.push({clienteNombre:'',cliente:'',plataforma:'Meta',monto:''});
+    st.lcDraft.cuentasUSD.push({cliente:'',plataforma:'Meta',monto:''});
     render();
   });
   // Image import
@@ -3039,15 +2803,13 @@ function bind(){
   $('#btn-clear-filters')?.addEventListener('click',()=>{st.filters={dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:'',meets:''};render()});
   $('#f-date-from')?.addEventListener('change',e=>{st.filters.dateFrom=e.target.value;render()});
   $('#f-date-to')?.addEventListener('change',e=>{st.filters.dateTo=e.target.value;render()});
-  $('#f-clear-dates')?.addEventListener('click',()=>{st.filters.dateFrom='';st.filters.dateTo='';render()});
-  $$('[data-fmes-from]').forEach(b=>b.addEventListener('click',()=>{
-    st.filters.dateFrom=b.dataset.fmesFrom;
-    st.filters.dateTo=b.dataset.fmesTo;
-    render();
-  }));
   $('#f-week')?.addEventListener('click',()=>{
     const now=new Date(),week=new Date(now-7*86400000);
     st.filters.dateFrom=week.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];render();
+  });
+  $('#f-month')?.addEventListener('click',()=>{
+    const now=new Date(),month=new Date(now.getFullYear(),now.getMonth(),1);
+    st.filters.dateFrom=month.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];render();
   });
   $$('[data-ftipo]').forEach(b=>b.addEventListener('click',()=>{st.filters.tipo=st.filters.tipo===b.dataset.ftipo?'':b.dataset.ftipo;render()}));
   $$('[data-fplat]').forEach(b=>b.addEventListener('click',()=>{st.filters.plataforma=st.filters.plataforma===b.dataset.fplat?'':b.dataset.fplat;render()}));
