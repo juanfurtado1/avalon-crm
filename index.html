@@ -513,6 +513,11 @@ function ncNew(d={}){
     montoMeta:d.montoMeta||'',montoGoogle:d.montoGoogle||'',
     montoOtros:d.montoOtros||'',montoOtrosDetalle:d.montoOtrosDetalle||'',
     fechaBriefMeet:d.fechaBriefMeet||'',
+    esencia:d.esencia||'',
+    identidadVisual:d.identidadVisual||'',
+    experienciaPrevia:d.experienciaPrevia||'',
+    scopeNoIncluye:d.scopeNoIncluye||'',
+    otrosCanales:d.otrosCanales||'',
     crmClientId:d.crmClientId||null,fromCRM:d.fromCRM||false
   };
 }
@@ -3268,23 +3273,44 @@ function rNuevoDetail(){
     </div>
     <div class="nc-section">
       <div class="nc-section-title">📝 Briefing del cliente <span style="color:var(--text-muted);font-size:8px;font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· para generar el mail</span></div>
+
+      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🧭 Contexto & marca</div>
       <div class="field"><label class="field-label">Descripción general y contexto</label>
-        <textarea class="field-textarea" id="nd-contexto" style="min-height:80px" placeholder="Descripción del negocio, etapa actual, contexto de la marca...">${c.contexto||''}</textarea>
+        <textarea class="field-textarea" id="nd-contexto" style="min-height:70px" placeholder="Negocio, etapa actual, estructura, cómo opera...">${c.contexto||''}</textarea>
       </div>
-      <div class="field"><label class="field-label">Diferencial / Distintivo</label>
-        <textarea class="field-textarea" id="nd-diferenciales" style="min-height:60px" placeholder="Un diferencial por línea...">${c.diferenciales||''}</textarea>
+      <div class="field"><label class="field-label">Esencia de la marca</label>
+        <textarea class="field-textarea" id="nd-esencia" style="min-height:50px" placeholder="A qué orientada, qué representa, tipo de cliente...">${c.esencia||''}</textarea>
       </div>
-      <div class="field"><label class="field-label">Status digital</label>
-        <textarea class="field-textarea" id="nd-status-digital" style="min-height:55px" placeholder="Estado actual de redes, ads, web, presencia online...">${c.statusDigital||''}</textarea>
+      <div class="field"><label class="field-label">Diferenciales</label>
+        <textarea class="field-textarea" id="nd-diferenciales" style="min-height:55px" placeholder="Un diferencial por línea...">${c.diferenciales||''}</textarea>
       </div>
+
+      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🎯 Objetivos</div>
       <div class="field">
-        <label class="field-label" style="margin-bottom:6px">Objetivos</label>
         <input class="field-input" id="nd-obj1" value="${c.objetivo1||''}" placeholder="Objetivo principal" style="margin-bottom:6px">
         <input class="field-input" id="nd-obj2" value="${c.objetivo2||''}" placeholder="Objetivo secundario" style="margin-bottom:6px">
         <input class="field-input" id="nd-obj3" value="${c.objetivo3||''}" placeholder="Objetivo 3 (opcional)">
       </div>
-      <div class="field"><label class="field-label">Observaciones estratégicas</label>
-        <textarea class="field-textarea" id="nd-observaciones" style="min-height:70px" placeholder="Puntos clave, lógica acordada, contexto importante para el equipo...">${c.observaciones||''}</textarea>
+
+      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">📣 Situación digital & comunicación</div>
+      <div class="field"><label class="field-label">Status digital</label>
+        <textarea class="field-textarea" id="nd-status-digital" style="min-height:55px" placeholder="Redes, ads, web, presencia online... qué tienen, qué les falta, qué está roto">${c.statusDigital||''}</textarea>
+      </div>
+      <div class="field"><label class="field-label">Identidad visual</label>
+        <input class="field-input" id="nd-identidad-visual" value="${c.identidadVisual||''}" placeholder="Definida / débil / inconsistente / gestionada por cliente">
+      </div>
+      <div class="field"><label class="field-label">Experiencia previa / observaciones del cliente</label>
+        <textarea class="field-textarea" id="nd-experiencia-previa" style="min-height:60px" placeholder="Trabajó con agencia, actitud del cliente, problemas detectados, algo a tener en cuenta...">${c.experienciaPrevia||''}</textarea>
+      </div>
+
+      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">📌 Scope — qué no incluye</div>
+      <div class="field"><label class="field-label">No incluye <span style="font-weight:500;color:var(--text-muted)">(si aplica)</span></label>
+        <textarea class="field-textarea" id="nd-scope-no-incluye" style="min-height:45px" placeholder="Ej: fotografía, diseño web, community management...">${c.scopeNoIncluye||''}</textarea>
+      </div>
+
+      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🔎 Observaciones estratégicas</div>
+      <div class="field">
+        <textarea class="field-textarea" id="nd-observaciones" style="min-height:65px" placeholder="Puntos clave, lógica acordada, contexto importante para el equipo...">${c.observaciones||''}</textarea>
       </div>
     </div>
     <button class="btn-sm btn-gold" id="btn-nd-save" style="width:100%;justify-content:center;padding:10px;margin-bottom:14px;font-size:11px">💾 Guardar datos</button>
@@ -3371,8 +3397,12 @@ async function saveNuevoDetail(){
   c.scopeCtx=gi('nd-scope-ctx')||'';
   c.scope=[...document.querySelectorAll('#nd-scope-grid .scope-toggle-btn.on')].map(t=>t.dataset.scope);
   c.contexto=gi('nd-contexto')||'';
+  c.esencia=gi('nd-esencia')||'';
   c.diferenciales=gi('nd-diferenciales')||'';
   c.statusDigital=gi('nd-status-digital')||'';
+  c.identidadVisual=gi('nd-identidad-visual')||'';
+  c.experienciaPrevia=gi('nd-experiencia-previa')||'';
+  c.scopeNoIncluye=gi('nd-scope-no-incluye')||'';
   c.objetivo1=gi('nd-obj1')||'';c.objetivo2=gi('nd-obj2')||'';c.objetivo3=gi('nd-obj3')||'';
   c.observaciones=gi('nd-observaciones')||'';
   c.montoMeta=gi('nd-monto-meta')||'';c.montoGoogle=gi('nd-monto-google')||'';
@@ -3409,44 +3439,92 @@ async function genEmail(){
   if(c.montoGoogle)inversion.push(`Google Ads: ${c.montoGoogle}`);
   if(c.montoOtros)inversion.push(`${c.montoOtrosDetalle||'Otros'}: ${c.montoOtros}`);
   const objetivos=[c.objetivo1,c.objetivo2,c.objetivo3].filter(Boolean);
-  const p=`Generá un mail interno de presentación de nuevo cliente para el equipo de Avalon World Agency. El mail debe ser exactamente como el que manda el Account Manager Juan a su equipo interno. Tono profesional, directo, sin paja.
+  const p=`Generá un mail interno de presentación de nuevo cliente para el equipo de Avalon World Agency. Seguí EXACTAMENTE la estructura y formato que se detalla abajo. Tono interno de agencia: directo, profesional, sin paja.
 
 DATOS DEL CLIENTE:
 - Marca/Empresa: ${c.company||''}
 - Rubro: ${c.rubro||'no especificado'}
 - Contacto: ${c.name}${c.email?` · ${c.email}`:''}${c.phone?` · WhatsApp: ${c.phone}`:''}
 - Web: ${c.web||'no disponible'}
-- Instagram: ${c.instagram||'no disponible'}${c.tiktok?`\n- TikTok: ${c.tiktok}`:''}
+- Instagram: ${c.instagram||'no disponible'}${c.tiktok?`\n- TikTok: ${c.tiktok}`:''}${c.otrosCanales?`\n- Otros canales: ${c.otrosCanales}`:''}
 - Fecha de alta: ${fecha}
 
-DESCRIPCIÓN GENERAL Y CONTEXTO:
-${c.contexto||'A definir en brief inicial'}
+CONTEXTO GENERAL: ${c.contexto||'A definir en brief inicial'}
+ESENCIA DE LA MARCA: ${c.esencia||'A relevar'}
+DIFERENCIALES: ${c.diferenciales||'A relevar en primera reunión'}
+STATUS DIGITAL: ${c.statusDigital||'A relevar en brief'}
+IDENTIDAD VISUAL: ${c.identidadVisual||'A evaluar'}
+EXPERIENCIA PREVIA / OBSERVACIONES: ${c.experienciaPrevia||'Sin datos previos'}
+OBJETIVOS: ${objetivos.length?objetivos.map((o,i)=>`${i+1}. ${o}`).join('\n'):'A definir con el cliente'}
+SCOPE incluye: ${c.scope.join(', ')||'a definir'}${c.scopeCtx?`\nDetalle: ${c.scopeCtx}`:''}
+SCOPE no incluye: ${c.scopeNoIncluye||'—'}
+PM asignado: ${c.pm||'a definir'}
+Equipo: ${equipo.join(', ')||'a definir'}
+Cuenta publicitaria: ${c.cuentaPublicitaria||'a definir'}
+Inversión: ${inversion.length?inversion.join(' / '):'a definir'}
+Brief Meet: ${briefMeetStr}
+OBSERVACIONES ESTRATÉGICAS: ${c.observaciones||'Sin observaciones adicionales'}
 
-DIFERENCIAL / DISTINTIVO:
-${c.diferenciales||'A relevar en primera reunión'}
+FORMATO OBLIGATORIO DEL MAIL (respetá exactamente esta estructura con emojis y secciones):
 
-STATUS DIGITAL:
-${c.statusDigital||'A relevar en brief'}
+Asunto: 🆕 NUEVO CLIENTE — [EMPRESA EN MAYÚSCULAS]
 
-OBJETIVOS:
-${objetivos.length?objetivos.map((o,i)=>`${i+1}. ${o}`).join('\n'):'A definir con el cliente en meet de brief'}
+🧭 Contexto general
+[párrafo narrativo con contexto, etapa y oportunidad principal]
 
-CONFIGURACIÓN OPERATIVA:
-- Scope: ${c.scope.join(', ')||'a definir'}${c.scopeCtx?`\n- Detalle scope: ${c.scopeCtx}`:''}
-- PM asignado: ${c.pm||'a definir'}
-- Equipo: ${equipo.join(', ')||'a definir'}
-- Cuenta publicitaria: ${c.cuentaPublicitaria||'a definir'}${inversion.length?`\n- Inversión inicial: ${inversion.join(' / ')}`:''}
-- Brief Meet: ${briefMeetStr}
+💡 Esencia
+[una línea con lo que representa la marca]
 
-OBSERVACIONES ESTRATÉGICAS:
-${c.observaciones||'Sin observaciones adicionales'}
+✨ Diferenciales
+[listar uno por línea]
 
-FORMATO DEL MAIL:
-Asunto: NUEVO CLIENTE: [MARCA EN MAYÚSCULAS]
+🎯 Objetivos
+[numerados]
 
-Incluir: descripción general y contexto, contacto principal (nombre + tel + mail), web + instagram, diferencial/distintivo, status digital, objetivos (numerados), scope/servicios contratados, cuenta publicitaria e inversión inicial, equipo asignado, fecha de brief meet, observaciones estratégicas, próximos pasos sugeridos.
+⚙️ Scope
+Servicio contratado: [full / performance / etc]
+Incluye:
+[listar]
+No incluye:
+[listar o "—"]
 
-Respondé SOLO con el mail completo, empezando por "Asunto:". Sin explicaciones. En español. Tono interno de agencia, profesional y directo.`;
+📊 Medios & plataformas
+[listar plataformas activas]
+
+💰 Inversión
+Meta: [monto]
+Google: [monto]
+Otros: [si aplica]
+
+🧾 Cuentas publicitarias
+[PROPIA / LC Avalon / a definir]
+
+📣 Situación de comunicación
+[estado actual, qué está pasando, principal gap]
+
+🎨 Identidad visual
+[definida / débil / inconsistente / gestionada por cliente]
+
+🔎 Experiencia previa / observaciones
+[lo relevante del cliente: actitud, historial, alertas]
+
+👥 Equipo asignado
+PM: [nombre]
+Equipo: [nombres]
+
+📍 Contacto
+[nombre]
+📲 [WhatsApp]
+
+🌐 Canales
+Web: [link]
+Instagram: [link]
+[Otros si aplica]
+
+📅 Meet de brief
+[fecha y hora o "A coordinar"]
+
+Respondé SOLO con el mail completo empezando por "Asunto:". Sin explicaciones ni texto extra. En español.`;
   try{
     const t=await claude([{role:'user',content:p}]);
     c.emailGenerado=t;await svNC(c);
