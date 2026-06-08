@@ -454,11 +454,46 @@ async function sbDel(id){
 // ── NUEVOS CLIENTES — SUPABASE ──
 let nuevos=[];
 let lcData={periodos:[]};
+let abonos=[];
+async function loadAbonos(){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/new_clients?select=data&order=updated_at.desc',{headers:sbH()});
+    const rows=await r.json();
+    if(Array.isArray(rows))abonos=rows.filter(row=>row.data&&row.data._type==='abono').map(row=>ncAbono(row.data));
+  }catch(e){console.error('Load abonos error',e);}
+}
+async function svAbono(a){
+  try{
+    await fetch(SB_URL+'/rest/v1/new_clients',{
+      method:'POST',
+      headers:{...sbH(),'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({id:a.id,data:a,updated_at:new Date().toISOString()})
+    });
+  }catch(e){console.error('Abono upsert error',e);}
+}
+async function sbDelAbono(id){
+  try{await fetch(SB_URL+'/rest/v1/new_clients?id=eq.'+id,{method:'DELETE',headers:sbH()});}
+  catch(e){console.error('Abono delete error',e);}
+}
+function ncAbono(d={}){
+  return{
+    _type:'abono',
+    id:d.id||('ab_'+Date.now().toString()),
+    name:d.name||'',company:d.company||'',
+    pm:d.pm||'',
+    plataformas:d.plataformas||[],
+    montoARS:d.montoARS||0,
+    montoUSD:d.montoUSD||0,
+    fechaInicio:d.fechaInicio||new Date().toISOString().split('T')[0],
+    activo:d.activo!==false,
+    historialIPC:d.historialIPC||[]
+  };
+}
 async function loadNC(){
   try{
     const r=await fetch(SB_URL+'/rest/v1/new_clients?select=data&order=updated_at.desc',{headers:sbH()});
     const rows=await r.json();
-    if(Array.isArray(rows))nuevos=rows.map(row=>ncNew(row.data));
+    if(Array.isArray(rows))nuevos=rows.filter(row=>row.data&&row.data._type!=='abono').map(row=>ncNew(row.data));
   }catch(e){console.error('Load NC error',e);}
 }
 async function svNC(c){
@@ -568,13 +603,17 @@ function nc(d={}){
     heatIgnored:d.heatIgnored||false,
     followupDate:d.followupDate||'',
     followupNote:d.followupNote||'',
-    estadoDate:d.estadoDate||d.lastContact||new Date().toISOString().split('T')[0]
+    estadoDate:d.estadoDate||d.lastContact||new Date().toISOString().split('T')[0],
+    etapas:d.etapas||[],
+    bajaDate:d.bajaDate||'',
+    bajaMonto:d.bajaMonto||'',
+    bajaMotivo:d.bajaMotivo||''
   };
 }
 
 // ── STATE ──
 let st={
-  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',
+  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,
   showNewModal:false,showEditModal:false,showFilters:false,showApiModal:false,showSbModal:false,
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   calOpen:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
@@ -773,6 +812,12 @@ function generarInforme(){
   const montoCerradas=cerradas.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
   const montoPerdidas=perdidas.reduce((a,c)=>{const v=parseInt(c.presupuesto||0);return a+(isNaN(v)?0:v);},0);
   const diferencia=montoCerradas-montoPerdidas;
+  // Churn: clientes activos dados de baja en el período
+  const convFrom0=f.dateFrom||(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01');
+  const convTo0=f.dateTo||today2;
+  const churnClients=clients.filter(function(c){const bd=c.bajaDate;return bd&&bd>=convFrom0&&bd<=convTo0;});
+  const montoChurn=churnClients.reduce(function(a,c){return a+(parseInt(c.bajaMonto||0)||0);},0);
+  const netoAltas=montoCerradas-montoPerdidas-montoChurn;
   const hotC=fl.filter(c=>c.estado==='Enviada');
   const warmC=fl.filter(c=>c.estado==='En negociación');
   const coldC=fl.filter(c=>!['Cerrada','Perdida','Enviada','En negociación'].includes(c.estado));
@@ -856,7 +901,7 @@ function generarInforme(){
   p('<div class="cc"><div class="cl">&#x1F4CA; Prospectos</div><div class="crow"><span class="cp">Abonos</span><span class="cv">'+abonos+'</span></div><div class="crow"><span class="cp">LC</span><span class="cv">'+lc+'</span></div><div class="crow"><span class="cp">Total</span><span class="cv" style="font-size:17px">'+total+'</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F3AF; Conversi&#243;n</div><div class="crow"><span class="cp">Cerradas</span><span class="cv" style="color:#4ade80">'+cerradas.length+'</span></div><div class="crow"><span class="cp">Perdidas</span><span class="cv" style="color:#ef4444">'+perdidas.length+'</span></div><div class="crow"><span class="cp">Tasa</span><span class="cv" style="color:'+convColor+';font-size:17px">'+convRate+'%</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F4C4; Pipeline</div><div class="crow"><span class="cp">Enviada</span><span class="cv" style="color:#d95f5f">'+hotC.length+'</span></div><div class="crow"><span class="cp">En negoc.</span><span class="cv" style="color:#c49a20">'+warmC.length+'</span></div><div class="crow"><span class="cp">Activos</span><span class="cv" style="color:#6a9fd8">'+coldC.length+'</span></div></div>');
-  p('<div class="cc"><div class="cl">&#x1F4B0; Montos</div><div class="crow"><span class="cp">Cerradas</span><span class="cv" style="color:#4ade80">'+fmtM(montoCerradas)+'</span></div><div class="crow"><span class="cp">Perdidas</span><span class="cv" style="color:#ef4444">'+fmtM(montoPerdidas)+'</span></div><div class="crow"><span class="cp">Neto</span><span class="'+(diferencia>=0?'pos':'neg')+'">'+(diferencia>=0?'+':'')+fmtM(Math.abs(diferencia))+'</span></div></div>');
+  p('<div class="cc"><div class="cl">&#x1F4B0; Montos</div><div class="crow"><span class="cp">Altas</span><span class="cv" style="color:#4ade80">'+fmtM(montoCerradas)+'</span></div><div class="crow"><span class="cp">Churn</span><span class="cv" style="color:#ef4444">'+fmtM(montoChurn||0)+'</span></div><div class="crow"><span class="cp">Neto</span><span class="'+(netoAltas>=0?'pos':'neg')+'">'+(netoAltas>=0?'+':'')+fmtM(Math.abs(netoAltas))+'</span></div></div>');
   p('</div><div class="met"><div class="ml">Pipeline activo estimado (Enviada + En negociaci&oacute;n)</div><div class="mn">'+(montoHot?fmtM(montoHot):'Sin presupuestos cargados')+'</div>');
   const canalStr=Object.keys(byCanal).length?'Canales: '+Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).map(function(e){return e[0]+' ('+e[1]+')'}).join(' &middot; '):'';
   p('<div style="font-size:12px;color:#555;margin-top:6px">'+canalStr+'</div></div></div>');
@@ -882,17 +927,90 @@ function generarInforme(){
   p('</div></div></div>');
   if(montoTotal)p('<div style="margin-top:10px;background:rgba(147,51,234,.07);border:1px solid rgba(147,51,234,.2);border-radius:6px;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0"><span style="font-size:11px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Total pipeline</span><span style="font-size:17px;font-weight:800;color:var(--p)">'+fmtM(montoTotal)+'</span></div>');
   p('</div>');
-  // S4 CERRADAS & PERDIDAS
+  // S4 ALTAS, BAJAS & CHURN
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Resultados</span></div>');
-  p('<h2>Cerradas &amp; Perdidas</h2><div class="cg2">');
-  p('<div class="al"><h3>&#x2713; Cerradas ('+cerradas.length+')'+(montoCerradas?' &mdash; '+fmtM(montoCerradas):'')+'</h3><ul class="cl2">');
+  p('<h2>Altas &amp; Bajas</h2>');
+  p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px;flex-shrink:0">');
+  p('<div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.35);padding:16px;border-radius:4px;text-align:center">');
+  p('<div style="font-size:10px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#x2B06; Altas (cierres)</div>');
+  p('<div style="font-size:28px;font-weight:800;color:#4ade80;line-height:1">'+cerradas.length+'</div>');
+  p('<div style="font-size:13px;color:#4ade80;opacity:.8;margin-top:4px;font-weight:700">'+fmtM(montoCerradas)+'</div></div>');
+  p('<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);padding:16px;border-radius:4px;text-align:center">');
+  p('<div style="font-size:10px;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#x2B07; Bajas (churn)</div>');
+  p('<div style="font-size:28px;font-weight:800;color:#ef4444;line-height:1">'+churnClients.length+'</div>');
+  p('<div style="font-size:13px;color:#ef4444;opacity:.8;margin-top:4px;font-weight:700">'+fmtM(montoChurn)+'</div></div>');
+  p('<div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.35);padding:16px;border-radius:4px;text-align:center">');
+  p('<div style="font-size:10px;color:#fb923c;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#x2715; Perdidas (prosp.)</div>');
+  p('<div style="font-size:28px;font-weight:800;color:#fb923c;line-height:1">'+perdidas.length+'</div>');
+  p('<div style="font-size:13px;color:#fb923c;opacity:.8;margin-top:4px;font-weight:700">'+fmtM(montoPerdidas)+'</div></div>');
+  p('</div>');
+  p('<div class="cg2">');
+  // Columna izq: Altas (cerradas)
+  p('<div class="al"><h3>&#x2B06; Altas — nuevos cierres</h3><ul class="cl2">');
   if(cerradas.length)cerradas.forEach(function(c){p('<li class="ci" style="border-left-color:#4ade80"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.presupuesto?'<span class="val">'+fmtM(parseInt(c.presupuesto))+' '+(c.moneda||'ARS')+(c.mesIngreso?' · '+c.mesIngreso:'')+'</span>':'')+'</li>');});
-  else p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic">Sin cierres</li>');
-  p('</ul></div><div class="ba"><h3>&#x2715; Perdidas ('+perdidas.length+')'+(montoPerdidas?' &mdash; '+fmtM(montoPerdidas):'')+'</h3><ul class="cl2">');
-  if(perdidas.length)perdidas.forEach(function(c){p('<li class="ci" style="border-left-color:#ef4444"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.presupuesto?'<span class="val">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</li>');});
-  else p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic">Sin perdidas</li>');
-  if(montoCerradas||montoPerdidas)p('<div style="margin-top:14px;padding:12px;background:rgba(147,51,234,.05);border-radius:3px;font-size:14px;color:var(--p);font-weight:700">Resultado neto: <span style="color:'+(diferencia>=0?'#4ade80':'#ef4444')+'">'+(diferencia>=0?'+':'')+fmtM(Math.abs(diferencia))+'</span></div>');
-  p('</ul></div></div></div>');
+  else p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic">Sin cierres en el período</li>');
+  p('</ul></div>');
+  // Columna der: Bajas + Perdidas
+  p('<div class="ba">');
+  if(churnClients.length){
+    p('<h3 style="color:#ef4444">&#x2B07; Bajas (churn)</h3><ul class="cl2">');
+    churnClients.forEach(function(c){p('<li class="ci" style="border-left-color:#ef4444"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.bajaMonto?'<span class="val" style="color:#ef4444">'+fmtM(parseInt(c.bajaMonto))+'</span>':'')+(c.bajaMotivo?'<span style="font-size:10px;color:#555;display:block;margin-top:2px">'+c.bajaMotivo+'</span>':'')+'</li>');});
+    p('</ul>');
+  }
+  if(perdidas.length){
+    p('<h3 style="color:#fb923c;margin-top:'+(churnClients.length?'12px':'0')+'">&#x2715; Perdidas (prospectos)</h3><ul class="cl2">');
+    perdidas.forEach(function(c){p('<li class="ci" style="border-left-color:#fb923c"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.presupuesto?'<span class="val" style="color:#fb923c">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</li>');});
+    p('</ul>');
+  }
+  if(!churnClients.length&&!perdidas.length)p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic;list-style:none">Sin bajas en el período</li>');
+  p('<div style="margin-top:14px;padding:12px;background:rgba(147,51,234,.07);border-radius:3px;font-size:14px;color:var(--p);font-weight:700">Resultado neto: <span style="color:'+(netoAltas>=0?'#4ade80':'#ef4444')+'">'+(netoAltas>=0?'+':'')+fmtM(Math.abs(netoAltas))+'</span></div>');
+  p('</div></div></div>');
+  // S4b PROYECCIÓN POR ETAPAS
+  const clientesConEtapas=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
+  if(clientesConEtapas.length){
+    // Armar mapa mes → monto total
+    const mesMap={};
+    clientesConEtapas.forEach(function(c){
+      (c.etapas||[]).forEach(function(et){
+        if(et.mes&&et.monto){
+          mesMap[et.mes]=(mesMap[et.mes]||0)+(parseInt(et.monto)||0);
+        }
+      });
+    });
+    const meses=Object.keys(mesMap).sort();
+    const maxMonto=Math.max.apply(null,meses.map(function(m){return mesMap[m];}));
+    p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Proyecci\u00f3n</span></div>');
+    p('<h2>Proyecci\u00f3n por Etapas</h2>');
+    // Tabla mes a mes
+    p('<div style="overflow-x:auto;margin-bottom:20px;flex-shrink:0">');
+    p('<table style="width:100%;border-collapse:collapse;font-size:12px">');
+    p('<thead><tr style="border-bottom:2px solid rgba(147,51,234,.4)"><th style="text-align:left;padding:8px 12px;color:#555;font-size:10px;text-transform:uppercase;letter-spacing:1px">Mes</th>');
+    clientesConEtapas.forEach(function(c){p('<th style="text-align:right;padding:8px 12px;color:#777;font-size:10px;text-transform:uppercase;letter-spacing:.5px">'+c.name+(c.company?'<br><span style="color:#444;font-size:9px">'+c.company+'</span>':'')+'</th>');});
+    p('<th style="text-align:right;padding:8px 12px;color:var(--p);font-size:10px;text-transform:uppercase;letter-spacing:1px">Total</th></tr></thead><tbody>');
+    meses.forEach(function(mes){
+      const label=new Date(mes+'-02').toLocaleString('es-AR',{month:'long',year:'numeric'}).replace(/^\w/,function(c){return c.toUpperCase();});
+      p('<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:9px 12px;color:#ccc;font-weight:600">'+label+'</td>');
+      clientesConEtapas.forEach(function(c){
+        const et=(c.etapas||[]).find(function(e){return e.mes===mes;});
+        p('<td style="text-align:right;padding:9px 12px;color:'+(et?'#9b6dff':'#222')+';font-weight:'+(et?'700':'400')+'">'+( et?fmtM(parseInt(et.monto)):'—')+'</td>');
+      });
+      p('<td style="text-align:right;padding:9px 12px;color:#4ade80;font-weight:800;font-size:13px">'+fmtM(mesMap[mes])+'</td></tr>');
+    });
+    p('</tbody></table></div>');
+    // Barras visuales
+    p('<div style="display:flex;flex-direction:column;gap:10px;flex:1">');
+    p('<div style="font-size:10px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Facturación proyectada</div>');
+    meses.forEach(function(mes){
+      const label=new Date(mes+'-02').toLocaleString('es-AR',{month:'short',year:'2-digit'}).replace(/^\w/,function(c){return c.toUpperCase();});
+      const pct=Math.round(mesMap[mes]/maxMonto*100);
+      p('<div style="display:flex;align-items:center;gap:12px">');
+      p('<div style="width:60px;font-size:11px;color:#666;font-weight:600;flex-shrink:0">'+label+'</div>');
+      p('<div style="flex:1;background:#111;border-radius:3px;height:20px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#7c3aed,#9b6dff);border-radius:3px"></div></div>');
+      p('<div style="width:100px;text-align:right;font-size:12px;color:var(--p);font-weight:700;flex-shrink:0">'+fmtM(mesMap[mes])+'</div>');
+      p('</div>');
+    });
+    p('</div></div>');
+  }
   // S5 DETALLE
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Detalle</span></div>');
   p('<h2>Detalle de Prospectos</h2><div style="overflow-y:auto;flex:1">');
@@ -932,6 +1050,58 @@ function generarInforme(){
     p('</div>');
   }
   p('</div></div></div>');
+
+  // S_ABONOS — Facturación de abonos activos
+  const abonosActivos=abonos.filter(function(a){return a.activo;});
+  if(abonosActivos.length){
+    const totARS=abonosActivos.reduce(function(s,a){return s+(parseInt(a.montoARS)||0);},0);
+    const totUSD=abonosActivos.reduce(function(s,a){return s+(parseFloat(a.montoUSD)||0);},0);
+    const fmtARSi=function(n){return n?'$'+parseInt(n).toLocaleString('es-AR'):'—';};
+    const fmtUSDi=function(n){return n?'USD '+parseFloat(n).toLocaleString('es-AR',{minimumFractionDigits:0}):'—';};
+    // Proyección 6 meses
+    const meses6=[];
+    for(var mi=0;mi<6;mi++){var d2=new Date(now.getFullYear(),now.getMonth()+mi,1);meses6.push({label:d2.toLocaleString('es-AR',{month:'long',year:'numeric'}).replace(/^\w/,function(c){return c.toUpperCase();})});}
+    // Por PM
+    const byPM2={};abonosActivos.forEach(function(a){var pm=a.pm||'Sin PM';byPM2[pm]=byPM2[pm]||{ars:0,usd:0,n:0};byPM2[pm].ars+=parseInt(a.montoARS)||0;byPM2[pm].usd+=parseFloat(a.montoUSD)||0;byPM2[pm].n++;});
+    p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Facturación</span></div>');
+    p('<h2>Abonos Activos ('+abonosActivos.length+')</h2>');
+    p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px;flex-shrink:0">');
+    p('<div style="background:rgba(196,154,32,.08);border:1px solid rgba(196,154,32,.4);padding:18px;border-radius:4px;text-align:center">');
+    p('<div style="font-size:11px;color:#c49a20;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total ARS / mes</div>');
+    p('<div style="font-size:32px;font-weight:800;color:#c49a20;line-height:1">'+fmtARSi(totARS)+'</div></div>');
+    p('<div style="background:rgba(106,159,216,.08);border:1px solid rgba(106,159,216,.4);padding:18px;border-radius:4px;text-align:center">');
+    p('<div style="font-size:11px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total USD / mes</div>');
+    p('<div style="font-size:32px;font-weight:800;color:#6a9fd8;line-height:1">'+fmtUSDi(totUSD)+'</div></div>');
+    p('<div style="background:rgba(155,109,255,.08);border:1px solid rgba(155,109,255,.35);padding:18px;border-radius:4px">');
+    p('<div style="font-size:11px;color:#9b6dff;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Por PM</div>');
+    Object.entries(byPM2).forEach(function(e){p('<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px"><span style="color:#bbb;font-weight:600">'+e[0]+'</span><span style="color:#c49a20;font-weight:700">'+e[1].n+' · '+fmtARSi(e[1].ars)+(e[1].usd?' + '+fmtUSDi(e[1].usd):'')+'</span></div>');});
+    p('</div></div>');
+    // Proyección 6 meses
+    p('<div style="flex-shrink:0;margin-bottom:16px">');
+    p('<div style="font-size:11px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Proyecci\u00f3n — pr\u00f3ximos 6 meses (sin ajuste IPC)</div>');
+    p('<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">');
+    meses6.forEach(function(m){
+      p('<div style="background:rgba(196,154,32,.06);border:1px solid rgba(196,154,32,.25);border-radius:4px;padding:10px 8px;text-align:center">');
+      p('<div style="font-size:10px;color:#666;font-weight:700;margin-bottom:6px">'+m.label+'</div>');
+      if(totARS)p('<div style="font-size:12px;font-weight:800;color:#c49a20">'+fmtARSi(totARS)+'</div>');
+      if(totUSD)p('<div style="font-size:11px;font-weight:700;color:#6a9fd8;margin-top:2px">'+fmtUSDi(totUSD)+'</div>');
+      p('</div>');
+    });
+    p('</div></div>');
+    // Lista de abonos
+    p('<div style="overflow-y:auto;flex:1"><table style="width:100%;border-collapse:collapse;font-size:11px">');
+    p('<thead><tr style="border-bottom:2px solid rgba(196,154,32,.3)"><th style="text-align:left;padding:6px 10px;color:#555;font-size:10px;text-transform:uppercase">Cliente</th><th style="text-align:left;padding:6px 10px;color:#555;font-size:10px">PM</th><th style="text-align:left;padding:6px 10px;color:#555;font-size:10px">Plataformas</th><th style="text-align:right;padding:6px 10px;color:#555;font-size:10px">ARS</th><th style="text-align:right;padding:6px 10px;color:#555;font-size:10px">USD</th></tr></thead><tbody>');
+    abonosActivos.forEach(function(a){
+      p('<tr style="border-bottom:1px solid rgba(255,255,255,.04)">');
+      p('<td style="padding:7px 10px"><strong style="color:#fff">'+a.name+'</strong>'+(a.company?'<br><span style="font-size:9px;color:#444">'+a.company+'</span>':'')+'</td>');
+      p('<td style="padding:7px 10px;color:#888;font-size:11px">'+(a.pm||'—')+'</td>');
+      p('<td style="padding:7px 10px;color:#555;font-size:10px">'+((a.plataformas||[]).join(', ')||'—')+'</td>');
+      p('<td style="text-align:right;padding:7px 10px;color:#c49a20;font-weight:700">'+(a.montoARS?fmtARSi(parseInt(a.montoARS)):'—')+'</td>');
+      p('<td style="text-align:right;padding:7px 10px;color:#6a9fd8;font-weight:700">'+(a.montoUSD?fmtUSDi(parseFloat(a.montoUSD)):'—')+'</td>');
+      p('</tr>');
+    });
+    p('</tbody></table></div></div>');
+  }
   // S7 LC CONSUMO (si hay datos del período)
   const lcPeriodo=(()=>{
     const sorted=[...lcData.periodos].sort((a,b)=>b.id.localeCompare(a.id));
@@ -942,7 +1112,8 @@ function generarInforme(){
     }
     return sorted[0]||null;
   })();
-  const totalSlides=lcPeriodo?7:6;
+  const clientesConEtapas2=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
+  const totalSlides=lcPeriodo?(clientesConEtapas2.length?8:7):(clientesConEtapas2.length?7:6);
   if(lcPeriodo){
     const fmtARS=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
     const fmtUSD=n=>n?'USD '+parseFloat(n).toLocaleString('es-AR',{minimumFractionDigits:0}):'—';
@@ -1102,6 +1273,7 @@ async function render(){
   const app=document.getElementById('app');
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
   if(st.view==='nuevos'){app.innerHTML=rNuevosList();if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());bind();bindNuevos();return;}
+  if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
   if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
   app.innerHTML=st.view==='list'?rList():rDetail();
   if(st.showNotifPanel)app.insertAdjacentHTML('beforeend',rNotifPanel());
@@ -1328,6 +1500,7 @@ function rList(){
       <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
       <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters">⚡ Filtros${haf?' ●':''}</button>
       <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
+      <button class="btn-sm" id="btn-go-abonos" style="background:rgba(196,154,32,.1);border-color:rgba(196,154,32,.4);color:var(--yellow);font-weight:800">💰 Abonos${abonos.filter(a=>a.activo).length?` <span style="background:var(--yellow);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${abonos.filter(a=>a.activo).length}</span>`:''}</button>
       <button class="btn-sm" id="btn-go-nuevos" style="background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
       <button class="btn-sm" id="btn-generar-informe" style="background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:var(--gold);font-weight:800">📊 Informe</button>
       <button class="btn-sm" id="btn-open-lc" style="background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800">💳 LC</button>
@@ -2204,6 +2377,45 @@ function rPipe(c){
     <div style="background:${co}18;border:1px solid ${co}35;border-radius:8px;padding:9px 12px;font-size:11px;color:${co};margin-bottom:14px;display:flex;align-items:center;gap:6px;font-weight:600">
       <span class="dot" style="background:${co}"></span>${ula(d,c.estado)}
     </div>
+    ${c.estado==='Cerrada'?`
+    <hr class="divider">
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>📈 Proyección por etapas</span>
+      <span style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:lowercase;letter-spacing:0">hasta 3 etapas</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+      ${[0,1,2].map(i=>{
+        const et=(c.etapas||[])[i]||{};
+        return `<div style="display:grid;grid-template-columns:28px 1fr 1fr auto;gap:6px;align-items:center">
+          <span style="font-size:9px;color:var(--text-muted);font-weight:700;text-align:center">E${i+1}</span>
+          <input class="field-input" id="pip-etapa-mes-${i}" type="month" value="${et.mes||''}" placeholder="Mes" style="font-size:11px;padding:7px 10px">
+          <input class="field-input" id="pip-etapa-monto-${i}" value="${et.monto?parseInt(et.monto).toLocaleString('es-AR'):''}" placeholder="Monto" style="font-size:11px;padding:7px 10px" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9.]/g,'')">
+          <span style="font-size:11px;color:var(--text-muted);font-weight:600">${c.moneda||'ARS'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn-sm btn-gold" id="btn-save-etapas" style="width:100%;justify-content:center;margin-bottom:4px">💾 Guardar etapas</button>
+    `:''}
+    ${c.bajaDate?`
+    <hr class="divider">
+    <div style="background:rgba(217,95,95,.08);border:1px solid rgba(217,95,95,.25);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:9px;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">⬇ Baja registrada</div>
+        <div style="font-size:11px;color:var(--text2);font-weight:600">${fmtDate(c.bajaDate)}${c.bajaMonto?' · $'+parseInt(c.bajaMonto).toLocaleString('es-AR'):''} ${c.moneda||''}</div>
+        ${c.bajaMotivo?`<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${c.bajaMotivo}</div>`:''}
+      </div>
+      <button class="btn-sm" id="btn-clear-baja" style="color:var(--red);border-color:rgba(217,95,95,.3);flex-shrink:0">✕</button>
+    </div>
+    `:`
+    <hr class="divider">
+    <div class="section-title">⬇ Registrar baja</div>
+    <div class="field-row">
+      <div class="field"><label class="field-label">Fecha de baja</label><input class="field-input" id="pip-baja-date" type="date" value=""></div>
+      <div class="field"><label class="field-label">Monto mensual perdido</label><input class="field-input" id="pip-baja-monto" placeholder="800.000" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9.]/g,'')"></div>
+    </div>
+    <div class="field"><label class="field-label">Motivo (opcional)</label><input class="field-input" id="pip-baja-motivo" placeholder="Ej: presupuesto, competencia, pausa..."></div>
+    <button class="btn-sm" id="btn-save-baja" style="color:var(--red);border-color:rgba(217,95,95,.35);background:rgba(217,95,95,.07);width:100%;justify-content:center;margin-bottom:4px">⬇ Registrar baja</button>
+    `}
     <hr class="divider">
     ${rFollowupDate(c)}
     <hr class="divider">
@@ -2461,7 +2673,8 @@ function bind(){
       }
     },{once:false});
   }
-  $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render()});
+  $('#btn-go-abonos')?.addEventListener('click',()=>{st.view='abonos';render();});
+  $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render();});
   $('#btn-generar-informe')?.addEventListener('click',generarInforme);
   // LC Modal
   $('#btn-open-lc')?.addEventListener('click',()=>{
@@ -2675,6 +2888,32 @@ function bind(){
   // Pipeline
   $('#btn-save-pip')?.addEventListener('click',async()=>{await savePip();toast('Guardado ✓')});
   $('#btn-contacte-hoy')?.addEventListener('click',async()=>{const c=gc();if(!c)return;c.lastContact=new Date().toISOString().split('T')[0];await savePip();render()});
+  // Etapas
+  $('#btn-save-etapas')?.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    c.etapas=[0,1,2].map(i=>{
+      const mes=document.getElementById('pip-etapa-mes-'+i)?.value||'';
+      const montoRaw=document.getElementById('pip-etapa-monto-'+i)?.value.replace(/\./g,'')||'';
+      const monto=parseInt(montoRaw)||0;
+      return mes||monto?{mes,monto}:null;
+    }).filter(Boolean);
+    await sv(c);toast('📈 Etapas guardadas ✓');render();
+  });
+  // Baja
+  $('#btn-save-baja')?.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    const fecha=document.getElementById('pip-baja-date')?.value;
+    if(!fecha){toast('Seleccioná una fecha de baja');return;}
+    c.bajaDate=fecha;
+    c.bajaMonto=document.getElementById('pip-baja-monto')?.value.replace(/\./g,'')||'';
+    c.bajaMotivo=document.getElementById('pip-baja-motivo')?.value.trim()||'';
+    await sv(c);toast('⬇ Baja registrada');render();
+  });
+  $('#btn-clear-baja')?.addEventListener('click',async()=>{
+    const c=gc();if(!c)return;
+    c.bajaDate='';c.bajaMonto='';c.bajaMotivo='';
+    await sv(c);toast('Baja eliminada');render();
+  });
   // Follow-up date
   $('#btn-save-followup')?.addEventListener('click',async()=>{
     const c=gc();if(!c)return;
@@ -3069,6 +3308,188 @@ async function saveEdit(){
   toast('Cambios guardados ✓');
   render();
 }
+
+// ── ABONOS — RENDER ──
+function rAbonosList(){
+  const activos=abonos.filter(a=>a.activo);
+  const inactivos=abonos.filter(a=>!a.activo);
+  const totalARS=activos.reduce((s,a)=>s+(parseInt(a.montoARS)||0),0);
+  const totalUSD=activos.reduce((s,a)=>s+(parseFloat(a.montoUSD)||0),0);
+  const fmtARS=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
+  const fmtUSD=n=>n?'USD '+parseFloat(n).toLocaleString('es-AR',{minimumFractionDigits:0}):'—';
+  // Proyección: 6 meses desde hoy
+  const now=new Date();
+  const meses=[];
+  for(let i=0;i<6;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    meses.push({key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,label:d.toLocaleString('es-AR',{month:'short',year:'2-digit'}).replace(/^\w/,c=>c.toUpperCase())});
+  }
+  // Por PM
+  const byPM={};activos.forEach(a=>{const p=a.pm||'Sin PM';byPM[p]=(byPM[p]||{ars:0,usd:0,n:0});byPM[p].ars+=parseInt(a.montoARS)||0;byPM[p].usd+=parseFloat(a.montoUSD)||0;byPM[p].n++;});
+  return`
+  <div class="header" style="position:sticky;top:0;z-index:100">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn-back" id="btn-abonos-back">← Volver</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:15px;font-weight:800;color:var(--yellow);letter-spacing:-.3px">💰 Abonos Activos</div>
+        <span style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px">/ Proyección</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn-sm" id="btn-abono-ipc" style="color:var(--yellow);border-color:rgba(196,154,32,.4);background:rgba(196,154,32,.07)">📈 Ajuste IPC</button>
+      <button class="btn-sm" id="btn-abono-import" style="color:var(--gold);border-color:rgba(155,109,255,.4);background:var(--gold-dim)">✦ Importar captura</button>
+      <button class="btn-add" id="btn-abono-nuevo" style="background:linear-gradient(135deg,#c49a20,#a07a10)">+ Abono</button>
+    </div>
+  </div>
+  <div class="gold-bar" style="background:linear-gradient(90deg,transparent,var(--yellow),transparent)"></div>
+  <!-- STATS -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 14px 0">
+    <div class="stat"><div class="stat-n" style="color:var(--yellow)">${activos.length}</div><div class="stat-l">Activos</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--green);font-size:16px">${fmtARS(totalARS)}</div><div class="stat-l">Total ARS/mes</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--blue);font-size:16px">${fmtUSD(totalUSD)}</div><div class="stat-l">Total USD/mes</div></div>
+    <div class="stat" style="cursor:pointer" id="stat-pm-block">
+      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Por PM</div>
+      ${Object.entries(byPM).map(([pm,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px"><span style="color:var(--text2);font-weight:600">${pm}</span><span style="color:var(--yellow);font-weight:700">${v.n} clientes</span></div>`).join('')}
+    </div>
+  </div>
+  <!-- PROYECCIÓN 6 MESES -->
+  <div style="padding:14px 14px 0">
+    <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Proyección de facturación — próximos 6 meses</div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+      ${meses.map(m=>`
+        <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${m.label}</div>
+          ${totalARS>0?`<div style="font-size:11px;font-weight:800;color:var(--yellow);line-height:1.2">${fmtARS(totalARS)}</div>`:''}
+          ${totalUSD>0?`<div style="font-size:10px;font-weight:700;color:var(--blue);margin-top:2px">${fmtUSD(totalUSD)}</div>`:''}
+        </div>`).join('')}
+    </div>
+  </div>
+  <!-- LISTA DE ABONOS -->
+  <div style="padding:14px 14px 120px">
+    ${activos.length===0?`<div class="empty"><div class="empty-icon">💰</div><div style="font-size:12px;margin-bottom:8px">Sin abonos cargados</div><div style="font-size:11px;color:var(--text-muted)">Importá una captura o agregá uno manualmente</div></div>`
+    :`<div style="display:flex;flex-direction:column;gap:6px">
+      ${activos.map(a=>`
+        <div class="card" style="padding:12px 14px 12px 16px" data-abonoid="${a.id}">
+          <div class="card-bar" style="background:var(--yellow)"></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${a.name}${a.company?` <span style="font-size:10px;color:var(--text-muted);font-weight:500">· ${a.company}</span>`:''}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;align-items:center">
+                ${a.pm?`<span style="font-size:9px;color:var(--text-muted);font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px">👤 ${a.pm}</span>`:''}
+                ${(a.plataformas||[]).map(p=>`<span style="font-size:9px;color:var(--text-muted);font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px">${p}</span>`).join('')}
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              ${a.montoARS?`<div style="font-size:14px;font-weight:800;color:var(--yellow)">$${parseInt(a.montoARS).toLocaleString('es-AR')}</div>`:''}
+              ${a.montoUSD?`<div style="font-size:12px;font-weight:700;color:var(--blue)">USD ${parseFloat(a.montoUSD).toLocaleString('es-AR')}</div>`:''}
+              ${a.historialIPC&&a.historialIPC.length?`<div style="font-size:8px;color:var(--text-muted);margin-top:2px">IPC x${a.historialIPC.length}</div>`:''}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn-sm btn-edit-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px">✏ Editar</button>
+            <button class="btn-sm btn-baja-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:var(--red);border-color:rgba(217,95,95,.3)">⬇ Dar de baja</button>
+          </div>
+        </div>`).join('')}
+    </div>`}
+    ${inactivos.length?`
+      <div style="margin-top:20px">
+        <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Inactivos (${inactivos.length})</div>
+        ${inactivos.map(a=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;opacity:.5;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--text-muted)">${a.name}${a.company?' · '+a.company:''}</span>
+          <button class="btn-sm btn-reactivar-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:var(--green);border-color:rgba(74,171,122,.3)">↑ Reactivar</button>
+        </div>`).join('')}
+      </div>`:''
+    }
+  </div>
+  ${st.showAbonoModal?rAbonoModal():''}
+  ${st.showAbonoImport?rAbonoImportModal():''}
+  ${st.showAbonoIPC?rAbonoIPCModal():''}
+  `;
+}
+
+function rAbonoModal(){
+  const a=st.editingAbono?abonos.find(x=>x.id===st.editingAbono):null;
+  const pms=['Salma','Lucas','Caro'];
+  const plats=['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn','CM y Diseño','Filmmaker','CRM'];
+  return`<div class="modal-overlay" id="abono-modal-overlay">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">${a?'✏ Editar abono':'+ Nuevo abono'}</div>
+      <div class="field"><label class="field-label">Nombre</label><input class="field-input" id="ab-name" value="${a?.name||''}" placeholder="Nombre del cliente"></div>
+      <div class="field"><label class="field-label">Empresa</label><input class="field-input" id="ab-company" value="${a?.company||''}" placeholder="Razón social (opcional)"></div>
+      <div class="field"><label class="field-label">PM asignado</label>
+        <div class="needs-grid">${pms.map(p=>`<div class="need-toggle ${(a?.pm||'')==p?'on':''}" data-abpm="${p}">${p}</div>`).join('')}</div>
+      </div>
+      <div class="field"><label class="field-label">Plataformas</label>
+        <div class="needs-grid">${plats.map(p=>`<div class="need-toggle ${(a?.plataformas||[]).includes(p)?'on':''}" data-abplat="${p}">${p}</div>`).join('')}</div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Abono ARS/mes</label><input class="field-input" id="ab-monto-ars" value="${a?.montoARS?parseInt(a.montoARS).toLocaleString('es-AR'):''}" placeholder="0" inputmode="numeric"></div>
+        <div class="field"><label class="field-label">Abono USD/mes</label><input class="field-input" id="ab-monto-usd" value="${a?.montoUSD||''}" placeholder="0" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label class="field-label">Fecha de inicio</label><input class="field-input" id="ab-fecha" type="date" value="${a?.fechaInicio||new Date().toISOString().split('T')[0]}"></div>
+      <button class="btn-primary" id="btn-ab-save">Guardar abono</button>
+      <button class="btn-outline" id="btn-ab-cancel">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+function rAbonoImportModal(){
+  return`<div class="modal-overlay" id="abono-import-overlay">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">✦ Importar desde captura</div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">Subí una imagen de tu listado (Excel, planilla, captura de pantalla). La IA extrae nombre, PM, plataformas y abono automáticamente.</p>
+      <div id="ab-import-drop" style="border:2px dashed var(--border2);border-radius:10px;padding:28px;text-align:center;cursor:pointer;margin-bottom:12px;transition:border-color .2s" onclick="document.getElementById('ab-import-file').click()">
+        <div style="font-size:24px;margin-bottom:6px">📷</div>
+        <div style="font-size:12px;color:var(--text-muted);font-weight:600">${st.abonoImportFile?'✓ '+st.abonoImportFile:'Tap para seleccionar imagen'}</div>
+      </div>
+      <input type="file" id="ab-import-file" accept="image/*" style="display:none">
+      ${st.abonoImportLoading?`<div class="ai-box loading" style="margin-bottom:12px"><div class="spinner"></div>Analizando imagen...</div>`:''}
+      ${st.abonoImportPreview&&!st.abonoImportLoading?`
+        <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px;max-height:280px;overflow-y:auto;margin-bottom:12px">
+          <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Vista previa — ${st.abonoImportPreview.length} clientes detectados</div>
+          ${st.abonoImportPreview.map((a,i)=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px">
+              <div><div style="font-weight:700;color:var(--text)">${a.name}${a.company?' · '+a.company:''}</div>
+              <div style="color:var(--text-muted);font-size:10px">${a.pm?'👤 '+a.pm+' · ':''}${(a.plataformas||[]).join(', ')}</div></div>
+              <div style="text-align:right">${a.montoARS?'<div style="color:var(--yellow);font-weight:700">$'+parseInt(a.montoARS).toLocaleString('es-AR')+'</div>':''}${a.montoUSD?'<div style="color:var(--blue);font-weight:700">USD '+a.montoUSD+'</div>':''}</div>
+            </div>`).join('')}
+        </div>
+        <button class="btn-primary" id="btn-ab-import-confirm">✓ Importar ${st.abonoImportPreview.length} clientes</button>
+      `:''}
+      <button class="btn-outline" id="btn-ab-import-cancel">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+function rAbonoIPCModal(){
+  const activos=abonos.filter(a=>a.activo);
+  return`<div class="modal-overlay" id="abono-ipc-overlay">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">📈 Ajuste por IPC</div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">Ingresá el porcentaje de aumento y se aplica a <strong style="color:var(--yellow)">${activos.length} clientes activos</strong>. El historial queda registrado.</p>
+      <div class="field"><label class="field-label">% de aumento</label>
+        <div style="position:relative">
+          <input class="field-input" id="ipc-pct" type="number" min="0" max="200" step="0.1" placeholder="Ej: 4.2" style="padding-right:36px">
+          <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-weight:700">%</span>
+        </div>
+      </div>
+      <div class="field"><label class="field-label">Aplica a</label>
+        <div class="needs-grid" style="margin-bottom:4px">
+          <div class="need-toggle on" id="ipc-todos" data-ipcfiltro="todos">Todos</div>
+          <div class="need-toggle" id="ipc-ars" data-ipcfiltro="ars">Solo ARS</div>
+        </div>
+      </div>
+      <div class="field"><label class="field-label">Nota (opcional)</label><input class="field-input" id="ipc-nota" placeholder="Ej: IPC Mayo 2026"></div>
+      <div id="ipc-preview" style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--text-muted)">Ingresá un porcentaje para ver la proyección</div>
+      <button class="btn-primary" id="btn-ipc-apply" style="background:linear-gradient(135deg,#c49a20,#a07a10)">📈 Aplicar ajuste</button>
+      <button class="btn-outline" id="btn-ipc-cancel">Cancelar</button>
+    </div>
+  </div>`;
+}
+
 
 // ── CLIENTES NUEVOS — RENDER ──
 function rNuevosList(){
@@ -3547,6 +3968,137 @@ Respondé SOLO con el mail completo empezando por "Asunto:". Sin explicaciones n
 }
 
 // ── BIND NUEVOS ──
+function bindAbonos(){
+  const $=s=>document.querySelector(s);
+  const $$=s=>[...document.querySelectorAll(s)];
+  $('#btn-abonos-back')?.addEventListener('click',()=>{st.view='list';render();});
+  $('#btn-abono-nuevo')?.addEventListener('click',()=>{st.editingAbono=null;st.showAbonoModal=true;render();});
+  $('#btn-abono-import')?.addEventListener('click',()=>{st.showAbonoImport=true;st.abonoImportPreview=null;st.abonoImportFile=null;st.abonoImportLoading=false;render();});
+  $('#btn-abono-ipc')?.addEventListener('click',()=>{st.showAbonoIPC=true;render();});
+  // Edit/baja/reactivar
+  $$('.btn-edit-abono').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();st.editingAbono=b.dataset.abonoid;st.showAbonoModal=true;render();}));
+  $$('.btn-baja-abono').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const a=abonos.find(x=>x.id===b.dataset.abonoid);if(!a)return;
+    a.activo=false;await svAbono(a);toast('⬇ Abono dado de baja');render();
+  }));
+  $$('.btn-reactivar-abono').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const a=abonos.find(x=>x.id===b.dataset.abonoid);if(!a)return;
+    a.activo=true;await svAbono(a);toast('↑ Abono reactivado');render();
+  }));
+  // Modal nuevo/editar
+  $('#btn-ab-save')?.addEventListener('click',async()=>{
+    const $g=id=>document.getElementById(id);
+    const name=$g('ab-name')?.value.trim();if(!name){toast('Ingresá el nombre');return;}
+    const pm=document.querySelector('[data-abpm].on')?.dataset.abpm||'';
+    const plataformas=[...document.querySelectorAll('[data-abplat].on')].map(t=>t.dataset.abplat);
+    const montoARS=parseInt(($g('ab-monto-ars')?.value||'').replace(/\./g,''))||0;
+    const montoUSD=parseFloat($g('ab-monto-usd')?.value||'')||0;
+    const fechaInicio=$g('ab-fecha')?.value||new Date().toISOString().split('T')[0];
+    if(st.editingAbono){
+      const a=abonos.find(x=>x.id===st.editingAbono);
+      if(a){Object.assign(a,{name,pm,plataformas,montoARS,montoUSD,fechaInicio});await svAbono(a);}
+    } else {
+      const a=ncAbono({name,company:$g('ab-company')?.value.trim()||'',pm,plataformas,montoARS,montoUSD,fechaInicio});
+      abonos.push(a);await svAbono(a);
+    }
+    st.showAbonoModal=false;st.editingAbono=null;toast('Abono guardado ✓');render();
+  });
+  $('#btn-ab-cancel')?.addEventListener('click',()=>{st.showAbonoModal=false;st.editingAbono=null;render();});
+  document.getElementById('abono-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='abono-modal-overlay'){st.showAbonoModal=false;st.editingAbono=null;render();}});
+  // Toggle PM y plataformas en modal
+  document.querySelectorAll('[data-abpm]').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('[data-abpm]').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+  }));
+  document.querySelectorAll('[data-abplat]').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+  // Import modal
+  $('#btn-ab-import-cancel')?.addEventListener('click',()=>{st.showAbonoImport=false;render();});
+  document.getElementById('abono-import-overlay')?.addEventListener('click',e=>{if(e.target.id==='abono-import-overlay'){st.showAbonoImport=false;render();}});
+  document.getElementById('ab-import-file')?.addEventListener('change',async e=>{
+    const file=e.target.files[0];if(!file)return;
+    st.abonoImportFile=file.name;st.abonoImportLoading=true;st.abonoImportPreview=null;render();
+    try{
+      const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+      const key=localStorage.getItem('avalon_api_key')||'';
+      if(!key){toast('Necesitás configurar la API key');st.abonoImportLoading=false;render();return;}
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+            {type:'text',text:'Analizá esta imagen de un listado de clientes. Extraé cada cliente con: nombre, empresa (si hay), PM asignado, plataformas (Meta Ads, Google Ads, TikTok Ads, Pinterest, LinkedIn, CM y Diseño, Filmmaker, CRM), abono en ARS y/o USD por mes. Respondé SOLO con JSON válido, sin explicaciones ni markdown. Formato: [{"name":"...","company":"...","pm":"...","plataformas":["..."],"montoARS":0,"montoUSD":0}]. Si un campo no está claro usá string vacío o 0.'}
+          ]}]
+        })
+      });
+      const data=await resp.json();
+      const txt=data.content?.[0]?.text||'[]';
+      const clean=txt.replace(/```json|```/g,'').trim();
+      const parsed=JSON.parse(clean);
+      st.abonoImportPreview=Array.isArray(parsed)?parsed:[];
+    }catch(err){toast('Error al procesar imagen: '+err.message);console.error(err);}
+    st.abonoImportLoading=false;render();
+  });
+  $('#btn-ab-import-confirm')?.addEventListener('click',async()=>{
+    if(!st.abonoImportPreview?.length)return;
+    let added=0;
+    for(const d of st.abonoImportPreview){
+      if(!d.name)continue;
+      const a=ncAbono(d);abonos.push(a);await svAbono(a);added++;
+    }
+    st.showAbonoImport=false;st.abonoImportPreview=null;
+    toast(`✓ ${added} abonos importados`);render();
+  });
+  // IPC modal
+  $('#btn-ipc-cancel')?.addEventListener('click',()=>{st.showAbonoIPC=false;render();});
+  document.getElementById('abono-ipc-overlay')?.addEventListener('click',e=>{if(e.target.id==='abono-ipc-overlay'){st.showAbonoIPC=false;render();}});
+  document.querySelectorAll('[data-ipcfiltro]').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('[data-ipcfiltro]').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    recalcIPCPreview();
+  }));
+  document.getElementById('ipc-pct')?.addEventListener('input',recalcIPCPreview);
+  $('#btn-ipc-apply')?.addEventListener('click',async()=>{
+    const pct=parseFloat(document.getElementById('ipc-pct')?.value||'0');
+    if(!pct||pct<=0){toast('Ingresá un porcentaje válido');return;}
+    const filtro=document.querySelector('[data-ipcfiltro].on')?.dataset.ipcfiltro||'todos';
+    const nota=document.getElementById('ipc-nota')?.value.trim()||`IPC +${pct}%`;
+    const fecha=new Date().toISOString().split('T')[0];
+    const activos=abonos.filter(a=>a.activo);
+    for(const a of activos){
+      const mult=1+pct/100;
+      if(a.montoARS&&(filtro==='todos'||filtro==='ars'))a.montoARS=Math.round(a.montoARS*mult);
+      if(a.montoUSD&&filtro==='todos')a.montoUSD=parseFloat((a.montoUSD*mult).toFixed(2));
+      a.historialIPC=a.historialIPC||[];
+      a.historialIPC.push({fecha,pct,nota});
+      await svAbono(a);
+    }
+    st.showAbonoIPC=false;
+    toast(`📈 IPC +${pct}% aplicado a ${activos.length} clientes ✓`);render();
+  });
+}
+function recalcIPCPreview(){
+  const pct=parseFloat(document.getElementById('ipc-pct')?.value||'0');
+  const div=document.getElementById('ipc-preview');if(!div)return;
+  if(!pct||pct<=0){div.textContent='Ingresá un porcentaje para ver la proyección';return;}
+  const filtro=document.querySelector('[data-ipcfiltro].on')?.dataset.ipcfiltro||'todos';
+  const activos=abonos.filter(a=>a.activo);
+  const totARS=activos.reduce((s,a)=>s+(parseInt(a.montoARS)||0),0);
+  const totUSD=activos.reduce((s,a)=>s+(parseFloat(a.montoUSD)||0),0);
+  const mult=1+pct/100;
+  const newARS=filtro==='todos'||filtro==='ars'?Math.round(totARS*mult):totARS;
+  const newUSD=filtro==='todos'?parseFloat((totUSD*mult).toFixed(2)):totUSD;
+  const fmtARS=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
+  const fmtUSD=n=>n?'USD '+n.toLocaleString('es-AR',{minimumFractionDigits:0}):'—';
+  div.innerHTML=`<div style="display:flex;gap:16px;flex-wrap:wrap">
+    ${totARS?`<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-bottom:2px">ARS actual → nuevo</div><div style="font-size:12px;color:var(--yellow);font-weight:700">${fmtARS(totARS)} → ${fmtARS(newARS)} <span style="color:var(--green);font-size:10px">(+${fmtARS(newARS-totARS)})</span></div></div>`:''}
+    ${totUSD&&filtro!=='ars'?`<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-bottom:2px">USD actual → nuevo</div><div style="font-size:12px;color:var(--blue);font-weight:700">${fmtUSD(totUSD)} → ${fmtUSD(newUSD)} <span style="color:var(--green);font-size:10px">(+${fmtUSD(newUSD-totUSD)})</span></div></div>`:''}
+  </div>`;
+}
+
+
 function bindNuevos(){
   const $=s=>document.querySelector(s);
   const $$=s=>document.querySelectorAll(s);
@@ -3680,6 +4232,7 @@ async function initApp(){
   await loadC();
   await loadNC();
   await loadLC();
+  await loadAbonos();
   st.sbLoading=false;
   render();
   setTimeout(requestNotifPermission,2000);
