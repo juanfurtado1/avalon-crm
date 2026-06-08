@@ -47,6 +47,7 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .filters::-webkit-scrollbar{display:none}
 .filt{display:none}
 .filt.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+.ab-drag-card.drag-over{border-color:var(--yellow)!important;box-shadow:0 0 0 2px rgba(196,154,32,.35),0 8px 40px rgba(196,154,32,.15)!important;transform:translateY(-3px)}
 .cards{padding:12px 14px 120px;display:flex;flex-direction:column;gap:8px}
 .card{background:linear-gradient(155deg,#181828 0%,#0c0c16 100%);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:13px 13px 13px 17px;position:relative;cursor:pointer;transition:border-color .2s,box-shadow .25s,transform .2s;box-shadow:0 4px 24px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06)}
 .card::before{content:'';position:absolute;top:0;left:4px;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent);pointer-events:none}
@@ -615,7 +616,7 @@ function nc(d={}){
 
 // ── STATE ──
 let st={
-  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',
+  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',abonoOrdenCustom:[],
   showNewModal:false,showEditModal:false,showFilters:false,showApiModal:false,showSbModal:false,
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   calOpen:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
@@ -3327,11 +3328,20 @@ function rAbonosList(){
     }
     return parseInt(a.montoARS||0);
   };
+  // Inicializar orden custom si no existe o tiene IDs distintos
+  if(!st.abonoOrdenCustom.length||st.abonoOrdenCustom.length!==activosFilt.length){
+    st.abonoOrdenCustom=activosFilt.map(a=>a.id);
+  }
   const activos=[...activosFilt].sort((a,b)=>{
     if(st.abonoSort==='az')return a.name.localeCompare(b.name,'es');
     if(st.abonoSort==='za')return b.name.localeCompare(a.name,'es');
     if(st.abonoSort==='mayor')return getMontoSort(b)-getMontoSort(a);
     if(st.abonoSort==='menor')return getMontoSort(a)-getMontoSort(b);
+    if(st.abonoSort==='custom'){
+      const ia=st.abonoOrdenCustom.indexOf(a.id);
+      const ib=st.abonoOrdenCustom.indexOf(b.id);
+      return (ia===-1?999:ia)-(ib===-1?999:ib);
+    }
     return 0; // default: orden de carga
   });
   const inactivos=abonos.filter(a=>!a.activo);
@@ -3366,8 +3376,8 @@ function rAbonosList(){
   <!-- SORT + FILTRO PM -->
   <div style="display:flex;gap:6px;padding:10px 14px 0;align-items:center;flex-wrap:wrap">
     <span style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">Ordenar:</span>
-    ${['default','az','za','mayor','menor'].map(s=>{
-      const labels={default:'Por defecto',az:'A → Z',za:'Z → A',mayor:'Mayor precio',menor:'Menor precio'};
+    ${['default','az','za','mayor','menor','custom'].map(s=>{
+      const labels={default:'Por defecto',az:'A → Z',za:'Z → A',mayor:'Mayor precio',menor:'Menor precio',custom:'✋ Personalizado'};
       return`<button class="filter-chip ${st.abonoSort===s?'on':''}" data-absort="${s}" style="font-size:9px;padding:3px 8px">${labels[s]}</button>`;
     }).join('')}
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
@@ -3414,8 +3424,9 @@ function rAbonosList(){
           if(pasadas.length){const ult=pasadas[pasadas.length-1];montoActual=ult.montoARS||0;montoUSDActual=ult.montoUSD||0;}
           else if(etapas[0]){montoActual=etapas[0].montoARS||0;montoUSDActual=etapas[0].montoUSD||0;}
         }
-        return`<div class="card" style="padding:12px 14px 12px 16px" data-abonoid="${a.id}">
+        return`<div class="card ab-drag-card" style="padding:12px 14px 12px 16px;${st.abonoSort==='custom'?'cursor:grab':''}" data-abonoid="${a.id}" draggable="${st.abonoSort==='custom'}">
           <div class="card-bar" style="background:${esEtapas?'var(--blue)':'var(--yellow)'}"></div>
+          ${st.abonoSort==='custom'?`<div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--border2);font-size:16px;pointer-events:none;letter-spacing:-2px">⋮⋮</div>`:''}
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -4056,7 +4067,48 @@ function bindAbonos(){
   const $$=s=>[...document.querySelectorAll(s)];
   $('#btn-abonos-back')?.addEventListener('click',()=>{st.view='list';render();});
   // Sort y filtro PM
-  document.querySelectorAll('[data-absort]').forEach(b=>b.addEventListener('click',()=>{st.abonoSort=b.dataset.absort;render();}));
+  document.querySelectorAll('[data-absort]').forEach(b=>b.addEventListener('click',()=>{
+    const prev=st.abonoSort;
+    st.abonoSort=b.dataset.absort;
+    // Al activar custom por primera vez, tomar el orden actual visible
+    if(b.dataset.absort==='custom'&&prev!=='custom'){
+      const cards=[...document.querySelectorAll('.ab-drag-card')];
+      if(cards.length)st.abonoOrdenCustom=cards.map(c=>c.dataset.abonoid);
+    }
+    render();
+  }));
+  // Drag & drop para orden personalizado
+  let dragSrcId=null;
+  document.querySelectorAll('.ab-drag-card').forEach(card=>{
+    if(st.abonoSort!=='custom')return;
+    card.addEventListener('dragstart',e=>{
+      dragSrcId=card.dataset.abonoid;
+      card.style.opacity='0.4';
+      e.dataTransfer.effectAllowed='move';
+    });
+    card.addEventListener('dragend',()=>{
+      card.style.opacity='1';
+      document.querySelectorAll('.ab-drag-card').forEach(c=>c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover',e=>{
+      e.preventDefault();e.dataTransfer.dropEffect='move';
+      document.querySelectorAll('.ab-drag-card').forEach(c=>c.classList.remove('drag-over'));
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
+    card.addEventListener('drop',e=>{
+      e.preventDefault();
+      if(!dragSrcId||dragSrcId===card.dataset.abonoid)return;
+      const arr=[...st.abonoOrdenCustom];
+      const fromIdx=arr.indexOf(dragSrcId);
+      const toIdx=arr.indexOf(card.dataset.abonoid);
+      if(fromIdx===-1||toIdx===-1)return;
+      arr.splice(fromIdx,1);
+      arr.splice(toIdx,0,dragSrcId);
+      st.abonoOrdenCustom=arr;
+      render();
+    });
+  });
   document.querySelectorAll('[data-abpm-filt]').forEach(b=>b.addEventListener('click',()=>{st.abonoFiltPM=b.dataset.abpmFilt;render();}));
   $('#btn-abono-nuevo')?.addEventListener('click',()=>{st.editingAbono=null;st.showAbonoModal=true;st.abonoTipoEtapas=null;render();});
   $('#btn-abono-import')?.addEventListener('click',()=>{st.showAbonoImport=true;st.abonoImportPreview=null;st.abonoImportFile=null;st.abonoImportLoading=false;render();});
