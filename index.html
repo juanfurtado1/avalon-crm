@@ -615,7 +615,7 @@ function nc(d={}){
 
 // ── STATE ──
 let st={
-  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,
+  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',
   showNewModal:false,showEditModal:false,showFilters:false,showApiModal:false,showSbModal:false,
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   calOpen:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
@@ -3313,7 +3313,27 @@ async function saveEdit(){
 
 // ── ABONOS — RENDER ──
 function rAbonosList(){
-  const activos=abonos.filter(a=>a.activo);
+  const pms=['Salma','Lucas','Caro'];
+  // Filtro PM
+  let activosFilt=abonos.filter(a=>a.activo);
+  if(st.abonoFiltPM)activosFilt=activosFilt.filter(a=>a.pm===st.abonoFiltPM);
+  // Sort
+  const getMontoSort=a=>{
+    if(a.tipoAbono==='etapas'&&(a.etapasAbono||[]).length){
+      const now2=new Date();const hoy=`${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}`;
+      const pasadas=(a.etapasAbono||[]).filter(e=>e.mes&&e.mes<=hoy);
+      const ult=pasadas.length?pasadas[pasadas.length-1]:a.etapasAbono[0];
+      return parseInt(ult?.montoARS||0);
+    }
+    return parseInt(a.montoARS||0);
+  };
+  const activos=[...activosFilt].sort((a,b)=>{
+    if(st.abonoSort==='az')return a.name.localeCompare(b.name,'es');
+    if(st.abonoSort==='za')return b.name.localeCompare(a.name,'es');
+    if(st.abonoSort==='mayor')return getMontoSort(b)-getMontoSort(a);
+    if(st.abonoSort==='menor')return getMontoSort(a)-getMontoSort(b);
+    return 0; // default: orden de carga
+  });
   const inactivos=abonos.filter(a=>!a.activo);
   const totalARS=activos.reduce((s,a)=>s+(parseInt(a.montoARS)||0),0);
   const totalUSD=activos.reduce((s,a)=>s+(parseFloat(a.montoUSD)||0),0);
@@ -3343,6 +3363,19 @@ function rAbonosList(){
     </div>
   </div>
   <div class="gold-bar" style="background:linear-gradient(90deg,transparent,var(--yellow),transparent)"></div>
+  <!-- SORT + FILTRO PM -->
+  <div style="display:flex;gap:6px;padding:10px 14px 0;align-items:center;flex-wrap:wrap">
+    <span style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">Ordenar:</span>
+    ${['default','az','za','mayor','menor'].map(s=>{
+      const labels={default:'Por defecto',az:'A → Z',za:'Z → A',mayor:'Mayor precio',menor:'Menor precio'};
+      return`<button class="filter-chip ${st.abonoSort===s?'on':''}" data-absort="${s}" style="font-size:9px;padding:3px 8px">${labels[s]}</button>`;
+    }).join('')}
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <span style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">PM:</span>
+      <button class="filter-chip ${!st.abonoFiltPM?'on':''}" data-abpm-filt="" style="font-size:9px;padding:3px 8px">Todos</button>
+      ${pms.map(p=>`<button class="filter-chip ${st.abonoFiltPM===p?'on':''}" data-abpm-filt="${p}" style="font-size:9px;padding:3px 8px">${p}</button>`).join('')}
+    </div>
+  </div>
   <!-- STATS -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 14px 0">
     <div class="stat"><div class="stat-n" style="color:var(--yellow)">${activos.length}</div><div class="stat-l">Activos</div></div>
@@ -4022,6 +4055,9 @@ function bindAbonos(){
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   $('#btn-abonos-back')?.addEventListener('click',()=>{st.view='list';render();});
+  // Sort y filtro PM
+  document.querySelectorAll('[data-absort]').forEach(b=>b.addEventListener('click',()=>{st.abonoSort=b.dataset.absort;render();}));
+  document.querySelectorAll('[data-abpm-filt]').forEach(b=>b.addEventListener('click',()=>{st.abonoFiltPM=b.dataset.abpmFilt;render();}));
   $('#btn-abono-nuevo')?.addEventListener('click',()=>{st.editingAbono=null;st.showAbonoModal=true;st.abonoTipoEtapas=null;render();});
   $('#btn-abono-import')?.addEventListener('click',()=>{st.showAbonoImport=true;st.abonoImportPreview=null;st.abonoImportFile=null;st.abonoImportLoading=false;render();});
   $('#btn-abono-ipc')?.addEventListener('click',()=>{st.showAbonoIPC=true;render();});
