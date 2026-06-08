@@ -567,7 +567,8 @@ function nc(d={}){
     heatLevel:d.heatLevel||null,
     heatIgnored:d.heatIgnored||false,
     followupDate:d.followupDate||'',
-    followupNote:d.followupNote||''
+    followupNote:d.followupNote||'',
+    estadoDate:d.estadoDate||d.lastContact||new Date().toISOString().split('T')[0]
   };
 }
 
@@ -644,8 +645,8 @@ function applyFilters(list){
     if(f.moneda&&c.moneda!==f.moneda)return false;
     if(f.urgencia==='urgente'&&ul(ds(c.lastContact),c.estado)!=='hot')return false;
     if(f.urgencia==='sin-contacto'&&(ds(c.lastContact)<=6||['Cerrada','Perdida'].includes(c.estado)))return false;
-    if(f.dateFrom){const d=new Date(c.lastContact);if(d<new Date(f.dateFrom))return false;}
-    if(f.dateTo){const d=new Date(c.lastContact);if(d>new Date(f.dateTo))return false;}
+    if(f.dateFrom){const d=new Date(c.estadoDate||c.lastContact);if(d<new Date(f.dateFrom))return false;}
+    if(f.dateTo){const d=new Date(c.estadoDate||c.lastContact);if(d>new Date(f.dateTo))return false;}
     return true;
   });
 }
@@ -1143,7 +1144,7 @@ function rSbModal(){
 function rFilterPanel(){
   const f=st.filters;
   return`<div class="filter-panel">
-    <div><div class="filter-label">Período — último contacto</div>
+    <div><div class="filter-label">Período — fecha de estado</div>
       <div class="filter-row">
         <span style="font-size:10px;color:var(--text-muted);font-weight:600">Desde</span>
         <input type="date" class="filter-input-sm" id="f-date-from" value="${f.dateFrom||''}">
@@ -1151,6 +1152,7 @@ function rFilterPanel(){
         <input type="date" class="filter-input-sm" id="f-date-to" value="${f.dateTo||''}">
         <button class="filter-chip" id="f-week">Semana</button>
         <button class="filter-chip" id="f-month">Mes</button>
+        <button class="filter-chip" id="f-lastmonth">Últ. Mes</button>
       </div>
     </div>
     <div><div class="filter-label">Tipo de cliente</div>
@@ -1297,7 +1299,7 @@ function rList(){
   const f=st.filters;
   const convFrom=f.dateFrom||`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
   const convTo=f.dateTo||today2;
-  const convPool=clients.filter(c=>c.lastContact>=convFrom&&c.lastContact<=convTo);
+  const convPool=clients.filter(c=>{const sd=c.estadoDate||c.lastContact;return sd>=convFrom&&sd<=convTo;});
   const convCerradas=convPool.filter(c=>c.estado==='Cerrada').length;
   const convBase=convPool.filter(c=>['Cerrada','Enviada','En negociación'].includes(c.estado)).length;
   const convTotal=convBase;
@@ -2125,7 +2127,7 @@ function rPipe(c){
     <div class="section-title">Estado del prospecto</div>
     <div class="field-row">
       <div class="field"><label class="field-label">Estado</label>${rEstadoSelect(c.estado)}</div>
-      <div class="field"><label class="field-label" style="display:flex;align-items:center;gap:5px">Último contacto <span style="background:rgba(155,109,255,.15);color:var(--gold);border-radius:3px;padding:1px 5px;font-size:8px;font-weight:700;letter-spacing:.3px">AUTO</span></label><input class="field-input" id="pip-date" type="date" value="${c.lastContact||''}" title="Se actualiza solo al guardar una nota"></div>
+      <div class="field"><label class="field-label" style="display:flex;align-items:center;gap:5px">Fecha de estado <span style="background:rgba(155,109,255,.15);color:var(--gold);border-radius:3px;padding:1px 5px;font-size:8px;font-weight:700;letter-spacing:.3px">INFORME</span></label><input class="field-input" id="pip-estado-date" type="date" value="${c.estadoDate||c.lastContact||''}" title="Fecha que se usa en informes y métricas. Se actualiza automáticamente al cambiar estado."></div>
     </div>
     <div class="field-row">
       <div class="field"><label class="field-label">Servicio</label>
@@ -2784,7 +2786,7 @@ function bind(){
     e.stopPropagation();
     const c=gc();if(!c)return;
     const prev=c.estado,next=el.dataset.csel;
-    if(prev!==next)addNotif(c,next);
+    if(prev!==next){addNotif(c,next);c.estadoDate=new Date().toISOString().split('T')[0];}
     c.estado=next;st.estadoOpen=false;await sv(c);
     // Show modal when closing a deal
     if(next==='Cerrada'&&prev!=='Cerrada'){
@@ -2793,7 +2795,7 @@ function bind(){
     render();
   }));
   $$('[data-cselbdrop]').forEach(el=>el.addEventListener('click',()=>{st.estadoOpen=false;render();}));
-  ['pip-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes'].forEach(id=>
+  ['pip-date','pip-estado-date','pip-service','pip-phone','pip-email','pip-tipo','pip-modalidad','pip-moneda','pip-servicio','pip-mes'].forEach(id=>
     document.getElementById(id)?.addEventListener('change',savePip)
   );
   document.getElementById('pip-presupuesto')?.addEventListener('blur',savePip);
@@ -2815,6 +2817,14 @@ function bind(){
   $('#f-month')?.addEventListener('click',()=>{
     const now=new Date(),month=new Date(now.getFullYear(),now.getMonth(),1);
     st.filters.dateFrom=month.toISOString().split('T')[0];st.filters.dateTo=now.toISOString().split('T')[0];render();
+  });
+  $('#f-lastmonth')?.addEventListener('click',()=>{
+    const now=new Date();
+    const firstDay=new Date(now.getFullYear(),now.getMonth()-1,1);
+    const lastDay=new Date(now.getFullYear(),now.getMonth(),0);
+    st.filters.dateFrom=firstDay.toISOString().split('T')[0];
+    st.filters.dateTo=lastDay.toISOString().split('T')[0];
+    render();
   });
   $$('[data-ftipo]').forEach(b=>b.addEventListener('click',()=>{st.filters.tipo=st.filters.tipo===b.dataset.ftipo?'':b.dataset.ftipo;render()}));
   $$('[data-fplat]').forEach(b=>b.addEventListener('click',()=>{st.filters.plataforma=st.filters.plataforma===b.dataset.fplat?'':b.dataset.fplat;render()}));
@@ -2846,6 +2856,7 @@ async function savePip(){
   const c=gc();if(!c)return;
   const g=id=>document.getElementById(id);
   if(g('pip-date'))c.lastContact=g('pip-date').value;
+  if(g('pip-estado-date'))c.estadoDate=g('pip-estado-date').value;
   if(g('pip-service'))c.service=g('pip-service').value.trim();
   if(g('pip-phone'))c.phone=g('pip-phone').value.trim();
   if(g('pip-email'))c.email=g('pip-email').value.trim();
