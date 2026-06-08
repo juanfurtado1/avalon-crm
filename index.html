@@ -817,7 +817,7 @@ function generarInforme(){
   const diferencia=montoCerradas-montoPerdidas;
   // Churn: clientes activos dados de baja en el período
   const convFrom0=f.dateFrom||(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01');
-  const convTo0=f.dateTo||today2;
+  const convTo0=f.dateTo||now.toISOString().split('T')[0];
   const churnClients=clients.filter(function(c){const bd=c.bajaDate;return bd&&bd>=convFrom0&&bd<=convTo0;});
   const montoChurn=churnClients.reduce(function(a,c){return a+(parseInt(c.bajaMonto||0)||0);},0);
   const netoAltas=montoCerradas-montoPerdidas-montoChurn;
