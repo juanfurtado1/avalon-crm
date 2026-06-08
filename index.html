@@ -799,7 +799,7 @@ function generarInforme(){
     ?(f.dateFrom?fmtDate(f.dateFrom):'inicio')+' — '+(f.dateTo?fmtDate(f.dateTo):'hoy')
     :now.toLocaleString('es-AR',{month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
   const generadoEn=now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const total=fl.length,abonos=fl.filter(c=>c.tipo!=='LC').length,lc=fl.filter(c=>c.tipo==='LC').length;
+  const total=fl.length,cntAbonos=fl.filter(c=>c.tipo!=='LC').length,lc=fl.filter(c=>c.tipo==='LC').length;
   const cerradas=fl.filter(c=>c.estado==='Cerrada');
   const perdidas=fl.filter(c=>c.estado==='Perdida');
   const enviadas=fl.filter(c=>c.estado==='Enviada').length;
@@ -901,7 +901,7 @@ function generarInforme(){
   // S2 RESUMEN
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Resumen Ejecutivo</span></div>');
   p('<h2>Performance del Per&#237;odo</h2><div class="cgrid">');
-  p('<div class="cc"><div class="cl">&#x1F4CA; Prospectos</div><div class="crow"><span class="cp">Abonos</span><span class="cv">'+abonos+'</span></div><div class="crow"><span class="cp">LC</span><span class="cv">'+lc+'</span></div><div class="crow"><span class="cp">Total</span><span class="cv" style="font-size:17px">'+total+'</span></div></div>');
+  p('<div class="cc"><div class="cl">&#x1F4CA; Prospectos</div><div class="crow"><span class="cp">Abonos</span><span class="cv">'+cntAbonos+'</span></div><div class="crow"><span class="cp">LC</span><span class="cv">'+lc+'</span></div><div class="crow"><span class="cp">Total</span><span class="cv" style="font-size:17px">'+total+'</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F3AF; Conversi&#243;n</div><div class="crow"><span class="cp">Cerradas</span><span class="cv" style="color:#4ade80">'+cerradas.length+'</span></div><div class="crow"><span class="cp">Perdidas</span><span class="cv" style="color:#ef4444">'+perdidas.length+'</span></div><div class="crow"><span class="cp">Tasa</span><span class="cv" style="color:'+convColor+';font-size:17px">'+convRate+'%</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F4C4; Pipeline</div><div class="crow"><span class="cp">Enviada</span><span class="cv" style="color:#d95f5f">'+hotC.length+'</span></div><div class="crow"><span class="cp">En negoc.</span><span class="cv" style="color:#c49a20">'+warmC.length+'</span></div><div class="crow"><span class="cp">Activos</span><span class="cv" style="color:#6a9fd8">'+coldC.length+'</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F4B0; Montos</div><div class="crow"><span class="cp">Altas</span><span class="cv" style="color:#4ade80">'+fmtM(montoCerradas)+'</span></div><div class="crow"><span class="cp">Churn</span><span class="cv" style="color:#ef4444">'+fmtM(montoChurn||0)+'</span></div><div class="crow"><span class="cp">Neto</span><span class="'+(netoAltas>=0?'pos':'neg')+'">'+(netoAltas>=0?'+':'')+fmtM(Math.abs(netoAltas))+'</span></div></div>');
