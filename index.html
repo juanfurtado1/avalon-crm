@@ -486,6 +486,8 @@ function ncAbono(d={}){
     montoUSD:d.montoUSD||0,
     fechaInicio:d.fechaInicio||new Date().toISOString().split('T')[0],
     activo:d.activo!==false,
+    tipoAbono:d.tipoAbono||'fijo',
+    etapasAbono:d.etapasAbono||[],
     historialIPC:d.historialIPC||[]
   };
 }
@@ -3337,7 +3339,6 @@ function rAbonosList(){
     </div>
     <div style="display:flex;gap:6px">
       <button class="btn-sm" id="btn-abono-ipc" style="color:var(--yellow);border-color:rgba(196,154,32,.4);background:rgba(196,154,32,.07)">📈 Ajuste IPC</button>
-      <button class="btn-sm" id="btn-abono-import" style="color:var(--gold);border-color:rgba(155,109,255,.4);background:var(--gold-dim)">✦ Importar captura</button>
       <button class="btn-add" id="btn-abono-nuevo" style="background:linear-gradient(135deg,#c49a20,#a07a10)">+ Abono</button>
     </div>
   </div>
@@ -3366,30 +3367,58 @@ function rAbonosList(){
   </div>
   <!-- LISTA DE ABONOS -->
   <div style="padding:14px 14px 120px">
-    ${activos.length===0?`<div class="empty"><div class="empty-icon">💰</div><div style="font-size:12px;margin-bottom:8px">Sin abonos cargados</div><div style="font-size:11px;color:var(--text-muted)">Importá una captura o agregá uno manualmente</div></div>`
+    ${activos.length===0?`<div class="empty"><div class="empty-icon">💰</div><div style="font-size:12px;margin-bottom:8px">Sin abonos cargados</div><div style="font-size:11px;color:var(--text-muted)">Agregá uno manualmente con el botón + Abono</div></div>`
     :`<div style="display:flex;flex-direction:column;gap:6px">
-      ${activos.map(a=>`
-        <div class="card" style="padding:12px 14px 12px 16px" data-abonoid="${a.id}">
-          <div class="card-bar" style="background:var(--yellow)"></div>
+      ${activos.map(a=>{
+        const esEtapas=a.tipoAbono==='etapas';
+        const etapas=a.etapasAbono||[];
+        const now2=new Date();
+        // Monto actual según etapa activa (la última cuyo mes ya llegó)
+        let montoActual=a.montoARS,montoUSDActual=a.montoUSD;
+        if(esEtapas&&etapas.length){
+          const hoy=`${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}`;
+          const pasadas=etapas.filter(e=>e.mes&&e.mes<=hoy);
+          if(pasadas.length){const ult=pasadas[pasadas.length-1];montoActual=ult.montoARS||0;montoUSDActual=ult.montoUSD||0;}
+          else if(etapas[0]){montoActual=etapas[0].montoARS||0;montoUSDActual=etapas[0].montoUSD||0;}
+        }
+        return`<div class="card" style="padding:12px 14px 12px 16px" data-abonoid="${a.id}">
+          <div class="card-bar" style="background:${esEtapas?'var(--blue)':'var(--yellow)'}"></div>
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:var(--text)">${a.name}${a.company?` <span style="font-size:10px;color:var(--text-muted);font-weight:500">· ${a.company}</span>`:''}</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;align-items:center">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <div style="font-size:13px;font-weight:700;color:var(--text)">${a.name}${a.company?` <span style="font-size:10px;color:var(--text-muted);font-weight:500">· ${a.company}</span>`:''}</div>
+                <span style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:4px;${esEtapas?'background:rgba(106,159,216,.15);color:var(--blue);border:1px solid rgba(106,159,216,.3)':'background:rgba(196,154,32,.12);color:var(--yellow);border:1px solid rgba(196,154,32,.3)'}">${esEtapas?'3 etapas':'fijo'}</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;align-items:center">
                 ${a.pm?`<span style="font-size:9px;color:var(--text-muted);font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px">👤 ${a.pm}</span>`:''}
                 ${(a.plataformas||[]).map(p=>`<span style="font-size:9px;color:var(--text-muted);font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px">${p}</span>`).join('')}
               </div>
+              ${esEtapas&&etapas.length?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+                ${etapas.map((e,i)=>{
+                  const hoy2=`${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}`;
+                  const activa=e.mes&&e.mes<=hoy2&&(!etapas[i+1]||etapas[i+1].mes>hoy2);
+                  const label=e.mes?new Date(e.mes+'-02').toLocaleString('es-AR',{month:'short',year:'2-digit'}).replace(/^\w/,c=>c.toUpperCase()):'E'+(i+1);
+                  return`<div style="background:${activa?'rgba(106,159,216,.15)':'var(--surface2)'};border:1px solid ${activa?'rgba(106,159,216,.4)':'var(--border)'};border-radius:5px;padding:3px 7px;font-size:9px">
+                    <span style="color:var(--text-muted);font-weight:600">E${i+1} ${label}</span>
+                    ${e.montoARS?`<span style="color:var(--yellow);font-weight:700;margin-left:4px">$${parseInt(e.montoARS).toLocaleString('es-AR')}</span>`:''}
+                    ${activa?'<span style="color:var(--blue);font-size:8px;margin-left:2px">●</span>':''}
+                  </div>`;
+                }).join('')}
+              </div>`:''}
             </div>
             <div style="text-align:right;flex-shrink:0">
-              ${a.montoARS?`<div style="font-size:14px;font-weight:800;color:var(--yellow)">$${parseInt(a.montoARS).toLocaleString('es-AR')}</div>`:''}
-              ${a.montoUSD?`<div style="font-size:12px;font-weight:700;color:var(--blue)">USD ${parseFloat(a.montoUSD).toLocaleString('es-AR')}</div>`:''}
+              ${montoActual?`<div style="font-size:14px;font-weight:800;color:var(--yellow)">$${parseInt(montoActual).toLocaleString('es-AR')}</div>`:''}
+              ${montoUSDActual?`<div style="font-size:12px;font-weight:700;color:var(--blue)">USD ${parseFloat(montoUSDActual).toLocaleString('es-AR')}</div>`:''}
               ${a.historialIPC&&a.historialIPC.length?`<div style="font-size:8px;color:var(--text-muted);margin-top:2px">IPC x${a.historialIPC.length}</div>`:''}
             </div>
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px">
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
             <button class="btn-sm btn-edit-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px">✏ Editar</button>
-            <button class="btn-sm btn-baja-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:var(--red);border-color:rgba(217,95,95,.3)">⬇ Dar de baja</button>
+            <button class="btn-sm btn-baja-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:var(--yellow);border-color:rgba(196,154,32,.3)">⬇ Baja</button>
+            <button class="btn-sm btn-del-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:var(--red);border-color:rgba(217,95,95,.3);margin-left:auto">🗑 Eliminar</button>
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>`}
     ${inactivos.length?`
       <div style="margin-top:20px">
@@ -3402,7 +3431,6 @@ function rAbonosList(){
     }
   </div>
   ${st.showAbonoModal?rAbonoModal():''}
-  ${st.showAbonoImport?rAbonoImportModal():''}
   ${st.showAbonoIPC?rAbonoIPCModal():''}
   `;
 }
@@ -3411,6 +3439,8 @@ function rAbonoModal(){
   const a=st.editingAbono?abonos.find(x=>x.id===st.editingAbono):null;
   const pms=['Salma','Lucas','Caro'];
   const plats=['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn','CM y Diseño','Filmmaker','CRM'];
+  const esEtapas=(st.abonoTipoEtapas!=null?st.abonoTipoEtapas:(a?.tipoAbono==='etapas'));
+  const etapas=a?.etapasAbono||[{},{},{}];
   return`<div class="modal-overlay" id="abono-modal-overlay">
     <div class="modal">
       <div class="modal-handle"></div>
@@ -3423,9 +3453,29 @@ function rAbonoModal(){
       <div class="field"><label class="field-label">Plataformas</label>
         <div class="needs-grid">${plats.map(p=>`<div class="need-toggle ${(a?.plataformas||[]).includes(p)?'on':''}" data-abplat="${p}">${p}</div>`).join('')}</div>
       </div>
-      <div class="field-row">
-        <div class="field"><label class="field-label">Abono ARS/mes</label><input class="field-input" id="ab-monto-ars" value="${a?.montoARS?parseInt(a.montoARS).toLocaleString('es-AR'):''}" placeholder="0" inputmode="numeric"></div>
-        <div class="field"><label class="field-label">Abono USD/mes</label><input class="field-input" id="ab-monto-usd" value="${a?.montoUSD||''}" placeholder="0" inputmode="numeric"></div>
+      <!-- Toggle tipo abono -->
+      <div class="field"><label class="field-label">Tipo de abono</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="need-toggle ${!esEtapas?'on':''}" id="ab-tipo-fijo" style="text-align:center;padding:10px">💰 Fijo<div style="font-size:9px;margin-top:2px;opacity:.7">Siempre el mismo</div></div>
+          <div class="need-toggle ${esEtapas?'on':''}" id="ab-tipo-etapas" style="text-align:center;padding:10px">📈 3 Etapas<div style="font-size:9px;margin-top:2px;opacity:.7">Sube mes a mes</div></div>
+        </div>
+      </div>
+      <!-- Fijo -->
+      <div id="ab-seccion-fijo" style="display:${!esEtapas?'block':'none'}">
+        <div class="field-row">
+          <div class="field"><label class="field-label">Abono ARS/mes</label><input class="field-input" id="ab-monto-ars" value="${a?.montoARS?parseInt(a.montoARS).toLocaleString('es-AR'):''}" placeholder="0" inputmode="numeric"></div>
+          <div class="field"><label class="field-label">Abono USD/mes</label><input class="field-input" id="ab-monto-usd" value="${a?.montoUSD||''}" placeholder="0" inputmode="numeric"></div>
+        </div>
+      </div>
+      <!-- Etapas -->
+      <div id="ab-seccion-etapas" style="display:${esEtapas?'block':'none'}">
+        <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">3 etapas — mes y monto</div>
+        ${[0,1,2].map(i=>`
+          <div style="display:grid;grid-template-columns:20px 1fr 1fr;gap:6px;align-items:center;margin-bottom:8px">
+            <span style="font-size:10px;color:var(--text-muted);font-weight:700;text-align:center">E${i+1}</span>
+            <input class="field-input" id="ab-et-mes-${i}" type="month" value="${(etapas[i]||{}).mes||''}" style="font-size:11px;padding:8px 10px" placeholder="Mes">
+            <input class="field-input" id="ab-et-ars-${i}" value="${(etapas[i]||{}).montoARS?parseInt((etapas[i]||{}).montoARS).toLocaleString('es-AR'):''}" placeholder="Monto ARS" inputmode="numeric" style="font-size:11px;padding:8px 10px">
+          </div>`).join('')}
       </div>
       <div class="field"><label class="field-label">Fecha de inicio</label><input class="field-input" id="ab-fecha" type="date" value="${a?.fechaInicio||new Date().toISOString().split('T')[0]}"></div>
       <button class="btn-primary" id="btn-ab-save">Guardar abono</button>
@@ -3972,15 +4022,23 @@ function bindAbonos(){
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   $('#btn-abonos-back')?.addEventListener('click',()=>{st.view='list';render();});
-  $('#btn-abono-nuevo')?.addEventListener('click',()=>{st.editingAbono=null;st.showAbonoModal=true;render();});
+  $('#btn-abono-nuevo')?.addEventListener('click',()=>{st.editingAbono=null;st.showAbonoModal=true;st.abonoTipoEtapas=null;render();});
   $('#btn-abono-import')?.addEventListener('click',()=>{st.showAbonoImport=true;st.abonoImportPreview=null;st.abonoImportFile=null;st.abonoImportLoading=false;render();});
   $('#btn-abono-ipc')?.addEventListener('click',()=>{st.showAbonoIPC=true;render();});
   // Edit/baja/reactivar
-  $$('.btn-edit-abono').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();st.editingAbono=b.dataset.abonoid;st.showAbonoModal=true;render();}));
+  $$('.btn-edit-abono').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();st.editingAbono=b.dataset.abonoid;st.showAbonoModal=true;st.abonoTipoEtapas=null;render();}));
   $$('.btn-baja-abono').forEach(b=>b.addEventListener('click',async e=>{
     e.stopPropagation();
     const a=abonos.find(x=>x.id===b.dataset.abonoid);if(!a)return;
     a.activo=false;await svAbono(a);toast('⬇ Abono dado de baja');render();
+  }));
+  $$('.btn-del-abono').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    if(!confirm('¿Eliminar este abono? No queda registro.'))return;
+    const id=b.dataset.abonoid;
+    abonos=abonos.filter(x=>x.id!==id);
+    await sbDelAbono(id);
+    toast('Abono eliminado');render();
   }));
   $$('.btn-reactivar-abono').forEach(b=>b.addEventListener('click',async e=>{
     e.stopPropagation();
@@ -3988,24 +4046,52 @@ function bindAbonos(){
     a.activo=true;await svAbono(a);toast('↑ Abono reactivado');render();
   }));
   // Modal nuevo/editar
+  // Toggle tipo fijo/etapas en el modal
+  document.getElementById('ab-tipo-fijo')?.addEventListener('click',()=>{
+    st.abonoTipoEtapas=false;
+    document.getElementById('ab-seccion-fijo').style.display='block';
+    document.getElementById('ab-seccion-etapas').style.display='none';
+    document.getElementById('ab-tipo-fijo').classList.add('on');
+    document.getElementById('ab-tipo-etapas').classList.remove('on');
+  });
+  document.getElementById('ab-tipo-etapas')?.addEventListener('click',()=>{
+    st.abonoTipoEtapas=true;
+    document.getElementById('ab-seccion-fijo').style.display='none';
+    document.getElementById('ab-seccion-etapas').style.display='block';
+    document.getElementById('ab-tipo-fijo').classList.remove('on');
+    document.getElementById('ab-tipo-etapas').classList.add('on');
+  });
   $('#btn-ab-save')?.addEventListener('click',async()=>{
     const $g=id=>document.getElementById(id);
     const name=$g('ab-name')?.value.trim();if(!name){toast('Ingresá el nombre');return;}
     const pm=document.querySelector('[data-abpm].on')?.dataset.abpm||'';
     const plataformas=[...document.querySelectorAll('[data-abplat].on')].map(t=>t.dataset.abplat);
-    const montoARS=parseInt(($g('ab-monto-ars')?.value||'').replace(/\./g,''))||0;
-    const montoUSD=parseFloat($g('ab-monto-usd')?.value||'')||0;
     const fechaInicio=$g('ab-fecha')?.value||new Date().toISOString().split('T')[0];
+    const esEtapas=st.abonoTipoEtapas!=null?st.abonoTipoEtapas:document.getElementById('ab-tipo-etapas')?.classList.contains('on');
+    let montoARS=0,montoUSD=0,tipoAbono='fijo',etapasAbono=[];
+    if(esEtapas){
+      tipoAbono='etapas';
+      etapasAbono=[0,1,2].map(i=>({
+        mes:$g('ab-et-mes-'+i)?.value||'',
+        montoARS:parseInt(($g('ab-et-ars-'+i)?.value||'').replace(/\./g,''))||0,
+        montoUSD:0
+      })).filter(e=>e.mes||e.montoARS);
+      // Monto base = etapa 1
+      if(etapasAbono[0])montoARS=etapasAbono[0].montoARS;
+    } else {
+      montoARS=parseInt(($g('ab-monto-ars')?.value||'').replace(/\./g,''))||0;
+      montoUSD=parseFloat($g('ab-monto-usd')?.value||'')||0;
+    }
     if(st.editingAbono){
       const a=abonos.find(x=>x.id===st.editingAbono);
-      if(a){Object.assign(a,{name,pm,plataformas,montoARS,montoUSD,fechaInicio});await svAbono(a);}
+      if(a){Object.assign(a,{name,pm,plataformas,montoARS,montoUSD,fechaInicio,tipoAbono,etapasAbono});await svAbono(a);}
     } else {
-      const a=ncAbono({name,company:$g('ab-company')?.value.trim()||'',pm,plataformas,montoARS,montoUSD,fechaInicio});
+      const a=ncAbono({name,company:$g('ab-company')?.value.trim()||'',pm,plataformas,montoARS,montoUSD,fechaInicio,tipoAbono,etapasAbono});
       abonos.push(a);await svAbono(a);
     }
-    st.showAbonoModal=false;st.editingAbono=null;toast('Abono guardado ✓');render();
+    st.showAbonoModal=false;st.editingAbono=null;st.abonoTipoEtapas=null;toast('Abono guardado ✓');render();
   });
-  $('#btn-ab-cancel')?.addEventListener('click',()=>{st.showAbonoModal=false;st.editingAbono=null;render();});
+  $('#btn-ab-cancel')?.addEventListener('click',()=>{st.showAbonoModal=false;st.editingAbono=null;st.abonoTipoEtapas=null;render();});
   document.getElementById('abono-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='abono-modal-overlay'){st.showAbonoModal=false;st.editingAbono=null;render();}});
   // Toggle PM y plataformas en modal
   document.querySelectorAll('[data-abpm]').forEach(t=>t.addEventListener('click',()=>{
