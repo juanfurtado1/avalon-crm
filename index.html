@@ -616,7 +616,7 @@ function nc(d={}){
 
 // ── STATE ──
 let st={
-  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',abonoOrdenCustom:[],
+  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',abonoOrdenCustom:[],lcSelARS:new Set(),lcSelUSD:new Set(),
   showNewModal:false,showEditModal:false,showFilters:false,showApiModal:false,showSbModal:false,
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   calOpen:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
@@ -1961,7 +1961,9 @@ function rLCModal(){
   const d=st.lcDraft||{periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
   const PLATS=['Meta','Google','TikTok','Pinterest','Otra'];
   function rowARS(r,i){
-    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-ars="${i}">
+    const sel=(st.lcSelARS||new Set()).has(i);
+    return`<div style="display:grid;grid-template-columns:18px 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px;${sel?'background:rgba(217,95,95,.07);border-radius:6px;padding:2px 4px':''}" data-ars="${i}">
+      <input type="checkbox" class="lc-chk-ars" data-idx="${i}" ${sel?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
       <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-ars-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
       <input class="field-input lc-ars-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto ARS" style="font-size:11px;padding:6px 8px" inputmode="numeric">
@@ -1969,7 +1971,9 @@ function rLCModal(){
     </div>`;
   }
   function rowUSD(r,i){
-    return`<div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px" data-usd="${i}">
+    const sel=(st.lcSelUSD||new Set()).has(i);
+    return`<div style="display:grid;grid-template-columns:18px 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px;${sel?'background:rgba(217,95,95,.07);border-radius:6px;padding:2px 4px':''}" data-usd="${i}">
+      <input type="checkbox" class="lc-chk-usd" data-idx="${i}" ${sel?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
       <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-usd-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
       <input class="field-input lc-usd-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto USD" style="font-size:11px;padding:6px 8px" inputmode="numeric">
@@ -2002,15 +2006,23 @@ function rLCModal(){
       <div class="field"><label class="field-label">Hasta</label><input class="field-input" id="lc-hasta" type="date" value="${d.hasta||''}"></div>
     </div>
     <hr class="divider">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px">Cuentas en Pesos (ARS)</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="lc-sel-all-ars" title="Seleccionar todas" style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
+        <div style="font-size:10px;font-weight:700;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px">Cuentas en Pesos (ARS)</div>
+        ${(st.lcSelARS&&st.lcSelARS.size)?`<button id="btn-lc-del-sel-ars" style="background:rgba(217,95,95,.12);border:1px solid rgba(217,95,95,.4);color:var(--red);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer">🗑 Eliminar ${st.lcSelARS.size} seleccionadas</button>`:''}
+      </div>
       ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
     </div>
     ${d.cuentasARS.length?d.cuentasARS.map((r,i)=>rowARS(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas ARS</div>'}
     <button class="btn-sm" id="btn-lc-add-ars" style="margin-bottom:14px;color:#6a9fd8;border-color:rgba(106,159,216,.4)">+ Cuenta ARS</button>
     <hr class="divider">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Cuentas en USD</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="lc-sel-all-usd" title="Seleccionar todas" style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
+        <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Cuentas en USD</div>
+        ${(st.lcSelUSD&&st.lcSelUSD.size)?`<button id="btn-lc-del-sel-usd" style="background:rgba(217,95,95,.12);border:1px solid rgba(217,95,95,.4);color:var(--red);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer">🗑 Eliminar ${st.lcSelUSD.size} seleccionadas</button>`:''}
+      </div>
       ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
     </div>
     ${d.cuentasUSD.length?d.cuentasUSD.map((r,i)=>rowUSD(r,i)).join(''):'<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:8px">Sin cuentas USD</div>'}
@@ -2708,8 +2720,8 @@ function bind(){
     };
     st.showLCModal=true;render();
   });
-  $('#lc-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='lc-modal-overlay'){st.showLCModal=false;render();}});
-  $('#btn-lc-cancel')?.addEventListener('click',()=>{st.showLCModal=false;render();});
+  $('#lc-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='lc-modal-overlay'){st.showLCModal=false;st.lcSelARS=new Set();st.lcSelUSD=new Set();render();}});
+  $('#btn-lc-cancel')?.addEventListener('click',()=>{st.showLCModal=false;st.lcSelARS=new Set();st.lcSelUSD=new Set();render();});
   // Load saved period
   document.getElementById('lc-load-select')?.addEventListener('change',e=>{
     const p=lcData.periodos.find(x=>x.id===e.target.value);
