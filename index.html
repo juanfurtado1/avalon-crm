@@ -489,7 +489,10 @@ function ncAbono(d={}){
     activo:d.activo!==false,
     tipoAbono:d.tipoAbono||'fijo',
     etapasAbono:d.etapasAbono||[],
-    historialIPC:d.historialIPC||[]
+    historialIPC:d.historialIPC||[],
+    fechaIngreso:d.fechaIngreso||'',
+    bajaMotivoCod:d.bajaMotivoCod||'',
+    bajaFecha:d.bajaFecha||''
   };
 }
 async function loadNC(){
@@ -616,7 +619,7 @@ function nc(d={}){
 
 // ── STATE ──
 let st={
-  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',abonoOrdenCustom:[],lcSelARS:new Set(),lcSelUSD:new Set(),
+  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',abonoOrdenCustom:[],lcSelARS:[],lcSelUSD:[],showBajaAbonoModal:false,bajaAbonoId:null,
   showNewModal:false,showEditModal:false,showFilters:false,showApiModal:false,showSbModal:false,
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   calOpen:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
@@ -790,7 +793,7 @@ function lcSyncDraft(){
 }
 
 // ── GENERAR INFORME ──
-function generarInforme(){
+async function generarInforme(){
   const fl=applyFilters(clients);
   if(!fl.length){toast('No hay clientes para generar el informe');return;}
   const f=st.filters;
@@ -830,6 +833,12 @@ function generarInforme(){
   // DEBUG — sacar después
   console.log('lcData.periodos:', lcData.periodos.length, lcData.periodos.map(p=>p.id));
   console.log('abonos activos:', abonos.filter(a=>a.activo).length);
+  // TC Dólar Blue — se fetchea de forma asíncrona y se inyecta después
+  var tcBlue=null;
+  try{
+    var tcResp=await fetch('https://dolarapi.com/v1/dolares/blue',{signal:AbortSignal.timeout(3000)});
+    if(tcResp.ok){var tcData=await tcResp.json();tcBlue=tcData.venta||null;}
+  }catch(e){console.warn('TC fetch error',e);}
   // Calcular totalSlides al inicio (antes de generar HTML)
   const _lcCheck=(()=>{const sorted=[...lcData.periodos].sort((a,b)=>b.id.localeCompare(a.id));if(f.dateFrom||f.dateTo){const fromM=f.dateFrom?f.dateFrom.substring(0,7):'0000-00';const toM=f.dateTo?f.dateTo.substring(0,7):'9999-99';return sorted.find(p=>p.id>=fromM&&p.id<=toM)||null;}return sorted[0]||null;})();
   const _etapasCheck=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
@@ -912,70 +921,73 @@ function generarInforme(){
   p('<div class="cc"><div class="cl">&#x1F4CA; Prospectos</div><div class="crow"><span class="cp">Abonos</span><span class="cv">'+cntAbonos+'</span></div><div class="crow"><span class="cp">LC</span><span class="cv">'+lc+'</span></div><div class="crow"><span class="cp">Total</span><span class="cv" style="font-size:17px">'+total+'</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F3AF; Conversi&#243;n</div><div class="crow"><span class="cp">Cerradas</span><span class="cv" style="color:#4ade80">'+cerradas.length+'</span></div><div class="crow"><span class="cp">Perdidas</span><span class="cv" style="color:#ef4444">'+perdidas.length+'</span></div><div class="crow"><span class="cp">Tasa</span><span class="cv" style="color:'+convColor+';font-size:17px">'+convRate+'%</span></div></div>');
   p('<div class="cc"><div class="cl">&#x1F4C4; Pipeline</div><div class="crow"><span class="cp">Enviada</span><span class="cv" style="color:#d95f5f">'+hotC.length+'</span></div><div class="crow"><span class="cp">En negoc.</span><span class="cv" style="color:#c49a20">'+warmC.length+'</span></div><div class="crow"><span class="cp">Activos</span><span class="cv" style="color:#6a9fd8">'+coldC.length+'</span></div></div>');
-  p('<div class="cc"><div class="cl">&#x1F4B0; Montos</div><div class="crow"><span class="cp">Altas</span><span class="cv" style="color:#4ade80">'+fmtM(montoCerradas)+'</span></div><div class="crow"><span class="cp">Churn</span><span class="cv" style="color:#ef4444">'+fmtM(montoChurn||0)+'</span></div><div class="crow"><span class="cp">Neto</span><span class="'+(netoAltas>=0?'pos':'neg')+'">'+(netoAltas>=0?'+':'')+fmtM(Math.abs(netoAltas))+'</span></div></div>');
+  p('<div class="cc"><div class="cl">&#x1F4B0; Montos</div><div class="crow"><span class="cp">Altas</span><span class="cv" style="color:#4ade80">'+fmtM(montoCerradas)+'</span></div><div class="crow"><span class="cp">Bajas</span><span class="cv" style="color:#ef4444">'+fmtM(montoChurn||0)+'</span></div><div class="crow"><span class="cp">Neto</span><span class="'+(montoCerradas-montoChurn>=0?'pos':'neg')+'">'+(montoCerradas-montoChurn>=0?'+':'')+fmtM(Math.abs(montoCerradas-montoChurn))+'</span></div></div>');
   p('</div><div class="met"><div class="ml">Pipeline activo estimado (Enviada + En negociaci&oacute;n)</div><div class="mn">'+(montoHot?fmtM(montoHot):'Sin presupuestos cargados')+'</div>');
   const canalStr=Object.keys(byCanal).length?'Canales: '+Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).map(function(e){return e[0]+' ('+e[1]+')'}).join(' &middot; '):'';
   p('<div style="font-size:12px;color:#555;margin-top:6px">'+canalStr+'</div></div></div>');
-  // S3 PIPELINE
+  // S3 PIPELINE — calcula leads hot/warm por calor (heatLevel o auto)
+  const heatHot=fl.filter(function(c){var h=c.heatLevel||ul(ds(c.lastContact),c.estado);return h==='hot'&&!['Cerrada','Perdida','Enviada','En negociación'].includes(c.estado);});
+  const heatWarm=fl.filter(function(c){var h=c.heatLevel||ul(ds(c.lastContact),c.estado);return h==='warm'&&!['Cerrada','Perdida','Enviada','En negociación'].includes(c.estado);});
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Pipeline</span></div>');
-  p('<h2>Pipeline Activo ('+(hotC.length+warmC.length+coldC.length)+')</h2><div class="pg">');
-  p('<div class="ps"><h3>&#x1F4E4; Enviada</h3><div class="psi">');
-  if(hotC.length)hotC.forEach(function(c){p('<div class="pi"><span class="pn">'+c.name+(c.company?' <span style="font-weight:400;color:#777">· '+c.company+'</span>':'')+'</span>'+(c.presupuesto?'<span style="color:#d95f5f;font-size:12px;font-weight:700">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</div>');});
-  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:18px 0;text-align:center">Sin prospectos</div>');
-  p('</div>');
+  p('<h2>Pipeline Activo ('+(hotC.length+warmC.length+coldC.length)+')</h2>');
+  p('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex:1;overflow:hidden">');
+  // Columna 1: Leads HOT
+  p('<div style="display:flex;flex-direction:column;background:rgba(217,95,95,.05);border:1px solid rgba(217,95,95,.25);border-radius:6px;overflow:hidden">');
+  p('<div style="padding:10px 12px;border-bottom:1px solid rgba(217,95,95,.2);display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;color:#d95f5f;text-transform:uppercase;letter-spacing:.8px">&#x1F525; Leads Hot</span><span style="background:rgba(217,95,95,.2);color:#d95f5f;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700">'+heatHot.length+'</span></div>');
+  p('<div style="flex:1;overflow-y:auto;padding:8px">');
+  if(heatHot.length)heatHot.forEach(function(c){p('<div style="padding:7px 8px;margin-bottom:4px;background:rgba(255,255,255,.03);border-left:2px solid #d95f5f;border-radius:2px"><div style="font-size:12px;font-weight:700;color:#eee">'+c.name+'</div>'+(c.company?'<div style="font-size:10px;color:#555">'+c.company+'</div>':'')+'<div style="font-size:10px;color:#d95f5f;margin-top:2px;font-weight:600">'+c.estado+'</div></div>');});
+  else p('<div style="font-size:11px;color:#333;font-style:italic;padding:16px;text-align:center">Sin leads hot</div>');
+  p('</div></div>');
+  // Columna 2: Leads WARM
+  p('<div style="display:flex;flex-direction:column;background:rgba(196,154,32,.05);border:1px solid rgba(196,154,32,.25);border-radius:6px;overflow:hidden">');
+  p('<div style="padding:10px 12px;border-bottom:1px solid rgba(196,154,32,.2);display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;color:#c49a20;text-transform:uppercase;letter-spacing:.8px">&#x1F7E1; Leads Warm</span><span style="background:rgba(196,154,32,.2);color:#c49a20;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700">'+heatWarm.length+'</span></div>');
+  p('<div style="flex:1;overflow-y:auto;padding:8px">');
+  if(heatWarm.length)heatWarm.forEach(function(c){p('<div style="padding:7px 8px;margin-bottom:4px;background:rgba(255,255,255,.03);border-left:2px solid #c49a20;border-radius:2px"><div style="font-size:12px;font-weight:700;color:#eee">'+c.name+'</div>'+(c.company?'<div style="font-size:10px;color:#555">'+c.company+'</div>':'')+'<div style="font-size:10px;color:#c49a20;margin-top:2px;font-weight:600">'+c.estado+'</div></div>');});
+  else p('<div style="font-size:11px;color:#333;font-style:italic;padding:16px;text-align:center">Sin leads warm</div>');
+  p('</div></div>');
+  // Columna 3: Propuestas Enviadas
+  p('<div style="display:flex;flex-direction:column;background:rgba(147,51,234,.05);border:1px solid rgba(147,51,234,.25);border-radius:6px;overflow:hidden">');
+  p('<div style="padding:10px 12px;border-bottom:1px solid rgba(147,51,234,.2);display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;color:var(--p);text-transform:uppercase;letter-spacing:.8px">&#x1F4E4; Enviadas</span><span style="background:rgba(147,51,234,.2);color:var(--p);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700">'+hotC.length+'</span></div>');
+  p('<div style="flex:1;overflow-y:auto;padding:8px">');
+  if(hotC.length)hotC.forEach(function(c){p('<div style="padding:7px 8px;margin-bottom:4px;background:rgba(255,255,255,.03);border-left:2px solid var(--p);border-radius:2px"><div style="font-size:12px;font-weight:700;color:#eee">'+c.name+'</div>'+(c.company?'<div style="font-size:10px;color:#555">'+c.company+'</div>':'')+(c.presupuesto?'<div style="font-size:11px;color:var(--p);font-weight:700;margin-top:2px">'+fmtM(parseInt(c.presupuesto))+'</div>':'')+'</div>');});
+  else p('<div style="font-size:11px;color:#333;font-style:italic;padding:16px;text-align:center">Sin propuestas</div>');
   const hM=hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0);
-  if(hM)p('<div class="pt"><span style="font-size:10px;color:#555;font-weight:700;text-transform:uppercase">Valor est.</span><span style="font-size:17px;color:var(--p);font-weight:800">'+fmtM(hM)+'</span></div>');
-  p('</div><div class="ps"><h3>&#x1F91D; En negociaci&#243;n</h3><div class="psi">');
-  if(warmC.length)warmC.forEach(function(c){p('<div class="pi"><span class="pn">'+c.name+(c.company?' <span style="font-weight:400;color:#777">· '+c.company+'</span>':'')+'</span>'+(c.presupuesto?'<span style="color:#c49a20;font-size:12px;font-weight:700">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</div>');});
-  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:18px 0;text-align:center">Sin prospectos</div>');
-  p('</div>');
+  p('</div>'+(hM?'<div style="padding:8px 12px;border-top:1px solid rgba(147,51,234,.2);display:flex;justify-content:space-between;align-items:center"><span style="font-size:9px;color:#555;font-weight:700;text-transform:uppercase">Est.</span><span style="font-size:14px;font-weight:800;color:var(--p)">'+fmtM(hM)+'</span></div>':'')+'</div>');
+  // Columna 4: En Negociación
+  p('<div style="display:flex;flex-direction:column;background:rgba(74,171,122,.05);border:1px solid rgba(74,171,122,.25);border-radius:6px;overflow:hidden">');
+  p('<div style="padding:10px 12px;border-bottom:1px solid rgba(74,171,122,.2);display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:800;color:#4aab7a;text-transform:uppercase;letter-spacing:.8px">&#x1F91D; Negociaci&#243;n</span><span style="background:rgba(74,171,122,.2);color:#4aab7a;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700">'+warmC.length+'</span></div>');
+  p('<div style="flex:1;overflow-y:auto;padding:8px">');
+  if(warmC.length)warmC.forEach(function(c){p('<div style="padding:7px 8px;margin-bottom:4px;background:rgba(255,255,255,.03);border-left:2px solid #4aab7a;border-radius:2px"><div style="font-size:12px;font-weight:700;color:#eee">'+c.name+'</div>'+(c.company?'<div style="font-size:10px;color:#555">'+c.company+'</div>':'')+(c.presupuesto?'<div style="font-size:11px;color:#4aab7a;font-weight:700;margin-top:2px">'+fmtM(parseInt(c.presupuesto))+'</div>':'')+'</div>');});
+  else p('<div style="font-size:11px;color:#333;font-style:italic;padding:16px;text-align:center">Sin prospectos</div>');
   const wM=warmC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0);
-  if(wM)p('<div class="pt"><span style="font-size:10px;color:#555;font-weight:700;text-transform:uppercase">Valor est.</span><span style="font-size:17px;color:var(--p);font-weight:800">'+fmtM(wM)+'</span></div>');
-  p('</div><div class="ps"><h3>&#x1F7E3; Activos + Pendientes</h3><div class="psi">');
-  const coldAll=coldC;
-  if(coldAll.length)coldAll.forEach(function(c){p('<div class="pi"><span class="pn">'+c.name+(c.company?' <span style="font-weight:400;color:#777">· '+c.company+'</span>':'')+'</span><span class="pst scold">'+c.estado+'</span></div>');});
-  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:18px 0;text-align:center">Sin prospectos</div>');
-  p('</div></div></div>');
-  if(montoTotal)p('<div style="margin-top:10px;background:rgba(147,51,234,.07);border:1px solid rgba(147,51,234,.2);border-radius:6px;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0"><span style="font-size:11px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Total pipeline</span><span style="font-size:17px;font-weight:800;color:var(--p)">'+fmtM(montoTotal)+'</span></div>');
+  p('</div>'+(wM?'<div style="padding:8px 12px;border-top:1px solid rgba(74,171,122,.2);display:flex;justify-content:space-between;align-items:center"><span style="font-size:9px;color:#555;font-weight:700;text-transform:uppercase">Est.</span><span style="font-size:14px;font-weight:800;color:#4aab7a">'+fmtM(wM)+'</span></div>':'')+'</div>');
   p('</div>');
-  // S4 ALTAS, BAJAS & CHURN
+  if(montoTotal)p('<div style="margin-top:8px;background:rgba(147,51,234,.07);border:1px solid rgba(147,51,234,.2);border-radius:6px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0"><span style="font-size:11px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Total pipeline (Enviadas + Negociaci&#243;n)</span><span style="font-size:17px;font-weight:800;color:var(--p)">'+fmtM(montoTotal)+'</span></div>');
+  p('</div>');
+  // S4 ALTAS vs BAJAS + PERDIDAS REFERENCIA
+  var netoBalance=montoCerradas-montoChurn;
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Resultados</span></div>');
   p('<h2>Altas &amp; Bajas</h2>');
-  p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px;flex-shrink:0">');
-  p('<div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.35);padding:16px;border-radius:4px;text-align:center">');
-  p('<div style="font-size:10px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#x2B06; Altas (cierres)</div>');
-  p('<div style="font-size:28px;font-weight:800;color:#4ade80;line-height:1">'+cerradas.length+'</div>');
-  p('<div style="font-size:13px;color:#4ade80;opacity:.8;margin-top:4px;font-weight:700">'+fmtM(montoCerradas)+'</div></div>');
-  p('<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);padding:16px;border-radius:4px;text-align:center">');
-  p('<div style="font-size:10px;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#x2B07; Bajas (churn)</div>');
-  p('<div style="font-size:28px;font-weight:800;color:#ef4444;line-height:1">'+churnClients.length+'</div>');
-  p('<div style="font-size:13px;color:#ef4444;opacity:.8;margin-top:4px;font-weight:700">'+fmtM(montoChurn)+'</div></div>');
-  p('<div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.35);padding:16px;border-radius:4px;text-align:center">');
-  p('<div style="font-size:10px;color:#fb923c;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#x2715; Perdidas (prosp.)</div>');
-  p('<div style="font-size:28px;font-weight:800;color:#fb923c;line-height:1">'+perdidas.length+'</div>');
-  p('<div style="font-size:13px;color:#fb923c;opacity:.8;margin-top:4px;font-weight:700">'+fmtM(montoPerdidas)+'</div></div>');
+  p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;flex-shrink:0">');
+  p('<div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.35);padding:14px 18px;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:9px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">&#x2B06; Altas (ingresos)</div><div style="font-size:26px;font-weight:800;color:#4ade80;line-height:1">'+cerradas.length+'</div></div><div style="text-align:right"><div style="font-size:15px;font-weight:800;color:#4ade80">'+fmtM(montoCerradas)+'</div><div style="font-size:9px;color:#4ade80;opacity:.6;margin-top:2px">ARS / período</div></div></div>');
+  p('<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);padding:14px 18px;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:9px;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">&#x2B07; Bajas (egresos)</div><div style="font-size:26px;font-weight:800;color:#ef4444;line-height:1">'+churnClients.length+'</div></div><div style="text-align:right"><div style="font-size:15px;font-weight:800;color:#ef4444">'+(montoChurn?fmtM(montoChurn):'—')+'</div><div style="font-size:9px;color:#ef4444;opacity:.6;margin-top:2px">ARS / período</div></div></div>');
+  p('<div style="background:rgba('+(netoBalance>=0?'74,222,128':'239,68,68')+',.1);border:2px solid rgba('+(netoBalance>=0?'74,222,128':'239,68,68')+',.5);padding:14px 18px;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:9px;color:'+(netoBalance>=0?'#4ade80':'#ef4444')+';font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">&#x2696; Balance Neto</div><div style="font-size:11px;color:#555;font-weight:600">Altas &#8722; Bajas</div></div><div style="font-size:22px;font-weight:800;color:'+(netoBalance>=0?'#4ade80':'#ef4444')+'">'+(netoBalance>=0?'+':'')+fmtM(Math.abs(netoBalance))+'</div></div>');
   p('</div>');
-  p('<div class="cg2">');
-  // Columna izq: Altas (cerradas)
-  p('<div class="al"><h3>&#x2B06; Altas — nuevos cierres</h3><ul class="cl2">');
-  if(cerradas.length)cerradas.forEach(function(c){p('<li class="ci" style="border-left-color:#4ade80"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.presupuesto?'<span class="val">'+fmtM(parseInt(c.presupuesto))+' '+(c.moneda||'ARS')+(c.mesIngreso?' · '+c.mesIngreso:'')+'</span>':'')+'</li>');});
-  else p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic">Sin cierres en el período</li>');
-  p('</ul></div>');
-  // Columna der: Bajas + Perdidas
-  p('<div class="ba">');
-  if(churnClients.length){
-    p('<h3 style="color:#ef4444">&#x2B07; Bajas (churn)</h3><ul class="cl2">');
-    churnClients.forEach(function(c){p('<li class="ci" style="border-left-color:#ef4444"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.bajaMonto?'<span class="val" style="color:#ef4444">'+fmtM(parseInt(c.bajaMonto))+'</span>':'')+(c.bajaMotivo?'<span style="font-size:10px;color:#555;display:block;margin-top:2px">'+c.bajaMotivo+'</span>':'')+'</li>');});
-    p('</ul>');
-  }
-  if(perdidas.length){
-    p('<h3 style="color:#fb923c;margin-top:'+(churnClients.length?'12px':'0')+'">&#x2715; Perdidas (prospectos)</h3><ul class="cl2">');
-    perdidas.forEach(function(c){p('<li class="ci" style="border-left-color:#fb923c"><strong>'+c.name+'</strong>'+(c.company?' — '+c.company:'')+(c.presupuesto?'<span class="val" style="color:#fb923c">'+fmtM(parseInt(c.presupuesto))+'</span>':'')+'</li>');});
-    p('</ul>');
-  }
-  if(!churnClients.length&&!perdidas.length)p('<li class="ci" style="border-left-color:#333;color:#444;font-style:italic;list-style:none">Sin bajas en el período</li>');
-  p('<div style="margin-top:14px;padding:12px;background:rgba(147,51,234,.07);border-radius:3px;font-size:14px;color:var(--p);font-weight:700">Resultado neto: <span style="color:'+(netoAltas>=0?'#4ade80':'#ef4444')+'">'+(netoAltas>=0?'+':'')+fmtM(Math.abs(netoAltas))+'</span></div>');
-  p('</div></div></div>');
+  p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;flex:1;overflow:hidden">');
+  p('<div style="display:flex;flex-direction:column;overflow:hidden"><div style="font-size:10px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(74,222,128,.2)">&#x2B06; Nuevos cierres</div><div style="flex:1;overflow-y:auto">');
+  if(cerradas.length)cerradas.forEach(function(c){p('<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="font-size:13px;font-weight:700;color:#eee">'+c.name+(c.company?' <span style="font-weight:400;color:#555;font-size:11px">— '+c.company+'</span>':'')+'</div>'+(c.presupuesto?'<div style="font-size:12px;color:#4ade80;font-weight:700;margin-top:2px">'+fmtM(parseInt(c.presupuesto))+' '+(c.moneda||'ARS')+(c.mesIngreso?' · <span style="color:#888">'+c.mesIngreso+'</span>':'')+'</div>':'')+'</div>');});
+  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin cierres en el período</div>');
+  p('</div></div>');
+  p('<div style="display:flex;flex-direction:column;overflow:hidden"><div style="font-size:10px;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(239,68,68,.2)">&#x2B07; Clientes que se van</div><div style="flex:1;overflow-y:auto">');
+  if(churnClients.length)churnClients.forEach(function(c){p('<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="font-size:13px;font-weight:700;color:#eee">'+c.name+(c.company?' <span style="font-weight:400;color:#555;font-size:11px">— '+c.company+'</span>':'')+'</div>'+(c.bajaMonto?'<div style="font-size:12px;color:#ef4444;font-weight:700;margin-top:2px">'+fmtM(parseInt(c.bajaMonto))+' ARS/mes</div>':'')+(c.bajaMotivo?'<div style="font-size:10px;color:#444;margin-top:2px">'+c.bajaMotivo+'</div>':'')+'</div>');});
+  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin bajas en el período</div>');
+  p('</div></div>');
+  p('<div style="display:flex;flex-direction:column;overflow:hidden"><div style="font-size:10px;color:#fb923c;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(251,146,60,.2)">&#x2715; Propuestas perdidas <span style="font-size:8px;color:#444;font-weight:600;text-transform:none">(referencia)</span></div><div style="flex:1;overflow-y:auto">');
+  if(perdidas.length)perdidas.forEach(function(c){p('<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="font-size:13px;font-weight:700;color:#eee">'+c.name+(c.company?' <span style="font-weight:400;color:#555;font-size:11px">— '+c.company+'</span>':'')+'</div>'+(c.presupuesto?'<div style="font-size:12px;color:#fb923c;font-weight:700;margin-top:2px">'+fmtM(parseInt(c.presupuesto))+'</div>':'')+'</div>');});
+  else p('<div style="font-size:12px;color:#333;font-style:italic;padding:12px 0">Sin propuestas perdidas</div>');
+  if(perdidas.length&&montoPerdidas)p('<div style="margin-top:8px;padding:6px 10px;background:rgba(251,146,60,.07);border-radius:4px;font-size:11px;color:#fb923c;font-weight:700">Total: '+fmtM(montoPerdidas)+'</div>');
+  p('</div></div>');
+  p('</div></div>');
   // S4b PROYECCIÓN POR ETAPAS
   const clientesConEtapas=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
   if(clientesConEtapas.length){
@@ -1038,26 +1050,60 @@ function generarInforme(){
   });
   p('</tbody></table></div></div>');
   // S6 CONVERSIÓN
+  // Métricas extra para conversión
+  var diasCierre=0,nCierre=0;
+  cerradas.forEach(function(c){
+    if(c.estadoDate&&c.lastContact){
+      var d=Math.round((new Date(c.estadoDate)-new Date(c.lastContact))/(1000*60*60*24));
+      if(d>0){diasCierre+=d;nCierre++;}
+    }
+  });
+  var velocidadCierre=nCierre?Math.round(diasCierre/nCierre):null;
+  var hoy=now.toISOString().split('T')[0];
+  var hace30=new Date(now.getFullYear(),now.getMonth(),now.getDate()-30).toISOString().split('T')[0];
+  var enRiesgo=hotC.filter(function(c){return c.estadoDate&&c.estadoDate<hace30;});
+  var proxMesARS=hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0);
   p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Conversi&#243;n</span></div>');
-  p('<h2>Conversi&#243;n &amp; Proyecci&#243;n</h2><div class="rg">');
-  p('<div><div class="rc" style="margin-bottom:16px"><div class="rl">Tasa de conversi&#243;n</div><div class="rv" style="color:'+convColor+'">'+convRate+'%</div><div style="font-size:12px;color:#555;margin-top:4px">'+cerradas.length+' cerradas / '+convBase+' propuestas totales</div></div>');
-  p('<div style="background:rgba(147,51,234,.05);border:1px solid rgba(147,51,234,.3);padding:16px;border-radius:4px">');
-  p('<div style="font-size:11px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Por estado</div>');
+  p('<h2>Conversi&#243;n &amp; Proyecci&#243;n</h2>');
+  p('<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;overflow:hidden">');
+  // Columna izquierda
+  p('<div style="display:flex;flex-direction:column;gap:12px">');
+  // Tasa de conversión
+  p('<div class="rc"><div class="rl">Tasa de conversi&#243;n</div><div class="rv" style="color:'+convColor+'">'+convRate+'%</div><div style="font-size:12px;color:#555;margin-top:4px">'+cerradas.length+' cerradas / '+convBase+' propuestas totales</div></div>');
+  // Métricas extra — fila de 3
+  p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">');
+  p('<div style="background:rgba(147,51,234,.06);border:1px solid rgba(147,51,234,.25);border-radius:6px;padding:12px;text-align:center"><div style="font-size:9px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#x23F1; Vel. de cierre</div><div style="font-size:22px;font-weight:800;color:var(--p)">'+(velocidadCierre?velocidadCierre+'d':'—')+'</div><div style="font-size:9px;color:#444;margin-top:2px">días prom.</div></div>');
+  p('<div style="background:rgba(217,95,95,.06);border:1px solid rgba(217,95,95,.25);border-radius:6px;padding:12px;text-align:center"><div style="font-size:9px;color:#d95f5f;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#x26A0; En riesgo</div><div style="font-size:22px;font-weight:800;color:#d95f5f">'+enRiesgo.length+'</div><div style="font-size:9px;color:#444;margin-top:2px">enviadas +30d</div></div>');
+  p('<div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.25);border-radius:6px;padding:12px;text-align:center"><div style="font-size:9px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#x1F4C8; Si cierran todo</div><div style="font-size:16px;font-weight:800;color:#4ade80">'+fmtM(proxMesARS)+'</div><div style="font-size:9px;color:#444;margin-top:2px">ingreso potencial</div></div>');
+  p('</div>');
+  // Por estado
+  p('<div style="background:rgba(147,51,234,.05);border:1px solid rgba(147,51,234,.3);padding:14px;border-radius:6px;flex:1">');
+  p('<div style="font-size:10px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Por estado</div>');
   [['En negociaci&#243;n',enNeg.length,'#5090c8'],['Pend. cotizaci&#243;n',pendCot.length,'#e6823a'],['Meet coordinada',pendMeet.length,'#9b6dff'],['Sin respuesta',sinResp.length,'#d95f5f']].forEach(function(r){
     if(r[1]>0)p('<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#777">'+r[0]+'</span><span style="font-size:13px;font-weight:700;color:'+r[2]+'">'+r[1]+'</span></div>');
   });
-  p('</div></div><div>');
-  p('<div style="background:rgba(147,51,234,.05);border-left:5px solid var(--p);padding:22px;border-radius:2px;margin-bottom:16px">');
-  p('<div style="font-size:11px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Proyecci&#243;n</div>');
+  // Propuestas en riesgo detalle
+  if(enRiesgo.length){
+    p('<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(217,95,95,.2)"><div style="font-size:9px;color:#d95f5f;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">&#x26A0; Propuestas enviadas sin respuesta (+30d)</div>');
+    enRiesgo.forEach(function(c){p('<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px"><span style="color:#888">'+c.name+(c.company?' · '+c.company:'')+'</span><span style="color:#d95f5f;font-weight:700">'+(c.presupuesto?fmtM(parseInt(c.presupuesto)):'')+'</span></div>');});
+    p('</div>');
+  }
+  p('</div></div>');
+  // Columna derecha
+  p('<div style="display:flex;flex-direction:column;gap:12px">');
+  p('<div style="background:rgba(147,51,234,.05);border-left:5px solid var(--p);padding:18px;border-radius:2px">');
+  p('<div style="font-size:10px;color:var(--p);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Proyecci&#243;n pipeline</div>');
   if(hotC.length)p('<div class="pri"><span class="prn">&#x1F4E4;</span> '+hotC.length+' enviada'+(hotC.length>1?'s':'')+' — '+fmtM(hotC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
   if(warmC.length)p('<div class="pri"><span class="prn">&#x1F91D;</span> '+warmC.length+' en negociaci&#243;n — '+fmtM(warmC.reduce(function(a,c){return a+(parseInt(c.presupuesto)||0);},0))+'</div>');
-  if(enNeg.length)p('<div class="pri"><span class="prn">&#x1F4BC;</span> '+enNeg.length+' en negociaci&#243;n</div>');
   if(pendCot.length)p('<div class="pri"><span class="prn">&#x1F4CB;</span> '+pendCot.length+' pendientes cotizaci&#243;n</div>');
   p('<div class="pri" style="border-top:2px solid var(--p);margin-top:10px;padding-top:10px"><span class="prn">Total estimado: </span><strong style="color:var(--p)">'+fmtM(montoTotal)+'</strong></div></div>');
   if(Object.keys(byCanal).length){
-    p('<div style="background:rgba(0,0,0,.3);border:1px solid #1a1a1a;padding:16px;border-radius:4px">');
-    p('<div style="font-size:11px;color:#333;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Origen</div>');
-    Object.entries(byCanal).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){p('<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #111;font-size:12px"><span style="color:#666;font-weight:600">'+e[0]+'</span><span style="color:var(--p);font-weight:700">'+e[1]+'</span></div>');});
+    p('<div style="background:rgba(0,0,0,.3);border:1px solid #1a1a1a;padding:14px;border-radius:4px;flex:1">');
+    p('<div style="font-size:10px;color:#333;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Origen de leads</div>');
+    Object.entries(byCanal).sort(function(a,b){return b[1]-a[1];}).slice(0,6).forEach(function(e){
+      var pct=Math.round(e[1]/fl.length*100);
+      p('<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:#666;font-weight:600">'+e[0]+'</span><span style="color:var(--p);font-weight:700">'+e[1]+' ('+pct+'%)</span></div><div style="background:#111;border-radius:3px;height:4px"><div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#7c3aed,#9b6dff);border-radius:3px"></div></div></div>');
+    });
     p('</div>');
   }
   p('</div></div></div>');
@@ -1074,28 +1120,67 @@ function generarInforme(){
     for(var mi=0;mi<6;mi++){var d2=new Date(now.getFullYear(),now.getMonth()+mi,1);meses6.push({label:d2.toLocaleString('es-AR',{month:'long',year:'numeric'}).replace(/^\w/,function(c){return c.toUpperCase();})});}
     // Por PM
     const byPM2={};abonosActivos.forEach(function(a){var pm=a.pm||'Sin PM';byPM2[pm]=byPM2[pm]||{ars:0,usd:0,n:0};byPM2[pm].ars+=parseInt(a.montoARS)||0;byPM2[pm].usd+=parseFloat(a.montoUSD)||0;byPM2[pm].n++;});
+    // Retención: clientes con fechaIngreso
+    var retencionDias=[];
+    abonos.forEach(function(a){
+      if(a.fechaIngreso){
+        var fin=a.bajaFecha?new Date(a.bajaFecha):now;
+        var dias=Math.round((fin-new Date(a.fechaIngreso))/(1000*60*60*24));
+        if(dias>0)retencionDias.push(dias);
+      }
+    });
+    var retPromedio=retencionDias.length?Math.round(retencionDias.reduce(function(a,b){return a+b;},0)/retencionDias.length):null;
+    var retMeses=retPromedio?Math.round(retPromedio/30):null;
+    // Motivos de baja
+    var MOTIVOS_LABEL={A:'Económico',B:'Disconformidad general',C:'Falla de comunicación',D:'Falta de resultados medibles'};
+    var motivosCnt={};
+    abonos.filter(function(a){return !a.activo&&a.bajaMotivoCod;}).forEach(function(a){motivosCnt[a.bajaMotivoCod]=(motivosCnt[a.bajaMotivoCod]||0)+1;});
     p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">Facturación</span></div>');
     p('<h2>Abonos Activos ('+abonosActivos.length+')</h2>');
-    p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px;flex-shrink:0">');
-    p('<div style="background:rgba(196,154,32,.08);border:1px solid rgba(196,154,32,.4);padding:18px;border-radius:4px;text-align:center">');
-    p('<div style="font-size:11px;color:#c49a20;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total ARS / mes</div>');
-    p('<div style="font-size:32px;font-weight:800;color:#c49a20;line-height:1">'+fmtARSi(totARS)+'</div></div>');
-    p('<div style="background:rgba(106,159,216,.08);border:1px solid rgba(106,159,216,.4);padding:18px;border-radius:4px;text-align:center">');
-    p('<div style="font-size:11px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total USD / mes</div>');
-    p('<div style="font-size:32px;font-weight:800;color:#6a9fd8;line-height:1">'+fmtUSDi(totUSD)+'</div></div>');
-    p('<div style="background:rgba(155,109,255,.08);border:1px solid rgba(155,109,255,.35);padding:18px;border-radius:4px">');
-    p('<div style="font-size:11px;color:#9b6dff;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Por PM</div>');
-    Object.entries(byPM2).forEach(function(e){p('<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px"><span style="color:#bbb;font-weight:600">'+e[0]+'</span><span style="color:#c49a20;font-weight:700">'+e[1].n+' · '+fmtARSi(e[1].ars)+(e[1].usd?' + '+fmtUSDi(e[1].usd):'')+'</span></div>');});
+    p('<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px;flex-shrink:0">');
+    p('<div style="background:rgba(196,154,32,.08);border:1px solid rgba(196,154,32,.4);padding:14px;border-radius:4px;text-align:center">');
+    p('<div style="font-size:10px;color:#c49a20;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total ARS / mes</div>');
+    p('<div style="font-size:26px;font-weight:800;color:#c49a20;line-height:1">'+fmtARSi(totARS)+'</div></div>');
+    p('<div style="background:rgba(106,159,216,.08);border:1px solid rgba(106,159,216,.4);padding:14px;border-radius:4px;text-align:center">');
+    p('<div style="font-size:10px;color:#6a9fd8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total USD / mes</div>');
+    p('<div style="font-size:26px;font-weight:800;color:#6a9fd8;line-height:1">'+fmtUSDi(totUSD)+'</div></div>');
+    // Retención
+    p('<div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.3);padding:14px;border-radius:4px;text-align:center">');
+    p('<div style="font-size:10px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">&#x23F1; Retención prom.</div>');
+    p('<div style="font-size:26px;font-weight:800;color:#4ade80;line-height:1">'+(retPromedio?retPromedio+'d':'—')+'</div>');
+    p('<div style="font-size:10px;color:#4ade80;opacity:.7;margin-top:3px">'+(retMeses?'≈ '+retMeses+' meses':'sin datos')+'</div></div>');
+    // Motivos de baja
+    p('<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.3);padding:14px;border-radius:4px">');
+    p('<div style="font-size:10px;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Motivos de baja</div>');
+    if(Object.keys(motivosCnt).length){
+      Object.entries(motivosCnt).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
+        p('<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:10px"><span style="color:#888"><strong style="color:#ef4444">'+e[0]+'</strong> '+MOTIVOS_LABEL[e[0]]+'</span><span style="color:#ef4444;font-weight:700">'+e[1]+'</span></div>');
+      });
+    } else {
+      p('<div style="font-size:11px;color:#333;font-style:italic">Sin bajas registradas</div>');
+    }
     p('</div></div>');
-    // Proyección 6 meses
-    p('<div style="flex-shrink:0;margin-bottom:16px">');
-    p('<div style="font-size:11px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Proyecci\u00f3n — pr\u00f3ximos 6 meses (sin ajuste IPC)</div>');
-    p('<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">');
+    p('<div style="background:rgba(155,109,255,.08);border:1px solid rgba(155,109,255,.35);padding:14px;border-radius:4px;margin-bottom:14px;flex-shrink:0">');
+    p('<div style="font-size:10px;color:#9b6dff;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Por PM</div>');
+    Object.entries(byPM2).forEach(function(e){p('<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px"><span style="color:#bbb;font-weight:600">'+e[0]+'</span><span style="color:#c49a20;font-weight:700">'+e[1].n+' · '+fmtARSi(e[1].ars)+(e[1].usd?' + '+fmtUSDi(e[1].usd):'')+'</span></div>');});
+    p('</div>');
+    // Proyección dinámica 6 meses
+    p('<div style="flex-shrink:0;margin-bottom:14px">');
+    p('<div style="font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Proyecci\u00f3n din\u00e1mica — pr\u00f3ximos 6 meses</div>');
+    p('<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">');
     meses6.forEach(function(m){
-      p('<div style="background:rgba(196,154,32,.06);border:1px solid rgba(196,154,32,.25);border-radius:4px;padding:10px 8px;text-align:center">');
-      p('<div style="font-size:10px;color:#666;font-weight:700;margin-bottom:6px">'+m.label+'</div>');
-      if(totARS)p('<div style="font-size:12px;font-weight:800;color:#c49a20">'+fmtARSi(totARS)+'</div>');
-      if(totUSD)p('<div style="font-size:11px;font-weight:700;color:#6a9fd8;margin-top:2px">'+fmtUSDi(totUSD)+'</div>');
+      var tieneNotas=m.notas&&m.notas.length>0;
+      var borderColor=tieneNotas?'rgba(155,109,255,.5)':'rgba(196,154,32,.25)';
+      var bgColor=tieneNotas?'rgba(155,109,255,.08)':'rgba(196,154,32,.06)';
+      p('<div style="background:'+bgColor+';border:1px solid '+borderColor+';border-radius:6px;padding:10px 8px">');
+      p('<div style="font-size:9px;color:#666;font-weight:700;text-align:center;margin-bottom:6px">'+m.label+'</div>');
+      if(m.arsBase)p('<div style="font-size:12px;font-weight:800;color:#c49a20;text-align:center">'+fmtARSi(m.arsBase)+'</div>');
+      if(m.usdBase)p('<div style="font-size:10px;font-weight:700;color:#6a9fd8;text-align:center;margin-top:2px">'+fmtUSDi(m.usdBase)+'</div>');
+      if(tieneNotas){
+        p('<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07)">');
+        m.notas.forEach(function(n){p('<div style="font-size:8px;color:'+n.color+';font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+n.txt+'</div>');});
+        p('</div>');
+      }
       p('</div>');
     });
     p('</div></div>');
@@ -1128,8 +1213,11 @@ function generarInforme(){
     const fmtARS=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
     const fmtUSD=n=>n?'USD '+parseFloat(n).toLocaleString('es-AR',{minimumFractionDigits:0}):'—';
     const totARS=(lcPeriodo.cuentasARS||[]).reduce((a,r)=>a+(parseInt((r.monto||'').toString().replace(/[.,]/g,''))||0),0);
+    const totUSDlc=(lcPeriodo.cuentasUSD||[]).reduce((a,r)=>a+(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0),0);
+    const totUSDpesificado=tcBlue&&totUSDlc?Math.round(totUSDlc*tcBlue):null;
+    const totalLCPesificado=totUSDpesificado?totARS+totUSDpesificado:totARS;
     const totUSD=(lcPeriodo.cuentasUSD||[]).reduce((a,r)=>a+(parseFloat((r.monto||'').toString().replace(/,/g,'.'))||0),0);
-    p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">LC Consumo</span></div>');
+    p('<div class="slide"><div class="hd"><span class="lbl">Avalon World Agency</span><span class="tag">LC Consumo</span>'+(tcBlue?'<span style="font-size:9px;color:#555;font-weight:600;margin-left:auto">TC Blue: $'+tcBlue.toLocaleString('es-AR')+'</span>':'')+'</div>');
     p('<h2>Consumo LC &middot; '+lcPeriodo.label+'</h2>');
     p('<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">');
     // Totales
@@ -1137,6 +1225,7 @@ function generarInforme(){
     p('<div class="rl" style="color:#6a9fd8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Total ARS</div>');
     p('<div style="font-size:34px;font-weight:800;color:#6a9fd8;line-height:1">'+fmtARS(totARS)+'</div>');
     p('<div style="font-size:11px;color:#444;margin-top:6px">'+((lcPeriodo.cuentasARS||[]).length)+' cuentas</div></div>');
+    if(tcBlue&&totUSDlc)p('<div style="background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.3);padding:14px 18px;border-radius:4px;text-align:center"><div style="font-size:10px;color:#4ade80;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total unificado (TC $'+tcBlue.toLocaleString('es-AR')+')</div><div style="font-size:22px;font-weight:800;color:#4ade80">'+fmtM(totalLCPesificado)+'</div><div style="font-size:10px;color:#4ade80;opacity:.7;margin-top:3px">ARS + USD pesificado</div></div>');
     p('<div class="rc" style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.4);padding:22px;border-radius:4px;text-align:center">');
     p('<div class="rl" style="color:#4ade80;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Total USD</div>');
     p('<div style="font-size:34px;font-weight:800;color:#4ade80;line-height:1">'+fmtUSD(totUSD)+'</div>');
@@ -1961,7 +2050,7 @@ function rLCModal(){
   const d=st.lcDraft||{periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
   const PLATS=['Meta','Google','TikTok','Pinterest','Otra'];
   function rowARS(r,i){
-    const sel=(st.lcSelARS||new Set()).has(i);
+    const sel=(st.lcSelARS||[]).includes(i);
     return`<div style="display:grid;grid-template-columns:18px 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px;${sel?'background:rgba(217,95,95,.07);border-radius:6px;padding:2px 4px':''}" data-ars="${i}">
       <input type="checkbox" class="lc-chk-ars" data-idx="${i}" ${sel?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
       <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
@@ -1971,7 +2060,7 @@ function rLCModal(){
     </div>`;
   }
   function rowUSD(r,i){
-    const sel=(st.lcSelUSD||new Set()).has(i);
+    const sel=(st.lcSelUSD||[]).includes(i);
     return`<div style="display:grid;grid-template-columns:18px 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px;${sel?'background:rgba(217,95,95,.07);border-radius:6px;padding:2px 4px':''}" data-usd="${i}">
       <input type="checkbox" class="lc-chk-usd" data-idx="${i}" ${sel?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
       <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
@@ -2010,7 +2099,7 @@ function rLCModal(){
       <div style="display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="lc-sel-all-ars" title="Seleccionar todas" style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
         <div style="font-size:10px;font-weight:700;color:#6a9fd8;text-transform:uppercase;letter-spacing:.8px">Cuentas en Pesos (ARS)</div>
-        ${(st.lcSelARS&&st.lcSelARS.size)?`<button id="btn-lc-del-sel-ars" style="background:rgba(217,95,95,.12);border:1px solid rgba(217,95,95,.4);color:var(--red);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer">🗑 Eliminar ${st.lcSelARS.size} seleccionadas</button>`:''}
+        ${(st.lcSelARS&&st.lcSelARS.length)?`<button id="btn-lc-del-sel-ars" style="background:rgba(217,95,95,.12);border:1px solid rgba(217,95,95,.4);color:var(--red);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer">🗑 Eliminar ${st.lcSelARS.length} seleccionadas</button>`:''}
       </div>
       ${totalARS>0?`<span style="font-size:11px;font-weight:800;color:#6a9fd8">Total: $${totalARS.toLocaleString('es-AR')}</span>`:''}
     </div>
@@ -2021,7 +2110,7 @@ function rLCModal(){
       <div style="display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="lc-sel-all-usd" title="Seleccionar todas" style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
         <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Cuentas en USD</div>
-        ${(st.lcSelUSD&&st.lcSelUSD.size)?`<button id="btn-lc-del-sel-usd" style="background:rgba(217,95,95,.12);border:1px solid rgba(217,95,95,.4);color:var(--red);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer">🗑 Eliminar ${st.lcSelUSD.size} seleccionadas</button>`:''}
+        ${(st.lcSelUSD&&st.lcSelUSD.length)?`<button id="btn-lc-del-sel-usd" style="background:rgba(217,95,95,.12);border:1px solid rgba(217,95,95,.4);color:var(--red);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer">🗑 Eliminar ${st.lcSelUSD.length} seleccionadas</button>`:''}
       </div>
       ${totalUSD>0?`<span style="font-size:11px;font-weight:800;color:var(--green)">Total: USD ${totalUSD.toLocaleString('es-AR',{maximumFractionDigits:2})}</span>`:''}
     </div>
@@ -2720,8 +2809,8 @@ function bind(){
     };
     st.showLCModal=true;render();
   });
-  $('#lc-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='lc-modal-overlay'){st.showLCModal=false;st.lcSelARS=new Set();st.lcSelUSD=new Set();render();}});
-  $('#btn-lc-cancel')?.addEventListener('click',()=>{st.showLCModal=false;st.lcSelARS=new Set();st.lcSelUSD=new Set();render();});
+  $('#lc-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='lc-modal-overlay'){st.showLCModal=false;st.lcSelARS=[];st.lcSelUSD=[];render();}});
+  $('#btn-lc-cancel')?.addEventListener('click',()=>{st.showLCModal=false;st.lcSelARS=[];st.lcSelUSD=[];render();});
   // Load saved period
   document.getElementById('lc-load-select')?.addEventListener('change',e=>{
     const p=lcData.periodos.find(x=>x.id===e.target.value);
@@ -2764,6 +2853,40 @@ function bind(){
     };
     document.addEventListener('paste',pasteHandler,{once:true});
   }
+  // Checkbox ARS
+  document.querySelectorAll('.lc-chk-ars').forEach(chk=>chk.addEventListener('change',()=>{
+    const i=parseInt(chk.dataset.idx);
+    if(!st.lcSelARS)st.lcSelARS=[];
+    if(chk.checked){if(!st.lcSelARS.includes(i))st.lcSelARS.push(i);}
+    else st.lcSelARS=st.lcSelARS.filter(x=>x!==i);
+    render();
+  }));
+  document.getElementById('lc-sel-all-ars')?.addEventListener('change',e=>{
+    st.lcSelARS=e.target.checked?st.lcDraft.cuentasARS.map((_,i)=>i):[];render();
+  });
+  document.getElementById('btn-lc-del-sel-ars')?.addEventListener('click',()=>{
+    if(!st.lcSelARS||!st.lcSelARS.length)return;
+    lcSyncDraft();
+    st.lcDraft.cuentasARS=st.lcDraft.cuentasARS.filter((_,i)=>!st.lcSelARS.includes(i));
+    st.lcSelARS=[];render();
+  });
+  // Checkbox USD
+  document.querySelectorAll('.lc-chk-usd').forEach(chk=>chk.addEventListener('change',()=>{
+    const i=parseInt(chk.dataset.idx);
+    if(!st.lcSelUSD)st.lcSelUSD=[];
+    if(chk.checked){if(!st.lcSelUSD.includes(i))st.lcSelUSD.push(i);}
+    else st.lcSelUSD=st.lcSelUSD.filter(x=>x!==i);
+    render();
+  }));
+  document.getElementById('lc-sel-all-usd')?.addEventListener('change',e=>{
+    st.lcSelUSD=e.target.checked?st.lcDraft.cuentasUSD.map((_,i)=>i):[];render();
+  });
+  document.getElementById('btn-lc-del-sel-usd')?.addEventListener('click',()=>{
+    if(!st.lcSelUSD||!st.lcSelUSD.length)return;
+    lcSyncDraft();
+    st.lcDraft.cuentasUSD=st.lcDraft.cuentasUSD.filter((_,i)=>!st.lcSelUSD.includes(i));
+    st.lcSelUSD=[];render();
+  });
   // Delete ARS row
   document.querySelectorAll('.lc-del-ars').forEach(btn=>btn.addEventListener('click',()=>{
     lcSyncDraft();
@@ -3506,6 +3629,7 @@ function rAbonosList(){
     }
   </div>
   ${st.showAbonoModal?rAbonoModal():''}
+  ${st.showBajaAbonoModal?rBajaAbonoModal():''}
   ${st.showAbonoIPC?rAbonoIPCModal():''}
   `;
 }
@@ -3552,7 +3676,7 @@ function rAbonoModal(){
             <input class="field-input" id="ab-et-ars-${i}" value="${(etapas[i]||{}).montoARS?parseInt((etapas[i]||{}).montoARS).toLocaleString('es-AR'):''}" placeholder="Monto ARS" inputmode="numeric" style="font-size:11px;padding:8px 10px">
           </div>`).join('')}
       </div>
-      <div class="field"><label class="field-label">Fecha de inicio</label><input class="field-input" id="ab-fecha" type="date" value="${a?.fechaInicio||new Date().toISOString().split('T')[0]}"></div>
+      <div class="field-row"><div class="field"><label class="field-label">Fecha de inicio (abono)</label><input class="field-input" id="ab-fecha" type="date" value="${a?.fechaInicio||new Date().toISOString().split('T')[0]}"></div><div class="field"><label class="field-label" style="display:flex;align-items:center;gap:4px">Fecha de ingreso del cliente <span style="font-size:8px;color:var(--text-muted)">(retención)</span></label><input class="field-input" id="ab-fecha-ingreso" type="date" value="${a?.fechaIngreso||''}" placeholder="Fecha real de inicio"></div></div>
       <button class="btn-primary" id="btn-ab-save">Guardar abono</button>
       <button class="btn-outline" id="btn-ab-cancel">Cancelar</button>
     </div>
@@ -3584,6 +3708,32 @@ function rAbonoImportModal(){
         <button class="btn-primary" id="btn-ab-import-confirm">✓ Importar ${st.abonoImportPreview.length} clientes</button>
       `:''}
       <button class="btn-outline" id="btn-ab-import-cancel">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+function rBajaAbonoModal(){
+  const a=abonos.find(x=>x.id===st.bajaAbonoId);
+  if(!a)return'';
+  return`<div class="modal-overlay" id="baja-abono-overlay">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" style="color:var(--red)">⬇ Registrar baja — ${a.name}</div>
+      <div class="field"><label class="field-label">Fecha de baja</label><input class="field-input" id="baja-ab-fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="field"><label class="field-label">Motivo de baja</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="need-toggle ${st.bajaMotivoCod==='A'?'on':''}" data-bajamotivo="A" style="padding:8px 10px"><span style="font-weight:700;color:var(--text)">A</span> — Económico</div>
+          <div class="need-toggle ${st.bajaMotivoCod==='B'?'on':''}" data-bajamotivo="B" style="padding:8px 10px"><span style="font-weight:700;color:var(--text)">B</span> — Disconformidad general</div>
+          <div class="need-toggle ${st.bajaMotivoCod==='C'?'on':''}" data-bajamotivo="C" style="padding:8px 10px"><span style="font-weight:700;color:var(--text)">C</span> — Falla de comunicación</div>
+          <div class="need-toggle ${st.bajaMotivoCod==='D'?'on':''}" data-bajamotivo="D" style="padding:8px 10px"><span style="font-weight:700;color:var(--text)">D</span> — Falta de resultados medibles</div>
+        </div>
+      </div>
+      ${a.fechaIngreso?`<div style="background:rgba(155,109,255,.07);border:1px solid rgba(155,109,255,.2);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--text-muted)">
+        <span style="color:var(--text2);font-weight:600">Tiempo como cliente:</span> ${Math.round((new Date()-new Date(a.fechaIngreso))/(1000*60*60*24))} días
+        (${a.fechaIngreso} → hoy)
+      </div>`:''}
+      <button class="btn-primary" id="btn-confirmar-baja-abono" style="background:linear-gradient(135deg,#c0392b,#992d22)">⬇ Confirmar baja</button>
+      <button class="btn-outline" id="btn-cancelar-baja-abono">Cancelar</button>
     </div>
   </div>`;
 }
@@ -4146,11 +4296,36 @@ function bindAbonos(){
   $('#btn-abono-ipc')?.addEventListener('click',()=>{st.showAbonoIPC=true;render();});
   // Edit/baja/reactivar
   $$('.btn-edit-abono').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();st.editingAbono=b.dataset.abonoid;st.showAbonoModal=true;st.abonoTipoEtapas=null;render();}));
-  $$('.btn-baja-abono').forEach(b=>b.addEventListener('click',async e=>{
+  $$('.btn-baja-abono').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
-    const a=abonos.find(x=>x.id===b.dataset.abonoid);if(!a)return;
-    a.activo=false;await svAbono(a);toast('⬇ Abono dado de baja');render();
+    st.bajaAbonoId=b.dataset.abonoid;st.showBajaAbonoModal=true;st.bajaMotivoCod='';render();
   }));
+  // Modal de baja abono
+  document.querySelectorAll('[data-bajamotivo]').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('[data-bajamotivo]').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');st.bajaMotivoCod=t.dataset.bajamotivo;render();
+  }));
+  document.getElementById('btn-confirmar-baja-abono')?.addEventListener('click',async()=>{
+    const a=abonos.find(x=>x.id===st.bajaAbonoId);if(!a)return;
+    const fecha=document.getElementById('baja-ab-fecha')?.value||new Date().toISOString().split('T')[0];
+    if(!st.bajaMotivoCod){toast('Seleccioná un motivo de baja');return;}
+    const MOTIVOS={A:'Económico',B:'Disconformidad general',C:'Falla de comunicación',D:'Falta de resultados medibles'};
+    a.activo=false;
+    a.bajaFecha=fecha;
+    a.bajaMotivoCod=st.bajaMotivoCod;
+    a.bajaDate=fecha; // compatibilidad con proyección
+    a.bajaMonto=a.montoARS||0;
+    a.bajaMotivo=MOTIVOS[st.bajaMotivoCod]||'';
+    await svAbono(a);
+    st.showBajaAbonoModal=false;st.bajaAbonoId=null;st.bajaMotivoCod='';
+    toast('⬇ Baja registrada: '+MOTIVOS[st.bajaMotivoCod]);render();
+  });
+  document.getElementById('btn-cancelar-baja-abono')?.addEventListener('click',()=>{
+    st.showBajaAbonoModal=false;st.bajaAbonoId=null;st.bajaMotivoCod='';render();
+  });
+  document.getElementById('baja-abono-overlay')?.addEventListener('click',e=>{
+    if(e.target.id==='baja-abono-overlay'){st.showBajaAbonoModal=false;st.bajaAbonoId=null;st.bajaMotivoCod='';render();}
+  });
   $$('.btn-del-abono').forEach(b=>b.addEventListener('click',async e=>{
     e.stopPropagation();
     if(!confirm('¿Eliminar este abono? No queda registro.'))return;
@@ -4201,11 +4376,12 @@ function bindAbonos(){
       montoARS=parseInt(($g('ab-monto-ars')?.value||'').replace(/\./g,''))||0;
       montoUSD=parseFloat($g('ab-monto-usd')?.value||'')||0;
     }
+    const fechaIngreso=document.getElementById('ab-fecha-ingreso')?.value||'';
     if(st.editingAbono){
       const a=abonos.find(x=>x.id===st.editingAbono);
-      if(a){Object.assign(a,{name,pm,plataformas,montoARS,montoUSD,fechaInicio,tipoAbono,etapasAbono});await svAbono(a);}
+      if(a){Object.assign(a,{name,pm,plataformas,montoARS,montoUSD,fechaInicio,tipoAbono,etapasAbono,fechaIngreso});await svAbono(a);}
     } else {
-      const a=ncAbono({name,company:$g('ab-company')?.value.trim()||'',pm,plataformas,montoARS,montoUSD,fechaInicio,tipoAbono,etapasAbono});
+      const a=ncAbono({name,company:$g('ab-company')?.value.trim()||'',pm,plataformas,montoARS,montoUSD,fechaInicio,tipoAbono,etapasAbono,fechaIngreso});
       abonos.push(a);await svAbono(a);
     }
     st.showAbonoModal=false;st.editingAbono=null;st.abonoTipoEtapas=null;toast('Abono guardado ✓');render();
