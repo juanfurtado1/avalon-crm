@@ -827,6 +827,9 @@ function generarInforme(){
   const byCanal={};fl.forEach(c=>{if(c.canal)byCanal[c.canal]=(byCanal[c.canal]||0)+1;});
   const fmtM=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
   const S=[];const p=x=>S.push(x);
+  // DEBUG — sacar después
+  console.log('lcData.periodos:', lcData.periodos.length, lcData.periodos.map(p=>p.id));
+  console.log('abonos activos:', abonos.filter(a=>a.activo).length);
   // Calcular totalSlides al inicio (antes de generar HTML)
   const _lcCheck=(()=>{const sorted=[...lcData.periodos].sort((a,b)=>b.id.localeCompare(a.id));if(f.dateFrom||f.dateTo){const fromM=f.dateFrom?f.dateFrom.substring(0,7):'0000-00';const toM=f.dateTo?f.dateTo.substring(0,7):'9999-99';return sorted.find(p=>p.id>=fromM&&p.id<=toM)||null;}return sorted[0]||null;})();
   const _etapasCheck=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
@@ -1174,7 +1177,7 @@ function generarInforme(){
   p('</div><div style="font-size:11px;color:#444;font-weight:600"><span id="cn">1</span> / '+totalSlides+'</div><div class="dots" id="dots"></div></div>');
   p('</div>');
   p('<'+'script>');
-  p('var c=0,ts='+totalSlides+',s=document.querySelectorAll(".slide");');
+  p('var s=document.querySelectorAll(".slide"),ts=s.length,c=0;');
   p('function go(n){s[c].classList.remove("on");c=Math.max(0,Math.min(c+n,ts-1));s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===ts-1;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});}');
   p('var dc=document.getElementById("dots");for(var i=0;i<ts;i++){var d=document.createElement("div");d.className="dot"+(i===0?" on":"");d.setAttribute("data-i",i);d.onclick=function(){var n=parseInt(this.getAttribute("data-i"));s[c].classList.remove("on");c=n;s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===ts-1;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});};dc.appendChild(d);}');
   p('document.addEventListener("keydown",function(e){if(e.key==="ArrowLeft")go(-1);if(e.key==="ArrowRight")go(1);});');
