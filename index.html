@@ -827,6 +827,11 @@ function generarInforme(){
   const byCanal={};fl.forEach(c=>{if(c.canal)byCanal[c.canal]=(byCanal[c.canal]||0)+1;});
   const fmtM=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
   const S=[];const p=x=>S.push(x);
+  // Calcular totalSlides al inicio (antes de generar HTML)
+  const _lcCheck=(()=>{const sorted=[...lcData.periodos].sort((a,b)=>b.id.localeCompare(a.id));if(f.dateFrom||f.dateTo){const fromM=f.dateFrom?f.dateFrom.substring(0,7):'0000-00';const toM=f.dateTo?f.dateTo.substring(0,7):'9999-99';return sorted.find(p=>p.id>=fromM&&p.id<=toM)||null;}return sorted[0]||null;})();
+  const _etapasCheck=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
+  const _abonosCheck=abonos.filter(function(a){return a.activo;});
+  const totalSlides=5+(_etapasCheck.length?1:0)+(_abonosCheck.length?1:0)+(_lcCheck?1:0);
   p('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe · '+periodoLabel+'</title>');
   p('<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">');
   p('<style>*{margin:0;padding:0;box-sizing:border-box}:root{--p:#9333ea;--acc:#a78bfa;--ok:#4ade80;--err:#ef4444;--warn:#fb923c}');
@@ -1116,10 +1121,6 @@ function generarInforme(){
     return sorted[0]||null;
   })();
   const clientesConEtapas2=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
-  const abonosParaSlide=abonos.filter(function(a){return a.activo;});
-  // Slides fijos: Resumen(1) + Pipeline(2) + Resultados(3) + Detalle(4) + Conversión(5) = 5
-  // Slides condicionales: etapas + abonos + LC
-  const totalSlides=5+(clientesConEtapas2.length?1:0)+(abonosParaSlide.length?1:0)+(lcPeriodo?1:0);
   if(lcPeriodo){
     const fmtARS=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
     const fmtUSD=n=>n?'USD '+parseFloat(n).toLocaleString('es-AR',{minimumFractionDigits:0}):'—';
