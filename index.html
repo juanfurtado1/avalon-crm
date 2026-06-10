@@ -1111,32 +1111,15 @@ function generarInforme(){
     if(f.dateFrom||f.dateTo){
       const fromM=f.dateFrom?f.dateFrom.substring(0,7):'0000-00';
       const toM=f.dateTo?f.dateTo.substring(0,7):'9999-99';
-      // 1) Buscar por id numérico tipo "2025-05"
-      const byId=sorted.find(p=>p.id>=fromM&&p.id<=toM);
-      if(byId)return byId;
-      // 2) Buscar por campo desde/hasta del período guardado
-      const byRange=sorted.find(p=>{
-        const pFrom=p.desde?p.desde.substring(0,7):'';
-        const pTo=p.hasta?p.hasta.substring(0,7):'';
-        if(pFrom&&pFrom>=fromM&&pFrom<=toM)return true;
-        if(pTo&&pTo>=fromM&&pTo<=toM)return true;
-        return false;
-      });
-      if(byRange)return byRange;
-      // 3) Fallback: buscar por label (ej: "Mayo 2025" o "mayo-2025")
-      const mesNames=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-      const targetYear=fromM.substring(0,4);
-      const targetMonth=parseInt(fromM.substring(5,7));
-      const targetMonthName=mesNames[targetMonth-1];
-      return sorted.find(p=>{
-        const lbl=(p.label||p.id).toLowerCase();
-        return lbl.includes(targetMonthName)&&lbl.includes(targetYear);
-      })||null;
+      return sorted.find(p=>p.id>=fromM&&p.id<=toM)||null;
     }
     return sorted[0]||null;
   })();
   const clientesConEtapas2=clients.filter(function(c){return c.estado==='Cerrada'&&c.etapas&&c.etapas.length;});
-  const totalSlides=lcPeriodo?(clientesConEtapas2.length?8:7):(clientesConEtapas2.length?7:6);
+  const abonosParaSlide=abonos.filter(function(a){return a.activo;});
+  // Slides fijos: Resumen(1) + Pipeline(2) + Resultados(3) + Detalle(4) + Conversión(5) = 5
+  // Slides condicionales: etapas + abonos + LC
+  const totalSlides=5+(clientesConEtapas2.length?1:0)+(abonosParaSlide.length?1:0)+(lcPeriodo?1:0);
   if(lcPeriodo){
     const fmtARS=n=>n?'$'+parseInt(n).toLocaleString('es-AR'):'—';
     const fmtUSD=n=>n?'USD '+parseFloat(n).toLocaleString('es-AR',{minimumFractionDigits:0}):'—';
