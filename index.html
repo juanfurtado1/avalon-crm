@@ -670,6 +670,8 @@ function fmt(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 function fmtDate(d){if(!d)return'';const p=d.split('-');if(p.length<3)return d;return`${p[2]}/${p[1]}`;}
 function gi(id){const el=document.getElementById(id);return el?el.value.trim():null}
 function fmtPres(el){let raw=el.value.replace(/[^0-9]/g,'');if(!raw){el.value='';return;}el.value=parseInt(raw,10).toLocaleString('es-AR');}
+function fmtNum(el){let raw=el.value.replace(/[^0-9]/g,'');if(!raw){el.value='';return;}el.value=parseInt(raw,10).toLocaleString('es-AR');}
+function parseFmtNum(str){return parseInt((str||'').toString().replace(/\./g,'').replace(/,/g,''))||0;}
 function presRaw(val){return val?val.replace(/[^\d]/g,''):''}
 function fmtPresByMoneda(val,moneda){if(!val)return'';const n=parseInt(val);if(isNaN(n))return val;const f=n.toLocaleString('es-AR');return moneda==='ARS'?'$'+f:f;}
 function updPresPrefix(moneda){
@@ -742,14 +744,19 @@ async function lcImportFromImage(file){
     if(data.error)throw new Error(data.error.message);
     const text=data.content?.[0]?.text||'[]';
     const rows=JSON.parse(text.replace(/```json|```/g,'').trim());
-    const arsRows=rows.filter(r=>(r.divisa||'ARS').toUpperCase()==='ARS');
-    const usdRows=rows.filter(r=>(r.divisa||'').toUpperCase()==='USD');
+    // Solo incluir cargas, no devoluciones
+    const soloCargas=rows.filter(r=>(r.tipo||'carga').toLowerCase()!=='devolucion');
+    const arsRows=soloCargas.filter(r=>(r.divisa||'ARS').toUpperCase()==='ARS');
+    const usdRows=soloCargas.filter(r=>(r.divisa||'').toUpperCase()==='USD');
+    const devs=rows.length-soloCargas.length;
     if(!st.lcDraft)st.lcDraft={periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
+    // Sanitizar números — limpiar puntos/comas en caso de formato inconsistente
+    const cleanN=v=>{if(typeof v==='number')return v;const s=String(v).replace(/[^0-9,.-]/g,'');if(s.includes(',')&&!s.includes('.'))return parseFloat(s.replace(',','.'));return parseFloat(s.replace(/\./g,'').replace(',','.'));};
     st.lcDraft.cuentasARS=[...(st.lcDraft.cuentasARS||[]),...arsRows.map(r=>({
-      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(r.carga||0))
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(Math.abs(cleanN(r.carga)||0)))
     }))];
     st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
-      cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.abs(cleanN(r.carga)||0))
     }))];
     toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)`);
   }catch(e){
@@ -782,7 +789,7 @@ async function lcImportFromPDF(file){
           role:'user',
           content:[
             {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-            {type:'text',text:'De este PDF de liquidación de cuentas extraé TODAS las filas de cargas. Devolvé SOLO un JSON array sin markdown, donde cada objeto tiene: {"cuenta":"nombre de cuenta o cliente","carga":numero_sin_formato,"divisa":"ARS" o "USD"}. La columna "Carga" o "Monto" tiene el valor numérico (sin puntos ni comas de miles). La columna "Divisa" indica ARS o USD — si no existe esa columna pero hay montos en dólares (USD, u$s, US$), usá "USD", sino "ARS". Ignorá encabezados, totales y filas vacías. Devolvé solo el JSON array, absolutamente nada más.'}
+            {type:'text',text:'Analizá este PDF de liquidación de cuentas publicitarias. Extraé TODAS las filas de operaciones individuales (no totales ni subtotales). Para cada fila devolvé un objeto JSON con: {"cuenta": "nombre exacto de la cuenta/cliente", "carga": número_entero_positivo, "divisa": "ARS" o "USD", "tipo": "carga" o "devolucion"}. Reglas importantes: 1) El campo "carga" debe ser siempre un número entero positivo sin puntos ni comas — si en el PDF dice "1.200.000" o "1,200,000" devolvé 1200000. 2) Si el monto en el PDF es negativo o la operación es una devolución/ajuste/reversa, poné tipo:"devolucion", sino tipo:"carga". 3) La divisa: si hay columna Divisa usala; si el nombre de cuenta contiene USD/u$s/US$ o el contexto indica dólares, poné "USD"; sino "ARS". 4) Ignorá filas de encabezado, totales, subtotales y filas completamente vacías. 5) Devolvé SOLO el JSON array, sin markdown, sin texto explicativo, sin nada más.'}
           ]
         }]
       })
@@ -800,7 +807,7 @@ async function lcImportFromPDF(file){
     st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
       cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
     }))];
-    toast('✓ PDF importado: '+rows.length+' filas ('+arsRows.length+' ARS · '+usdRows.length+' USD)');
+    toast('✓ PDF importado: '+soloCargas.length+' cargas ('+arsRows.length+' ARS · '+usdRows.length+' USD)'+(devs?' · '+devs+' devoluciones ignoradas':''));
   }catch(e){
     toast('Error al leer PDF: '+e.message);
     console.error(e);
@@ -830,7 +837,7 @@ function lcSyncDraft(){
     return{
       cliente:cli?cli.value:r.cliente,
       plataforma:plat?plat.value:r.plataforma,
-      monto:monto?monto.value:r.monto
+      monto:monto?monto.value.replace(/\./g,''):r.monto
     };
   });
   // Sync header fields
@@ -2105,7 +2112,7 @@ function rLCModal(){
       <input type="checkbox" class="lc-chk-ars" data-idx="${i}" ${sel?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
       <input class="field-input lc-ars-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-ars-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
-      <input class="field-input lc-ars-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto ARS" style="font-size:11px;padding:6px 8px" inputmode="numeric">
+      <input class="field-input lc-ars-monto" data-idx="${i}" value="${r.monto?parseInt(r.monto.toString().replace(/[.,]/g,'')).toLocaleString('es-AR'):''}" placeholder="Monto ARS" style="font-size:11px;padding:6px 8px" inputmode="numeric" oninput="fmtNum(this)">
       <button class="btn-sm lc-del-ars" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
     </div>`;
   }
@@ -2115,7 +2122,7 @@ function rLCModal(){
       <input type="checkbox" class="lc-chk-usd" data-idx="${i}" ${sel?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--red)">
       <input class="field-input lc-usd-cli" data-idx="${i}" value="${r.cliente||''}" placeholder="Cliente" style="font-size:11px;padding:6px 8px">
       <select class="field-select lc-usd-plat" data-idx="${i}" style="font-size:11px;padding:6px 8px;width:90px">${PLATS.map(p=>`<option value="${p}" ${r.plataforma===p?'selected':''}>${p}</option>`).join('')}</select>
-      <input class="field-input lc-usd-monto" data-idx="${i}" value="${r.monto||''}" placeholder="Monto USD" style="font-size:11px;padding:6px 8px" inputmode="numeric">
+      <input class="field-input lc-usd-monto" data-idx="${i}" value="${r.monto?parseFloat(r.monto.toString().replace(/[.,]/g,'')).toLocaleString('es-AR'):''}" placeholder="Monto USD" style="font-size:11px;padding:6px 8px" inputmode="numeric" oninput="fmtNum(this)">
       <button class="btn-sm lc-del-usd" data-idx="${i}" style="color:var(--red);border-color:rgba(217,95,95,.3);padding:4px 7px;font-size:12px">✕</button>
     </div>`;
   }
@@ -2589,7 +2596,7 @@ function rPipe(c){
     <div class="section-title">⬇ Registrar baja</div>
     <div class="field-row">
       <div class="field"><label class="field-label">Fecha de baja</label><input class="field-input" id="pip-baja-date" type="date" value=""></div>
-      <div class="field"><label class="field-label">Monto mensual perdido</label><input class="field-input" id="pip-baja-monto" placeholder="800.000" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9.]/g,'')"></div>
+      <div class="field"><label class="field-label">Monto mensual perdido</label><input class="field-input" id="pip-baja-monto" placeholder="800.000" inputmode="numeric" oninput="fmtNum(this)"></div>
     </div>
     <div class="field"><label class="field-label">Motivo (opcional)</label><input class="field-input" id="pip-baja-motivo" placeholder="Ej: presupuesto, competencia, pausa..."></div>
     <button class="btn-sm" id="btn-save-baja" style="color:var(--red);border-color:rgba(217,95,95,.35);background:rgba(217,95,95,.07);width:100%;justify-content:center;margin-bottom:4px">⬇ Registrar baja</button>
