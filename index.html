@@ -744,19 +744,17 @@ async function lcImportFromImage(file){
     if(data.error)throw new Error(data.error.message);
     const text=data.content?.[0]?.text||'[]';
     const rows=JSON.parse(text.replace(/```json|```/g,'').trim());
-    // Solo incluir cargas, no devoluciones
-    const soloCargas=rows.filter(r=>(r.tipo||'carga').toLowerCase()!=='devolucion');
-    const arsRows=soloCargas.filter(r=>(r.divisa||'ARS').toUpperCase()==='ARS');
-    const usdRows=soloCargas.filter(r=>(r.divisa||'').toUpperCase()==='USD');
-    const devs=rows.length-soloCargas.length;
+    const arsRows=rows.filter(r=>(r.divisa||'ARS').toUpperCase()==='ARS');
+    const usdRows=rows.filter(r=>(r.divisa||'').toUpperCase()==='USD');
+    const devs=0;
     if(!st.lcDraft)st.lcDraft={periodo:'',desde:'',hasta:'',cuentasARS:[],cuentasUSD:[]};
-    // Sanitizar números — limpiar puntos/comas en caso de formato inconsistente
-    const cleanN=v=>{if(typeof v==='number')return v;const s=String(v).replace(/[^0-9,.-]/g,'');if(s.includes(',')&&!s.includes('.'))return parseFloat(s.replace(',','.'));return parseFloat(s.replace(/\./g,'').replace(',','.'));};
+    // Sanitizar números — conservar signo para que negativos resten al sumar
+    const cleanN=v=>{if(typeof v==='number')return v;const s=String(v).replace(/[^0-9,.-]/g,'');if(s.includes(',')&&!s.includes('.'))return parseFloat(s.replace(',','.'));return parseFloat(s.replace(/[.](?=.*[.,])/g,'').replace(',','.'));};
     st.lcDraft.cuentasARS=[...(st.lcDraft.cuentasARS||[]),...arsRows.map(r=>({
-      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(Math.abs(cleanN(r.carga)||0)))
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.round(cleanN(r.carga)||0))
     }))];
     st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
-      cliente:r.cuenta||'',plataforma:'Meta',monto:String(Math.abs(cleanN(r.carga)||0))
+      cliente:r.cuenta||'',plataforma:'Meta',monto:String(cleanN(r.carga)||0)
     }))];
     toast(`✓ ${rows.length} filas importadas (${arsRows.length} ARS · ${usdRows.length} USD)`);
   }catch(e){
@@ -789,7 +787,7 @@ async function lcImportFromPDF(file){
           role:'user',
           content:[
             {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-            {type:'text',text:'Analizá este PDF de liquidación de cuentas publicitarias. Extraé TODAS las filas de operaciones individuales (no totales ni subtotales). Para cada fila devolvé un objeto JSON con: {"cuenta": "nombre exacto de la cuenta/cliente", "carga": número_entero_positivo, "divisa": "ARS" o "USD", "tipo": "carga" o "devolucion"}. Reglas importantes: 1) El campo "carga" debe ser siempre un número entero positivo sin puntos ni comas — si en el PDF dice "1.200.000" o "1,200,000" devolvé 1200000. 2) Si el monto en el PDF es negativo o la operación es una devolución/ajuste/reversa, poné tipo:"devolucion", sino tipo:"carga". 3) La divisa: si hay columna Divisa usala; si el nombre de cuenta contiene USD/u$s/US$ o el contexto indica dólares, poné "USD"; sino "ARS". 4) Ignorá filas de encabezado, totales, subtotales y filas completamente vacías. 5) Devolvé SOLO el JSON array, sin markdown, sin texto explicativo, sin nada más.'}
+            {type:'text',text:'Analizá este PDF de liquidación de cuentas publicitarias. Extraé TODAS las filas de operaciones individuales (no totales ni subtotales). Para cada fila devolvé un objeto JSON con: {"cuenta": "nombre exacto de la cuenta/cliente", "carga": numero_con_signo, "divisa": "ARS" o "USD"}. Reglas críticas: 1) El campo "carga" es un número entero CON su signo original — si en el PDF es positivo devolvé número positivo, si es negativo devolvé número negativo. Si el PDF dice "1.200.000" devolvé 1200000, si dice "-312.500" devolvé -312500. NUNCA uses puntos ni comas en el número. 2) La divisa: si hay columna Divisa usala; si el nombre de cuenta o contexto indica dólares (USD/u$s/US$) poné "USD"; sino "ARS". 3) Ignorá filas de encabezado, totales, subtotales y filas completamente vacías. 4) Devolvé SOLO el JSON array, sin markdown, sin texto explicativo, absolutamente nada más.'}
           ]
         }]
       })
@@ -807,7 +805,7 @@ async function lcImportFromPDF(file){
     st.lcDraft.cuentasUSD=[...(st.lcDraft.cuentasUSD||[]),...usdRows.map(r=>({
       cliente:r.cuenta||'',plataforma:'Meta',monto:String(r.carga||0)
     }))];
-    toast('✓ PDF importado: '+soloCargas.length+' cargas ('+arsRows.length+' ARS · '+usdRows.length+' USD)'+(devs?' · '+devs+' devoluciones ignoradas':''));
+    toast('✓ PDF importado: '+rows.length+' filas ('+arsRows.length+' ARS · '+usdRows.length+' USD)');
   }catch(e){
     toast('Error al leer PDF: '+e.message);
     console.error(e);
