@@ -690,6 +690,7 @@ function applyFilters(list){
   const f=st.filters;
   const q=st.searchTerm.toLowerCase().trim();
   return list.filter(c=>{
+    if(!c.name||!c.name.trim())return false;
     if(q&&!((c.name||'').toLowerCase().includes(q))&&!((c.company||'').toLowerCase().includes(q))&&!((c.email||'').toLowerCase().includes(q)))return false;
     if(st.filter!=='Todos'&&c.estado!==st.filter)return false;
     if(f.tipo&&c.tipo!==f.tipo)return false;
