@@ -1634,7 +1634,8 @@ function rList(){
   const fl=applyFilters(clients);
   const sr=[...fl].sort((a,b)=>Number(b.id)-Number(a.id));
   const today2=new Date().toISOString().split('T')[0];
-  const ct={total:clients.length,abonos:clients.filter(c=>c.tipo!=='LC').length,lc:clients.filter(c=>c.tipo==='LC').length,urgentes:clients.filter(c=>ul(ds(c.lastContact),c.estado)==='cold').length,meets:clients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length,cerradas:clients.filter(c=>c.estado==='Cerrada').length,perdidas:clients.filter(c=>c.estado==='Perdida').length,pipeline:clients.filter(c=>!['Cerrada','Perdida'].includes(c.estado)).length};
+  const validClients=clients.filter(c=>c.name&&c.name.trim());
+  const ct={total:validClients.length,abonos:validClients.filter(c=>c.tipo!=='LC').length,lc:validClients.filter(c=>c.tipo==='LC').length,urgentes:validClients.filter(c=>ul(ds(c.lastContact),c.estado)==='cold').length,meets:validClients.filter(c=>(c.meetDiscovery&&c.meetDiscovery>=today2)||(c.meetBudget&&c.meetBudget>=today2)).length,cerradas:validClients.filter(c=>c.estado==='Cerrada').length,perdidas:validClients.filter(c=>c.estado==='Perdida').length,pipeline:validClients.filter(c=>!['Cerrada','Perdida'].includes(c.estado)).length};
   // Proyección pipeline: presupuestos de estado Enviada + columna Hot
   const proyeccionPool=fl.filter(c=>c.estado==='Enviada'||ul(ds(c.lastContact),c.estado)==='hot');
   const totalMonto=proyeccionPool.reduce((acc,c)=>{const v=parseInt(c.presupuesto||0);return acc+(isNaN(v)?0:v);},0);
