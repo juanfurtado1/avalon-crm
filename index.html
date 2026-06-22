@@ -1480,6 +1480,7 @@ function rSbModal(){
   <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px">Credenciales de Supabase hardcodeadas en el código. Proyecto: <strong style="color:var(--gold)">avalon-crm</strong></p>
   <div class="field"><label class="field-label">URL</label><input class="field-input" value="${SB_URL}" readonly style="opacity:.6"></div>
   <div class="field"><label class="field-label">Estado</label><div style="background:rgba(74,171,122,.1);border:1px solid rgba(74,171,122,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green);font-weight:600">✓ Conectado — ${clients.length} clientes cargados</div></div>
+  <button class="btn-outline" id="btn-limpiar-local" style="color:var(--red);border-color:rgba(217,95,95,.3);margin-bottom:8px;width:100%">🧹 Limpiar caché local</button>
   <button class="btn-outline" id="btn-cancel-sb">Cerrar</button>
   </div></div>`;
 }
@@ -3068,7 +3069,13 @@ function bind(){
   $('#api-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='api-modal-overlay'){st.showApiModal=false;render()}});
   $('#sb-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='sb-modal-overlay'){st.showSbModal=false;render()}});
   $('#btn-cancel-api')?.addEventListener('click',()=>{st.showApiModal=false;render()});
-  $('#btn-cancel-sb')?.addEventListener('click',()=>{st.showSbModal=false;render()});
+  $('#btn-cancel-sb')?.addEventListener('click',()=>{st.showSbModal=false;render();});
+  $('#btn-limpiar-local')?.addEventListener('click',()=>{
+    localStorage.removeItem('avalon_clients');
+    localStorage.removeItem('pipeline_clients');
+    toast('🧹 Caché local limpiado — recargando...');
+    setTimeout(()=>location.reload(),1200);
+  });
   $('#btn-cancel-new')?.addEventListener('click',()=>{st.showNewModal=false;render()});
 
   // API key save
