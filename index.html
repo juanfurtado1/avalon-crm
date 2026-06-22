@@ -429,10 +429,9 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 function sbH(){return{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}
 let clients=[];
 async function loadC(){
-  try{
-    const old=JSON.parse(localStorage.getItem('avalon_clients')||'[]');
-    if(old.length){for(const c of old)await sbUp(c);localStorage.removeItem('avalon_clients');localStorage.removeItem('pipeline_clients');}
-  }catch(e){}
+  // Limpiar cualquier dato viejo de localStorage
+  localStorage.removeItem('avalon_clients');
+  localStorage.removeItem('pipeline_clients');
   try{
     const r=await fetch(SB_URL+'/rest/v1/clients?select=data&order=created_at.desc',{headers:sbH()});
     const rows=await r.json();
