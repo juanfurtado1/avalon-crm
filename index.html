@@ -3742,7 +3742,7 @@ function rAbonosList(){
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <div style="font-size:13px;font-weight:700;color:var(--text)">${a.name}${a.company?` <span style="font-size:10px;color:var(--text-muted);font-weight:500">· ${a.company}</span>`:''}</div>
+                <div style="font-size:13px;font-weight:700;color:var(--text)">${a.company||a.name}${a.company?` <span style="font-size:10px;color:var(--text-muted);font-weight:500">| ${a.name}</span>`:''}</div>
                 <span style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:4px;${esEtapas?'background:rgba(106,159,216,.15);color:var(--blue);border:1px solid rgba(106,159,216,.3)':'background:rgba(196,154,32,.12);color:var(--yellow);border:1px solid rgba(196,154,32,.3)'}">${esEtapas?'3 etapas':'fijo'}</span>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;align-items:center">
@@ -3860,7 +3860,7 @@ function rAbonoImportModal(){
             <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px">
               <div><div style="font-weight:700;color:var(--text)">${a.name}${a.company?' · '+a.company:''}</div>
               <div style="color:var(--text-muted);font-size:10px">${a.pm?'👤 '+a.pm+' · ':''}${(a.plataformas||[]).join(', ')}</div></div>
-              <div style="text-align:right">${a.montoARS?'<div style="color:var(--yellow);font-weight:700">$'+parseInt(a.montoARS).toLocaleString('es-AR')+'</div>':''}${a.montoUSD?'<div style="color:var(--blue);font-weight:700">USD '+a.montoUSD+'</div>':''}</div>
+              <div style="text-align:right">${a.montoARS?'<div style="color:var(--yellow);font-weight:700">$'+parseInt(a.montoARS).toLocaleString('es-AR')+'</div>':''}${a.montoUSD?'<div style="color:var(--blue);font-weight:700">USD '+parseFloat(a.montoUSD).toLocaleString('es-AR')+'</div>':''}</div>
             </div>`).join('')}
         </div>
         <button class="btn-primary" id="btn-ab-import-confirm">✓ Importar ${st.abonoImportPreview.length} clientes</button>
