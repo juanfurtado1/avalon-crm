@@ -442,7 +442,7 @@ async function loadC(){
 async function sv(c){if(!c)return;if(!c.name||!c.name.trim()){console.warn("sv() bloqueado: cliente sin nombre",c.id);return;}await sbUp(c);}
 async function sbUp(c){
   try{
-    await fetch(SB_URL+'/rest/v1/clients',{
+    await fetch(SB_URL+'/rest/v1/clients?on_conflict=id',{
       method:'POST',
       headers:{...sbH(),'Prefer':'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify({id:c.id,data:c,updated_at:new Date().toISOString()})
