@@ -372,6 +372,8 @@ body.is-dragging .kanban-card:not(.dragging){transition:opacity .1s}
 .recipient-row input[type="checkbox"]{accent-color:var(--green);width:14px;height:14px;flex-shrink:0;cursor:pointer}
 .recipient-name{font-size:12px;font-weight:700;color:var(--text);flex:1}
 .recipient-email{font-size:10px;color:var(--text-muted);font-weight:600}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+  .shake{animation:shake .4s ease;}
 </style>
 </head>
 <body>
@@ -437,7 +439,7 @@ async function loadC(){
     if(Array.isArray(rows))clients=rows.filter(row=>row.data&&row.data.id!=='lc_master').map(row=>nc(row.data));
   }catch(e){console.error('Load error',e);}
 }
-async function sv(c){if(!c)return;await sbUp(c);}
+async function sv(c){if(!c)return;if(!c.name||!c.name.trim()){console.warn("sv() bloqueado: cliente sin nombre",c.id);return;}await sbUp(c);}
 async function sbUp(c){
   try{
     await fetch(SB_URL+'/rest/v1/clients',{
@@ -3311,6 +3313,7 @@ function bind(){
     e.stopPropagation();
     const c=gc();if(!c)return;
     const prev=c.estado,next=el.dataset.csel;
+    if(!c.name||!c.name.trim()){toast('⚠ Completá el nombre del prospecto antes de cambiar el estado');st.estadoOpen=false;render();return;}
     if(prev!==next){addNotif(c,next);c.estadoDate=new Date().toISOString().split('T')[0];}
     c.estado=next;st.estadoOpen=false;await sv(c);
     // Show modal when closing a deal
@@ -3361,7 +3364,7 @@ function bind(){
 // ── ACTIONS ──
 async function saveNew(){
   const $=s=>document.querySelector(s);
-  const name=$('#fn-name')?.value.trim();if(!name){$('#fn-name')?.focus();return;}
+  const name=$('#fn-name')?.value.trim();if(!name){const inp=$('#fn-name');if(inp){inp.focus();inp.style.borderColor='#d95f5f';inp.style.boxShadow='0 0 0 2px rgba(217,95,95,.3)';inp.classList.add('shake');setTimeout(()=>{inp.style.borderColor='';inp.style.boxShadow='';inp.classList.remove('shake');},1500);}toast('⚠ Ingresá un nombre para el prospecto');return;}
   const sn=[...document.querySelectorAll('#fn-needs-grid .need-toggle.on')].map(t=>t.dataset.need);
   const tipo=document.querySelector('#fn-tipo-grid .need-toggle.on')?.dataset.tipo||'Abono';
   const plataformas=tipo==='LC'?[...document.querySelectorAll('#fn-plat-grid .need-toggle.on')].map(t=>t.dataset.plat):[];
