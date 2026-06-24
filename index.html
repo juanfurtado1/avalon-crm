@@ -1482,8 +1482,7 @@ function rGlobalNav(){
       <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif-nav" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
       <button class="btn-add" id="btn-open-new-nav" style="font-size:10px;padding:5px 10px">+ Prospecto</button>
     </div>
-  </div>
-  <div style="height:48px"></div>`;
+  </div>`;
 }
 function bindGlobalNav(){
   document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>{
@@ -1500,13 +1499,21 @@ function render(){
   const app=document.getElementById('app');
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
   // Inyectar/actualizar barra de navegación global
-  const _navEl=document.getElementById('global-nav');
-  const _navSpacer=document.getElementById('global-nav-spacer');
-  const _navHtml=rGlobalNav();
-  if(_navEl){_navEl.outerHTML=_navHtml;}
-  else{const _d=document.createElement('div');_d.innerHTML=_navHtml;document.body.insertBefore(_d.firstElementChild,app);}
-  if(!_navSpacer){const _s=document.createElement('div');_s.id='global-nav-spacer';_s.style.height='48px';app.prepend(_s);}
+  let _navEl=document.getElementById('global-nav');
+  if(!_navEl){
+    _navEl=document.createElement('div');
+    _navEl.id='global-nav-wrap';
+    document.body.insertBefore(_navEl,app);
+  }
+  _navEl.outerHTML=rGlobalNav();
   bindGlobalNav();
+  // Spacer fijo en el body para compensar la barra
+  if(!document.getElementById('global-nav-spacer')){
+    const _s=document.createElement('div');
+    _s.id='global-nav-spacer';
+    _s.style.cssText='height:48px;width:100%;position:relative';
+    document.body.insertBefore(_s,app);
+  }
   if(st.view==='nuevos'){app.innerHTML=rNuevosList();if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());bind();bindNuevos();return;}
   if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
   if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
