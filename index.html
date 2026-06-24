@@ -421,7 +421,20 @@ function requestNotifPermission(){if(Notification&&Notification.permission==='de
 const NC_SCOPE=['Meta Ads','Google Ads','TikTok Ads','Pinterest','LinkedIn','CM y Diseño','Filmmaker','CRM'];
 const NC_PMS=['Salma','Lucas','Caro'];
 const NC_PM_TEAMS={'Salma':['Mica','Tizi','Eli','May','Martu'],'Lucas':['Mica','Noe','Pili','Martu'],'Caro':['Tizi','Eli','Noe','May']};
-const NC_OB_STEPS=[{key:'contrato',label:'Contrato'},{key:'oc',label:'OC firmada'},{key:'altaAdmin',label:'Alta Admin'},{key:'mailPresentacion',label:'Mail equipo'},{key:'meetBrief',label:'Meet de brief'}];
+const NC_OB_STEPS=[
+  {key:'contrato',label:'Contrato firmado'},
+  {key:'oc',label:'OC (Orden de Compra)'},
+  {key:'altaAdmin',label:'Alta administrativa'},
+  {key:'mailPresentacion',label:'Mail de presentación'},
+  {key:'meetBrief',label:'Meet de brief'}
+];
+const NC_OB_ESTADOS=['Sin enviar','Enviado','Firmado','Completo'];
+const NC_TEAMS={
+  'Diseño':['Pilar','Martu'],
+  'CM':['May','Dai'],
+  'Meta':['Ivan','Gustavo'],
+  'Google':['Ivan','Gustavo']
+};
 
 // ── SUPABASE ──
 const SB_URL='https://jbfpwrkcyhoclqxvxuqq.supabase.co';
@@ -547,7 +560,8 @@ function ncNew(d={}){
     rubro:d.rubro||'',pm:d.pm||'',equipo:d.equipo||'',
     fechaInicio:d.fechaInicio||new Date().toISOString().split('T')[0],
     scope:d.scope||[],
-    onboarding:d.onboarding||{contrato:false,oc:false,altaAdmin:false,mailPresentacion:false,meetBrief:false},
+    onboarding:d.onboarding||{contrato:'Sin enviar',oc:'Sin enviar',altaAdmin:'Sin enviar',mailPresentacion:'Sin enviar',meetBrief:'Sin enviar'},
+    equipoAreas:d.equipoAreas||{Diseño:'',CM:'',Meta:'',Google:''},
     mision:d.mision||'',vision:d.vision||'',
     diferenciales:d.diferenciales||'',objetivos:d.objetivos||'',contexto:d.contexto||'',
     emailGenerado:d.emailGenerado||'',scopeCtx:d.scopeCtx||'',
@@ -2820,7 +2834,7 @@ function sendTeamEmail(c){
   if(!pmEmail){toast('Asigná un PM primero');return;}
 
   // Read equipo from DOM in case it hasn't been saved yet
-  const equipoRaw=document.getElementById('nd-equipo')?.value||c.equipo||'';
+  const equipoRaw=c.equipo||Object.entries(c.equipoAreas||{}).filter(([,v])=>v).map(([a,v])=>`${a}: ${v}`).join(', ')||'';
   const equipoNames=equipoRaw.split('\n').map(s=>s.trim()).filter(Boolean);
 
   const found=[];
@@ -3938,8 +3952,8 @@ function rAbonoIPCModal(){
 
 // ── CLIENTES NUEVOS — RENDER ──
 function rNuevosList(){
-  const listo=nuevos.filter(c=>Object.values(c.onboarding).every(Boolean)).length;
-  const enProceso=nuevos.filter(c=>!Object.values(c.onboarding).every(Boolean)).length;
+  const listo=nuevos.filter(c=>Object.values(c.onboarding||{}).every(v=>v==='Completo')).length;
+  const enProceso=nuevos.filter(c=>!Object.values(c.onboarding||{}).every(v=>v==='Completo')).length;
   const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id));
   return`
   <div class="nc-header">
@@ -4032,7 +4046,7 @@ function rNuevoModal(){
 function rNuevoDetail(){
   const c=gnc();if(!c){st.view='nuevos';render();return'';}
   const ob=c.onboarding||{};
-  const done=Object.values(ob).filter(Boolean).length;
+  const done=Object.values(ob).filter(v=>v==='Completo').length;
   const ready=done===NC_OB_STEPS.length;
   const wl=wa(c.phone);
   return`
@@ -4050,11 +4064,18 @@ function rNuevoDetail(){
     <div class="nc-section">
       <div class="nc-section-title">📋 Onboarding checklist <span style="margin-left:auto;font-size:10px;color:${ready?'var(--green)':'var(--gold)'};font-weight:800">${done}/${NC_OB_STEPS.length}</span></div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        ${NC_OB_STEPS.map(s=>`
-        <div class="ob-step ${ob[s.key]?'done':''}" style="font-size:11px;padding:10px 12px;border-radius:8px;cursor:pointer;user-select:none" data-ob="${s.key}">
-          <div class="ob-check" style="width:16px;height:16px;border-radius:4px;font-size:10px">${ob[s.key]?'✓':''}</div>
-          <span style="font-weight:700;text-transform:none;letter-spacing:0">${{contrato:'Contrato firmado',oc:'OC (Orden de Compra) firmada',altaAdmin:'Formulario de alta administrativa',mailPresentacion:'Mail de presentación al equipo interno',meetBrief:'Meet de brief realizada'}[s.key]}</span>
-        </div>`).join('')}
+        ${NC_OB_STEPS.map(s=>{
+          const est=ob[s.key]||'Sin enviar';
+          const colors={'Sin enviar':'var(--text-muted)','Enviado':'var(--gold)','Firmado':'var(--blue)','Completo':'var(--green)'};
+          const icons={'Sin enviar':'○','Enviado':'◔','Firmado':'◑','Completo':'✓'};
+          return`<div class="ob-step" style="font-size:11px;padding:10px 12px;border-radius:8px;cursor:pointer;user-select:none;border:1px solid ${est==='Completo'?'rgba(74,171,122,.3)':'var(--border)'};background:${est==='Completo'?'rgba(74,171,122,.06)':'var(--card)'}" data-ob="${s.key}">
+            <div style="width:18px;height:18px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;color:${colors[est]};font-weight:900;flex-shrink:0">${icons[est]}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;text-transform:none;letter-spacing:0;color:var(--text)">${s.label}</div>
+            </div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${colors[est]};padding:2px 7px;border-radius:4px;border:1px solid ${colors[est]};opacity:.9">${est}</div>
+          </div>`;
+        }).join('')}
       </div>
     </div>
     <div class="nc-section">
@@ -4112,12 +4133,18 @@ function rNuevoDetail(){
         </div>
         <div class="field"><label class="field-label">Fecha de inicio</label><input class="field-input" id="nd-fecha" type="date" value="${c.fechaInicio||''}"></div>
       </div>
-      <div class="field"><label class="field-label">Equipo asignado <span style="font-weight:500;color:var(--text-muted)">(uno por línea)</span></label>
-        <textarea class="field-textarea" id="nd-equipo" style="min-height:70px" placeholder="Gustavo&#10;Caro&#10;Francesca">${c.equipo||''}</textarea>
-      </div>
-      <div class="field"><label class="field-label">📅 Fecha y hora · Brief Meet</label>
-        <input class="field-input" id="nd-brief-meet" type="datetime-local" value="${c.fechaBriefMeet||''}">
-        ${c.fechaBriefMeet?`<div style="font-size:10px;color:var(--gold);font-weight:600;margin-top:4px">📌 ${new Date(c.fechaBriefMeet).toLocaleString('es-AR',{weekday:'long',day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'})}</div>`:''}
+      <div class="field">
+        <label class="field-label" style="margin-bottom:8px">Equipo asignado</label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${Object.entries(NC_TEAMS).map(([area,personas])=>`
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);width:52px;flex-shrink:0">${area}</div>
+            <select class="field-select" id="nd-equipo-${area}" style="flex:1">
+              <option value="">—</option>
+              ${personas.map(p=>`<option value="${p}" ${(c.equipoAreas||{})[area]===p?'selected':''}>${p}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+        </div>
       </div>
     </div>
     <div class="nc-section">
@@ -4125,103 +4152,14 @@ function rNuevoDetail(){
       <div class="needs-grid" id="nd-scope-grid">
         ${NC_SCOPE.map(s=>`<div class="scope-toggle-btn ${(c.scope||[]).includes(s)?'on':''}" data-scope="${s}">${s}</div>`).join('')}
       </div>
-      <div style="margin-top:10px">
-        <div style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Contexto adicional del scope (opcional)</div>
-        <textarea class="field-textarea" id="nd-scope-ctx" style="min-height:60px;font-size:11px" placeholder="Detalles del scope para incluir en el mail...">${c.scopeCtx||''}</textarea>
-      </div>
     </div>
-    <div class="nc-section">
-      <div class="nc-section-title">💰 Inversión publicitaria</div>
-      <div class="field" style="margin-bottom:10px">
-        <label class="field-label" style="margin-bottom:6px">Cuenta publicitaria</label>
-        <div style="display:flex;gap:6px">
-          <button class="cuenta-pub-btn ${c.cuentaPublicitaria==='PROPIA'?'on':''}" data-cuenta="PROPIA">✓ PROPIA</button>
-          <button class="cuenta-pub-btn ${c.cuentaPublicitaria==='LC Avalon'?'on':''}" data-cuenta="LC Avalon">LC AVALON</button>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label class="field-label">Inversión Meta Ads</label><input class="field-input" id="nd-monto-meta" value="${c.montoMeta||''}" placeholder="Ej: $500.000"></div>
-        <div class="field"><label class="field-label">Inversión Google Ads</label><input class="field-input" id="nd-monto-google" value="${c.montoGoogle||''}" placeholder="Ej: $300.000"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label class="field-label">Inversión otros</label><input class="field-input" id="nd-monto-otros" value="${c.montoOtros||''}" placeholder="Monto"></div>
-        <div class="field"><label class="field-label">Plataforma</label><input class="field-input" id="nd-monto-otros-detalle" value="${c.montoOtrosDetalle||''}" placeholder="Ej: TikTok Ads"></div>
-      </div>
-    </div>
-    <div class="nc-section">
-      <div class="nc-section-title">📝 Briefing del cliente <span style="color:var(--text-muted);font-size:8px;font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· para generar el mail</span></div>
 
-      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🧭 Contexto & marca</div>
-      <div class="field"><label class="field-label">Descripción general y contexto</label>
-        <textarea class="field-textarea" id="nd-contexto" style="min-height:70px" placeholder="Negocio, etapa actual, estructura, cómo opera...">${c.contexto||''}</textarea>
-      </div>
-      <div class="field"><label class="field-label">Esencia de la marca</label>
-        <textarea class="field-textarea" id="nd-esencia" style="min-height:50px" placeholder="A qué orientada, qué representa, tipo de cliente...">${c.esencia||''}</textarea>
-      </div>
-      <div class="field"><label class="field-label">Diferenciales</label>
-        <textarea class="field-textarea" id="nd-diferenciales" style="min-height:55px" placeholder="Un diferencial por línea...">${c.diferenciales||''}</textarea>
-      </div>
 
-      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🎯 Objetivos</div>
-      <div class="field">
-        <input class="field-input" id="nd-obj1" value="${c.objetivo1||''}" placeholder="Objetivo principal" style="margin-bottom:6px">
-        <input class="field-input" id="nd-obj2" value="${c.objetivo2||''}" placeholder="Objetivo secundario" style="margin-bottom:6px">
-        <input class="field-input" id="nd-obj3" value="${c.objetivo3||''}" placeholder="Objetivo 3 (opcional)">
-      </div>
-
-      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">📣 Situación digital & comunicación</div>
-      <div class="field"><label class="field-label">Status digital</label>
-        <textarea class="field-textarea" id="nd-status-digital" style="min-height:55px" placeholder="Redes, ads, web, presencia online... qué tienen, qué les falta, qué está roto">${c.statusDigital||''}</textarea>
-      </div>
-      <div class="field"><label class="field-label">Identidad visual</label>
-        <input class="field-input" id="nd-identidad-visual" value="${c.identidadVisual||''}" placeholder="Definida / débil / inconsistente / gestionada por cliente">
-      </div>
-      <div class="field"><label class="field-label">Experiencia previa / observaciones del cliente</label>
-        <textarea class="field-textarea" id="nd-experiencia-previa" style="min-height:60px" placeholder="Trabajó con agencia, actitud del cliente, problemas detectados, algo a tener en cuenta...">${c.experienciaPrevia||''}</textarea>
-      </div>
-
-      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">📌 Scope — qué no incluye</div>
-      <div class="field"><label class="field-label">No incluye <span style="font-weight:500;color:var(--text-muted)">(si aplica)</span></label>
-        <textarea class="field-textarea" id="nd-scope-no-incluye" style="min-height:45px" placeholder="Ej: fotografía, diseño web, community management...">${c.scopeNoIncluye||''}</textarea>
-      </div>
-
-      <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🔎 Observaciones estratégicas</div>
-      <div class="field">
-        <textarea class="field-textarea" id="nd-observaciones" style="min-height:65px" placeholder="Puntos clave, lógica acordada, contexto importante para el equipo...">${c.observaciones||''}</textarea>
-      </div>
-    </div>
     <button class="btn-sm btn-gold" id="btn-nd-save" style="width:100%;justify-content:center;padding:10px;margin-bottom:14px;font-size:11px">💾 Guardar datos</button>
-    <hr class="nc-divider">
     ${ready?`<div class="email-notify-box">
       <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px">🎉 ¡${c.company||c.name} está listo para PM!</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Todos los pasos completados. Notificá al equipo para arrancar.</div>
-      <button class="btn-notify-team" id="btn-notify-team">📧 Notificar al equipo</button>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Todos los pasos completados.</div>
     </div>`:''}
-    <div class="section-title">📧 Mail de presentación al equipo</div>
-    <div class="nc-section" style="margin-bottom:12px">
-      <div class="nc-section-title">🖼 Cargar presentación <span style="font-size:8px;color:var(--text-muted);font-weight:500;text-transform:none;letter-spacing:0">&nbsp;· pegá capturas o adjuntá imágenes</span></div>
-      ${(c.presentacionScreenshots||[]).length?`<div class="screenshots-grid" style="margin-bottom:10px">
-        ${(c.presentacionScreenshots||[]).map((s,i)=>`<div class="screenshot-item">
-          <img src="data:${s.mediaType};base64,${s.base64}" alt="presentación ${i+1}" style="max-width:200px;max-height:140px;cursor:pointer" onclick="this.closest('.screenshot-item').querySelector('img').requestFullscreen?.()">
-          <div class="screenshot-label">${s.date||''}</div>
-          <button class="screenshot-del" data-pres-del="${i}">✕</button>
-        </div>`).join('')}
-      </div>`:''}
-      <div class="paste-zone" id="pres-paste-zone">
-        <input type="file" id="pres-file-input" accept="image/*" multiple style="display:none">
-        <div class="paste-zone-row">
-          <span class="paste-zone-icon">🖼</span>
-          <span class="paste-zone-label">Ctrl+V para pegar · o hacé clic para adjuntar imagen</span>
-        </div>
-      </div>
-    </div>
-    ${st.loadingEmail
-      ?`<div class="ai-box loading"><div class="spinner"></div>Generando mail de presentación...</div>`
-      :c.emailGenerado
-        ?`<div class="ai-box" style="white-space:pre-wrap;font-size:11px;line-height:1.8">${c.emailGenerado}</div>
-           <button class="btn-copy ${st.copiedEmail?'copied':''}" id="btn-copy-email">${st.copiedEmail?'✓ Copiado':'📋 Copiar mail'}</button>
-           <button class="btn-outline" id="btn-regen-email">↻ Regenerar</button>`
-        :`<button class="btn-primary" id="btn-gen-email">✦ Generar mail de presentación</button>`}
   </div>`;
 }
 
@@ -4269,27 +4207,20 @@ async function saveNuevoDetail(){
   c.tiktok=gi('nd-tiktok')||'';c.phone=gi('nd-phone')||'';c.email=gi('nd-email')||'';
   c.pm=document.getElementById('nd-pm')?.value||'';
   c.fechaInicio=document.getElementById('nd-fecha')?.value||'';
-  c.fechaBriefMeet=document.getElementById('nd-brief-meet')?.value||'';
-  c.equipo=gi('nd-equipo')||'';
-  c.scopeCtx=gi('nd-scope-ctx')||'';
   c.scope=[...document.querySelectorAll('#nd-scope-grid .scope-toggle-btn.on')].map(t=>t.dataset.scope);
-  c.contexto=gi('nd-contexto')||'';
-  c.esencia=gi('nd-esencia')||'';
-  c.diferenciales=gi('nd-diferenciales')||'';
-  c.statusDigital=gi('nd-status-digital')||'';
-  c.identidadVisual=gi('nd-identidad-visual')||'';
-  c.experienciaPrevia=gi('nd-experiencia-previa')||'';
-  c.scopeNoIncluye=gi('nd-scope-no-incluye')||'';
-  c.objetivo1=gi('nd-obj1')||'';c.objetivo2=gi('nd-obj2')||'';c.objetivo3=gi('nd-obj3')||'';
-  c.observaciones=gi('nd-observaciones')||'';
-  c.montoMeta=gi('nd-monto-meta')||'';c.montoGoogle=gi('nd-monto-google')||'';
-  c.montoOtros=gi('nd-monto-otros')||'';c.montoOtrosDetalle=gi('nd-monto-otros-detalle')||'';
+  // Equipo por áreas
+  c.equipoAreas=c.equipoAreas||{};
+  Object.keys(NC_TEAMS).forEach(area=>{
+    const sel=document.getElementById('nd-equipo-'+area);
+    if(sel)c.equipoAreas[area]=sel.value;
+  });
   await svNC(c);toast('Guardado ✓');
 }
 
 async function toggleOb(key){
   const c=gnc();if(!c)return;
-  c.onboarding[key]=!c.onboarding[key];
+  const idx=NC_OB_ESTADOS.indexOf(c.onboarding[key]||'Sin enviar');
+  c.onboarding[key]=NC_OB_ESTADOS[(idx+1)%NC_OB_ESTADOS.length];
   await svNC(c);render();
 }
 
@@ -4670,42 +4601,16 @@ function bindNuevos(){
   $('#btn-nd-save')?.addEventListener('click',async()=>{await saveNuevoDetail();render();toast('Guardado ✓')});
   $$('[data-ob]').forEach(b=>b.addEventListener('click',()=>toggleOb(b.dataset.ob)));
   $$('#nd-scope-grid .scope-toggle-btn').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
-  $('#btn-gen-email')?.addEventListener('click',genEmail);
-  $('#btn-regen-email')?.addEventListener('click',async()=>{const c=gnc();if(!c)return;c.emailGenerado='';await svNC(c);genEmail()});
-  $('#btn-copy-email')?.addEventListener('click',()=>cpT(gnc()?.emailGenerado||'','copiedEmail'));
   $('#btn-gen-rubro')?.addEventListener('click',genRubro);
-  $('#btn-notify-team')?.addEventListener('click',()=>{const c=gnc();if(c)sendTeamEmail(c);});
-  // Cuenta publicitaria toggle
-  $$('[data-cuenta]').forEach(b=>b.addEventListener('click',async()=>{
-    const c=gnc();if(!c)return;
-    c.cuentaPublicitaria=b.dataset.cuenta;
-    await svNC(c);render();
-  }));
   // Brandbook screenshots
   $('#bb-paste-zone')?.addEventListener('click',()=>$('#bb-file-input')?.click());
   $('#bb-file-input')?.addEventListener('change',async e=>{for(const f of e.target.files)await addBrandbookScreenshot(f);e.target.value='';});
   $$('[data-bb-del]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();await delBrandbookScreenshot(parseInt(b.dataset.bbDel));}));
-  // Presentacion screenshots
-  $('#pres-paste-zone')?.addEventListener('click',()=>$('#pres-file-input')?.click());
-  $('#pres-file-input')?.addEventListener('change',async e=>{for(const f of e.target.files)await addPresentacionScreenshot(f);e.target.value='';});
-  $$('[data-pres-del]').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();await delPresentacionScreenshot(parseInt(b.dataset.presDel));}));
 }
 
 // ── GLOBAL PASTE HANDLER (screenshots for reunion/propuesta/presentacion) ──
 document.addEventListener('paste',function(e){
-  // Handle paste in nuevoDetail (presentacion screenshots)
-  if(st.view==='nuevoDetail'){
-    const items=[...(e.clipboardData?.items||[])];
-    const imgItem=items.find(i=>i.type.startsWith('image/'));
-    if(!imgItem)return;
-    e.preventDefault();
-    const file=imgItem.getAsFile();
-    if(!file)return;
-    addPresentacionScreenshot(file);
-    const zone=document.getElementById('pres-paste-zone');
-    if(zone){zone.classList.add('paste-highlight');setTimeout(()=>zone.classList.remove('paste-highlight'),800);}
-    return;
-  }
+
   if(st.view!=='detail')return;
   if(st.activeTab!=='reunion'&&st.activeTab!=='propuesta')return;
   const items=[...(e.clipboardData?.items||[])];
