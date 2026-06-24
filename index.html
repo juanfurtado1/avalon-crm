@@ -1456,48 +1456,69 @@ function rEstadoSelect(currentEstado){
 // ── RENDER ──
 // ── GLOBAL NAV ──
 function rGlobalNav(){
-  const views=[
-    {id:'list',   label:'Leads',    icon:'🎯', color:'var(--text-muted)'},
-    {id:'nuevos', label:'Nuevos',   icon:'🚀', color:'var(--green)',   count:nuevos.filter(n=>!NC_OB_STEPS.every(s=>(n.onboarding||{})[s.key]==='Completo')).length},
-    {id:'abonos', label:'Abonos',   icon:'💰', color:'var(--yellow)',  count:abonos.filter(a=>a.activo).length},
-    {id:'informe',label:'Informe',  icon:'📊', color:'#c4a0ff'},
-    {id:'lc',     label:'LC',       icon:'💳', color:'#6a9fd8'},
-  ];
-  const cur=st.view==='nuevoDetail'?'nuevos':st.view==='detail'?'list':st.view;
-  return`<div id="global-nav" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(10,10,20,.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;height:48px;padding:0 12px;gap:4px">
-    <div style="display:flex;align-items:center;gap:6px;margin-right:10px;flex-shrink:0">
-      <img src="https://avalonworldagency.com/wp-content/uploads/2024/06/logo-avalon-1.png" alt="Avalon" style="height:22px;object-fit:contain" onerror="this.style.display='none'">
+  const haf=hasActiveFilters();
+  return`<div id="global-nav" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(10,10,20,.97);backdrop-filter:blur(16px);border-bottom:1px solid rgba(155,109,255,.18);box-shadow:0 2px 24px rgba(0,0,0,.7);display:flex;align-items:center;height:48px;padding:0 12px;gap:6px">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-right:8px">
+      <img src="https://avalonworldagency.com/wp-content/uploads/2024/06/logo-avalon-1.png" alt="Avalon" style="height:24px;object-fit:contain" onerror="this.style.display='none'">
+      <div style="width:1px;height:20px;background:linear-gradient(180deg,transparent,rgba(155,109,255,.4),transparent)"></div>
       <span style="font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase">CRM</span>
     </div>
-    <div style="display:flex;gap:2px;flex:1">
-      ${views.map(v=>`
-      <button data-nav="${v.id}" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;border:1px solid ${cur===v.id?v.color:'transparent'};background:${cur===v.id?'rgba(255,255,255,.06)':'transparent'};color:${cur===v.id?v.color:'var(--text-muted)'};font-family:'Montserrat',sans-serif;font-size:10px;font-weight:${cur===v.id?'800':'600'};cursor:pointer;transition:all .15s;white-space:nowrap">
-        <span>${v.icon}</span>
-        <span>${v.label}</span>
-        ${v.count?`<span style="background:${v.color};color:#000;border-radius:3px;padding:0 4px;font-size:8px;font-weight:800;line-height:16px">${v.count}</span>`:''}
-      </button>`).join('')}
+    <div class="search-wrap" style="flex-shrink:0">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search-input" placeholder="Buscar cliente..." value="${st.searchTerm}" autocomplete="off">
+      <button class="search-clear ${st.searchTerm?'visible':''}" id="btn-search-clear">✕</button>
     </div>
-    <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
-      <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif-nav" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
-      <button class="btn-add" id="btn-open-new-nav" style="font-size:10px;padding:5px 10px">+ Prospecto</button>
-    </div>
+    <button class="btn-sm" id="btn-export" title="Exportar">⬇</button>
+    <input type="file" id="import-file" accept=".json" style="display:none">
+    <button class="btn-sm" id="btn-import" title="Importar">⬆</button>
+    <button class="btn-sm" id="btn-api-key" title="API Key">⚙</button>
+    <button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button>
+    <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas" style="flex-shrink:0">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
+    <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters" style="flex-shrink:0">⚡ Filtros${haf?' ●':''}</button>
+    <div style="flex:1"></div>
+    <div class="notif-bell" style="flex-shrink:0"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
+    <button class="btn-sm" id="btn-go-abonos" style="flex-shrink:0;background:rgba(196,154,32,.1);border-color:rgba(196,154,32,.4);color:var(--yellow);font-weight:800">💰 Abonos${abonos.filter(a=>a.activo).length?` <span style="background:var(--yellow);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${abonos.filter(a=>a.activo).length}</span>`:''}</button>
+    <button class="btn-sm" id="btn-go-nuevos" style="flex-shrink:0;background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
+    <button class="btn-sm" id="btn-generar-informe-header" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:var(--gold);font-weight:800">📊 Informe</button>
+    <button class="btn-sm" id="btn-open-lc" style="flex-shrink:0;background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800">💳 LC</button>
+    <button class="btn-add" id="btn-open-new" style="flex-shrink:0;font-size:10px;padding:5px 12px">+ Prospecto</button>
   </div>`;
 }
 function bindGlobalNav(){
-  document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>{
-    const v=b.dataset.nav;
-    if(v==='informe'){document.getElementById('btn-generar-informe-header')?.click();return;}
-    if(v==='lc'){document.getElementById('btn-open-lc')?.click();return;}
-    st.view=v;st.activeClient=null;st.activeNuevo=null;render();
-  }));
-  document.getElementById('btn-notif-nav')?.addEventListener('click',()=>{st.showNotif=!st.showNotif;render();});
-  document.getElementById('btn-open-new-nav')?.addEventListener('click',()=>{st.showNewModal=true;render();});
+  const searchEl=document.getElementById('search-input');
+  if(searchEl){
+    searchEl.addEventListener('input',e=>{
+      st.searchTerm=e.target.value;
+      const clr=document.getElementById('btn-search-clear');
+      if(clr)clr.className='search-clear'+(e.target.value?' visible':'');
+      renderListOnly();
+    });
+    searchEl.addEventListener('keydown',e=>{if(e.key==='Escape'){st.searchTerm='';render();}});
+  }
+  document.getElementById('btn-search-clear')?.addEventListener('click',()=>{st.searchTerm='';render();});
+  document.getElementById('btn-export')?.addEventListener('click',exportData);
+  document.getElementById('import-file')?.addEventListener('change',importData);
+  document.getElementById('btn-import')?.addEventListener('click',()=>document.getElementById('import-file')?.click());
+  document.getElementById('btn-api-key')?.addEventListener('click',()=>{st.showApiModal=true;render();});
+  document.getElementById('btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render();});
+  document.getElementById('btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render();});
+  document.getElementById('btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render();});
+  document.getElementById('btn-notif')?.addEventListener('click',e=>{e.stopPropagation();st.showNotifPanel=!st.showNotifPanel;render();});
+  document.getElementById('btn-go-abonos')?.addEventListener('click',()=>{st.view='abonos';st.activeClient=null;st.activeNuevo=null;render();});
+  document.getElementById('btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';st.activeClient=null;st.activeNuevo=null;render();});
+  document.getElementById('btn-generar-informe-header')?.addEventListener('click',()=>{st.view='informe';st.activeClient=null;st.activeNuevo=null;render();generarInforme?.();});
+  document.getElementById('btn-open-lc')?.addEventListener('click',()=>{
+    const f=st.filters;
+    st.lcDraft={periodo:'',desde:f.dateFrom||'',hasta:f.dateTo||'',cuentasARS:[],cuentasUSD:[]};
+    st.showLCModal=true;render();
+  });
+  document.getElementById('btn-open-new')?.addEventListener('click',()=>{st.showNewModal=true;render();});
 }
 
 function render(){
   const app=document.getElementById('app');
   if(!app)return;
-  // Barra de navegación global — siempre presente excepto en loading inicial
+  // ── Barra global única — presente en todas las vistas ──
   if(!st.sbLoading){
     let _navWrap=document.getElementById('global-nav-wrap');
     if(!_navWrap){
@@ -1510,10 +1531,11 @@ function render(){
     if(!document.getElementById('global-nav-spacer')){
       const _s=document.createElement('div');
       _s.id='global-nav-spacer';
-      _s.style.cssText='height:48px;width:100%';
+      _s.style.cssText='height:52px;width:100%';
       document.body.insertBefore(_s,app);
     }
   }
+
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
   if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
   if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
@@ -1724,33 +1746,6 @@ function rList(){
   const convMes=new Date(convFrom).toLocaleString('es-AR',{month:'long',year:'numeric'});
   const haf=hasActiveFilters();
   return`
-  <div class="header">
-    <div class="logo-wrap">
-      <img class="logo-img" src="https://avalonworldagency.com/wp-content/uploads/2024/06/logo-avalon-1.png" alt="Avalon" onerror="this.style.display='none';this.nextSibling.style.display='block'">
-      <span style="display:none;font-size:16px;font-weight:800;color:var(--gold);letter-spacing:1px">AVALON</span>
-      <div class="logo-sep"></div><div class="logo-sub">CRM</div>
-    </div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input class="search-input" id="search-input" placeholder="Buscar cliente..." value="${st.searchTerm}" autocomplete="off">
-        <button class="search-clear ${st.searchTerm?'visible':''}" id="btn-search-clear">✕</button>
-      </div>
-      <button class="btn-sm" id="btn-export">⬇</button>
-      <input type="file" id="import-file" accept=".json" style="display:none">
-      <button class="btn-sm" id="btn-import">⬆</button>
-      <button class="btn-sm" id="btn-api-key" title="API Key">⚙</button>
-      <button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button>
-      <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
-      <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters">⚡ Filtros${haf?' ●':''}</button>
-      <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
-      <button class="btn-sm" id="btn-go-abonos" style="background:rgba(196,154,32,.1);border-color:rgba(196,154,32,.4);color:var(--yellow);font-weight:800">💰 Abonos${abonos.filter(a=>a.activo).length?` <span style="background:var(--yellow);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${abonos.filter(a=>a.activo).length}</span>`:''}</button>
-      <button class="btn-sm" id="btn-go-nuevos" style="background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
-      <button class="btn-sm" id="btn-generar-informe-header" style="background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:var(--gold);font-weight:800">📊 Informe</button>
-      <button class="btn-sm" id="btn-open-lc" style="background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800">💳 LC</button>
-      <button class="btn-add" id="btn-open-new">+ Prospecto</button>
-    </div>
-  </div>
   <div class="gold-bar"></div>
   ${st.showFilters?rFilterPanel():''}
   <div class="stats">
@@ -2937,27 +2932,10 @@ function bind(){
   const $=s=>document.querySelector(s);
   const $$=s=>document.querySelectorAll(s);
 
-  // List
-  // Search — update state without re-render on every key, use input event
-  const searchEl=document.getElementById('search-input');
-  if(searchEl){
-    searchEl.addEventListener('input',e=>{
-      st.searchTerm=e.target.value;
-      const clr=document.getElementById('btn-search-clear');
-      if(clr)clr.className='search-clear'+(e.target.value?'  visible':' ');
-      renderListOnly();
-    });
-    searchEl.addEventListener('keydown',e=>e.stopPropagation());
-  }
-  document.getElementById('btn-search-clear')?.addEventListener('click',()=>{
-    st.searchTerm='';
-    const inp=document.getElementById('search-input');
-    if(inp){inp.value='';inp.focus();}
-    renderListOnly();
-  });
+  // (Search handled by bindGlobalNav)
   $('#btn-toggle-proyec')?.addEventListener('click',()=>{st.showProyecciones=!st.showProyecciones;render()});
   // Notif panel
-  $('#btn-notif')?.addEventListener('click',e=>{e.stopPropagation();st.showNotifPanel=!st.showNotifPanel;render()});
+  // (btn-notif handled by bindGlobalNav)
   $('#btn-close-notif')?.addEventListener('click',()=>{st.showNotifPanel=false;render()});
   $('#btn-mark-all-done')?.addEventListener('click',()=>{const t=getTasks().map(x=>({...x,done:true}));saveTasks(t);render()});
   $('#btn-req-notif')?.addEventListener('click',()=>requestNotifPermission());
@@ -2974,20 +2952,11 @@ function bind(){
       }
     },{once:false});
   }
-  $('#btn-go-abonos')?.addEventListener('click',()=>{st.view='abonos';render();});
-  $('#btn-go-nuevos')?.addEventListener('click',()=>{st.view='nuevos';render();});
+  // (btn-go-abonos, btn-go-nuevos handled by bindGlobalNav)
   $('#btn-generar-informe')?.addEventListener('click',generarInforme);
-  $('#btn-generar-informe-header')?.addEventListener('click',generarInforme);
+  // (btn-generar-informe-header handled by bindGlobalNav)
   // LC Modal
-  $('#btn-open-lc')?.addEventListener('click',()=>{
-    const f=st.filters;
-    st.lcDraft={
-      periodo:'',
-      desde:f.dateFrom||'',hasta:f.dateTo||'',
-      cuentasARS:[],cuentasUSD:[]
-    };
-    st.showLCModal=true;render();
-  });
+  // (btn-open-lc handled by bindGlobalNav)
   $('#lc-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='lc-modal-overlay'){st.showLCModal=false;st.lcSelARS=[];st.lcSelUSD=[];render();}});
   $('#btn-lc-cancel')?.addEventListener('click',()=>{st.showLCModal=false;st.lcSelARS=[];st.lcSelUSD=[];render();});
   // Load saved period
