@@ -1454,9 +1454,59 @@ function rEstadoSelect(currentEstado){
 }
 
 // ── RENDER ──
-async function render(){
+async 
+// ── GLOBAL NAV ──
+function rGlobalNav(){
+  const views=[
+    {id:'list',   label:'Leads',    icon:'🎯', color:'var(--text-muted)'},
+    {id:'nuevos', label:'Nuevos',   icon:'🚀', color:'var(--green)',   count:nuevos.filter(n=>!NC_OB_STEPS.every(s=>(n.onboarding||{})[s.key]==='Completo')).length},
+    {id:'abonos', label:'Abonos',   icon:'💰', color:'var(--yellow)',  count:abonos.filter(a=>a.activo).length},
+    {id:'informe',label:'Informe',  icon:'📊', color:'#c4a0ff'},
+    {id:'lc',     label:'LC',       icon:'💳', color:'#6a9fd8'},
+  ];
+  const cur=st.view==='nuevoDetail'?'nuevos':st.view==='detail'?'list':st.view;
+  return`<div id="global-nav" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(10,10,20,.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;height:48px;padding:0 12px;gap:4px">
+    <div style="display:flex;align-items:center;gap:6px;margin-right:10px;flex-shrink:0">
+      <img src="https://avalonworldagency.com/wp-content/uploads/2024/06/logo-avalon-1.png" alt="Avalon" style="height:22px;object-fit:contain" onerror="this.style.display='none'">
+      <span style="font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase">CRM</span>
+    </div>
+    <div style="display:flex;gap:2px;flex:1">
+      ${views.map(v=>`
+      <button data-nav="${v.id}" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;border:1px solid ${cur===v.id?v.color:'transparent'};background:${cur===v.id?'rgba(255,255,255,.06)':'transparent'};color:${cur===v.id?v.color:'var(--text-muted)'};font-family:'Montserrat',sans-serif;font-size:10px;font-weight:${cur===v.id?'800':'600'};cursor:pointer;transition:all .15s;white-space:nowrap">
+        <span>${v.icon}</span>
+        <span>${v.label}</span>
+        ${v.count?`<span style="background:${v.color};color:#000;border-radius:3px;padding:0 4px;font-size:8px;font-weight:800;line-height:16px">${v.count}</span>`:''}
+      </button>`).join('')}
+    </div>
+    <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+      <div class="notif-bell"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif-nav" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
+      <button class="btn-add" id="btn-open-new-nav" style="font-size:10px;padding:5px 10px">+ Prospecto</button>
+    </div>
+  </div>
+  <div style="height:48px"></div>`;
+}
+function bindGlobalNav(){
+  document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>{
+    const v=b.dataset.nav;
+    if(v==='informe'){document.getElementById('btn-generar-informe-header')?.click();return;}
+    if(v==='lc'){document.getElementById('btn-open-lc')?.click();return;}
+    st.view=v;st.activeClient=null;st.activeNuevo=null;render();
+  }));
+  document.getElementById('btn-notif-nav')?.addEventListener('click',()=>{st.showNotif=!st.showNotif;render();});
+  document.getElementById('btn-open-new-nav')?.addEventListener('click',()=>{st.showNewModal=true;render();});
+}
+
+function render(){
   const app=document.getElementById('app');
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
+  // Inyectar/actualizar barra de navegación global
+  const _navEl=document.getElementById('global-nav');
+  const _navSpacer=document.getElementById('global-nav-spacer');
+  const _navHtml=rGlobalNav();
+  if(_navEl){_navEl.outerHTML=_navHtml;}
+  else{const _d=document.createElement('div');_d.innerHTML=_navHtml;document.body.insertBefore(_d.firstElementChild,app);}
+  if(!_navSpacer){const _s=document.createElement('div');_s.id='global-nav-spacer';_s.style.height='48px';app.prepend(_s);}
+  bindGlobalNav();
   if(st.view==='nuevos'){app.innerHTML=rNuevosList();if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());bind();bindNuevos();return;}
   if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
   if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
@@ -4226,11 +4276,20 @@ async function toggleOb(key){
   const todosCompletos=NC_OB_STEPS.every(s=>(c.onboarding[s.key]||'Sin enviar')==='Completo');
   if(todosCompletos){
     const nombre=c.company||c.name;
-    if(confirm(`✅ ${nombre} completó todo el onboarding.\n¿Archivarlo de Clientes Nuevos? Ya figura en Abonos activos.`)){
+    if(confirm(`✅ ${nombre} completó todo el onboarding.\n¿Archivarlo de Clientes Nuevos? Se actualizarán los datos en Abonos.`)){
+      // Buscar el abono correspondiente y sobreescribir datos
+      const ab=abonos.find(a=>a.crmClientId===c.crmClientId||a.name===c.name||a.company===c.company);
+      if(ab){
+        ab.pm=c.pm||ab.pm;
+        ab.plataformas=c.scope?.length?c.scope:ab.plataformas;
+        ab.fechaInicio=c.fechaInicio||ab.fechaInicio;
+        ab.equipoAreas=c.equipoAreas||ab.equipoAreas||{};
+        await svAbono(ab);
+      }
       nuevos=nuevos.filter(x=>x.id!==c.id);
       await sbDelNC(c.id);
-      st.activeNuevo=null;st.view='nuevos';
-      render();toast(`${nombre} archivado ✓`);
+      st.activeNuevo=null;st.view='abonos';
+      render();toast(`${nombre} archivado y datos actualizados en Abonos ✓`);
     }
   }
 }
