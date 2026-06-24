@@ -379,6 +379,25 @@ body.is-dragging .kanban-card:not(.dragging){transition:opacity .1s}
 <body>
 <div id="app"></div>
 <script>
+
+// ── GLOBAL ERROR HANDLER ──
+window.addEventListener('error', function(e) {
+  console.error('Global error:', e.message, 'at', e.filename, 'line', e.lineno);
+  const app = document.getElementById('app');
+  if (app && !app.innerHTML) {
+    app.style.display = '';
+    app.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;padding:20px;text-align:center">' +
+      '<div style="font-size:32px">⚠️</div>' +
+      '<div style="font-size:14px;font-weight:700;color:#d95f5f">Error al iniciar el CRM</div>' +
+      '<div style="font-size:11px;color:#888;max-width:400px;word-break:break-all">' + e.message + '</div>' +
+      '<button onclick="location.reload()" style="background:#9b6dff;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;font-size:12px;margin-top:8px">↺ Recargar</button>' +
+      '</div>';
+  }
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('Unhandled promise rejection:', e.reason);
+});
+
 // ── CONSTANTS ──
 const SP=`Sos un asistente estratégico-comercial para Juan, ejecutivo de Avalon World Agency, agencia de marketing y comunicación (Buenos Aires, Miami, Dubai, Barcelona, San Pablo). Modelo de negocio: servicio principal estrategia + pauta (Meta Ads, Google Ads). Complementario: redes, contenido, diseño, branding. Juan NO vende redes aisladas. Analizar marcas: leer negocio real, detectar contradicciones, evaluar fit con Avalon. Preguntas discovery: específicas al negocio, nunca genéricas, revelan problema real y presupuesto, posicionan a Juan como partner estratégico. 5 preguntas máximo. Propuestas: partir del negocio real, eje estrategia + pauta. Módulos disponibles: Estrategia de Comunicación, Paid Media / Media Planner, Manejo de Redes Sociales, Diseño y Creatividad, Guiones y Contenido, Filmmaker / Producción, Edición de Video, Investigación de Mercado, Automatización / CRM + IA, Gestión MercadoLibre. Estilo: español rioplatense (vos), directo, comercial, sin paja.`;
 const ESTADO_GROUPS=[
@@ -4772,7 +4791,21 @@ async function initApp(){
   setTimeout(requestNotifPermission,2000);
 }
 // Arranque con auth
-if(isAuthed()){initApp();}else{showLogin();}
+try {
+  if(isAuthed()){initApp();}else{showLogin();}
+} catch(e) {
+  console.error('Init error:', e);
+  const app = document.getElementById('app');
+  if(app) {
+    app.style.display = '';
+    app.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;padding:20px;text-align:center">' +
+      '<div style="font-size:32px">⚠️</div>' +
+      '<div style="font-size:14px;font-weight:700;color:#d95f5f">Error al iniciar el CRM</div>' +
+      '<div style="font-size:11px;color:#888;max-width:400px;word-break:break-all">' + String(e) + '</div>' +
+      '<button onclick="location.reload()" style="background:#9b6dff;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;font-size:12px;margin-top:8px">↺ Recargar</button>' +
+      '</div>';
+  }
+}
 </script>
 </body>
 </html>
