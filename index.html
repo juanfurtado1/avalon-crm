@@ -1497,24 +1497,25 @@ function bindGlobalNav(){
 
 function render(){
   const app=document.getElementById('app');
+  if(!app)return;
+  // Barra de navegación global — siempre presente excepto en loading inicial
+  if(!st.sbLoading){
+    let _navWrap=document.getElementById('global-nav-wrap');
+    if(!_navWrap){
+      _navWrap=document.createElement('div');
+      _navWrap.id='global-nav-wrap';
+      document.body.insertBefore(_navWrap,app);
+    }
+    _navWrap.innerHTML=rGlobalNav();
+    bindGlobalNav();
+    if(!document.getElementById('global-nav-spacer')){
+      const _s=document.createElement('div');
+      _s.id='global-nav-spacer';
+      _s.style.cssText='height:48px;width:100%';
+      document.body.insertBefore(_s,app);
+    }
+  }
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
-  // Inyectar/actualizar barra de navegación global
-  let _navEl=document.getElementById('global-nav');
-  if(!_navEl){
-    _navEl=document.createElement('div');
-    _navEl.id='global-nav-wrap';
-    document.body.insertBefore(_navEl,app);
-  }
-  _navEl.outerHTML=rGlobalNav();
-  bindGlobalNav();
-  // Spacer fijo en el body para compensar la barra
-  if(!document.getElementById('global-nav-spacer')){
-    const _s=document.createElement('div');
-    _s.id='global-nav-spacer';
-    _s.style.cssText='height:48px;width:100%;position:relative';
-    document.body.insertBefore(_s,app);
-  }
-  if(st.view==='nuevos'){app.innerHTML=rNuevosList();if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());bind();bindNuevos();return;}
   if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
   if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
   app.innerHTML=st.view==='list'?rList():rDetail();
