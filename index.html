@@ -1473,9 +1473,9 @@ function rGlobalNav(){
     <button class="btn-sm" id="btn-import" title="Importar">⬆</button>
     <button class="btn-sm" id="btn-api-key" title="API Key">⚙</button>
     <button class="btn-sm" id="btn-sb-settings" title="Base de datos" style="color:var(--green)">🗄</button>
-    ${(st.view==='list'||st.view==='detail')?`
-    <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas" style="flex-shrink:0">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
-    <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters" style="flex-shrink:0">⚡ Filtros${haf?' ●':''}</button>`:''}
+    <button id="btn-go-leads" style="flex-shrink:0;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;border:1px solid ${(st.view==='list'||st.view==='detail')?'rgba(155,109,255,.5)':'transparent'};background:${(st.view==='list'||st.view==='detail')?'rgba(155,109,255,.1)':'transparent'};color:${(st.view==='list'||st.view==='detail')?'var(--gold)':'var(--text-muted)'};font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">🎯 Leads</button>
+    <button class="btn-view-toggle ${st.viewMode==='kanban'?'active':''}" id="btn-toggle-view" title="Vista columnas" style="flex-shrink:0;display:${(st.view==='list'||st.view==='detail')?'flex':'none'}">${st.viewMode==='kanban'?'≡ Lista':'⊟ Columnas'}</button>
+    <button class="btn-filter ${haf?'filter-btn-active':''}" id="btn-toggle-filters" style="flex-shrink:0;display:${(st.view==='list'||st.view==='detail')?'flex':'none'}">⚡ Filtros${haf?' ●':''}</button>
     <div style="flex:1"></div>
     <div class="notif-bell" style="flex-shrink:0"><button class="btn-sm ${getPendingCount()>0?'btn-gold':''}" id="btn-notif" title="Tareas">🔔${getPendingCount()>0?`<span class="notif-badge">${getPendingCount()}</span>`:''}</button></div>
     <button class="btn-sm" id="btn-go-abonos" style="flex-shrink:0;background:rgba(196,154,32,.1);border-color:rgba(196,154,32,.4);color:var(--yellow);font-weight:800">💰 Abonos${abonos.filter(a=>a.activo).length?` <span style="background:var(--yellow);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${abonos.filter(a=>a.activo).length}</span>`:''}</button>
@@ -1502,6 +1502,7 @@ function bindGlobalNav(){
   document.getElementById('btn-import')?.addEventListener('click',()=>document.getElementById('import-file')?.click());
   document.getElementById('btn-api-key')?.addEventListener('click',()=>{st.showApiModal=true;render();});
   document.getElementById('btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render();});
+  document.getElementById('btn-go-leads')?.addEventListener('click',()=>{st.view='list';st.activeClient=null;render();});
   document.getElementById('btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render();});
   document.getElementById('btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render();});
   document.getElementById('btn-notif')?.addEventListener('click',e=>{e.stopPropagation();st.showNotifPanel=!st.showNotifPanel;render();});
@@ -3082,8 +3083,7 @@ function bind(){
   document.getElementById('import-file')?.addEventListener('change',importData);
   $('#btn-api-key')?.addEventListener('click',()=>{st.showApiModal=true;render()});
   $('#btn-sb-settings')?.addEventListener('click',()=>{st.showSbModal=true;render()});
-  $('#btn-toggle-filters')?.addEventListener('click',()=>{st.showFilters=!st.showFilters;render()});
-  $('#btn-toggle-view')?.addEventListener('click',()=>{st.viewMode=st.viewMode==='kanban'?'list':'kanban';render()});
+  // (toggle-filters, toggle-view handled by bindGlobalNav)
   document.getElementById('btn-stat-sincontacto')?.addEventListener('click',()=>{
     st.filters.urgencia=st.filters.urgencia==='sin-contacto'?'':'sin-contacto';
     render();
