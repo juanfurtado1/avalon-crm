@@ -1538,6 +1538,7 @@ function render(){
 
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
   if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
+  if(st.view==='nuevos'){app.innerHTML=rNuevosList();bind();bindNuevos();return;}
   if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
   app.innerHTML=st.view==='list'?rList():rDetail();
   if(st.showNotifPanel)app.insertAdjacentHTML('beforeend',rNotifPanel());
