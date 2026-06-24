@@ -4222,6 +4222,17 @@ async function toggleOb(key){
   const idx=NC_OB_ESTADOS.indexOf(c.onboarding[key]||'Sin enviar');
   c.onboarding[key]=NC_OB_ESTADOS[(idx+1)%NC_OB_ESTADOS.length];
   await svNC(c);render();
+  // Si todos los pasos quedaron en Completo, ofrecer archivar
+  const todosCompletos=NC_OB_STEPS.every(s=>(c.onboarding[s.key]||'Sin enviar')==='Completo');
+  if(todosCompletos){
+    const nombre=c.company||c.name;
+    if(confirm(`✅ ${nombre} completó todo el onboarding.\n¿Archivarlo de Clientes Nuevos? Ya figura en Abonos activos.`)){
+      nuevos=nuevos.filter(x=>x.id!==c.id);
+      await sbDelNC(c.id);
+      st.activeNuevo=null;st.view='nuevos';
+      render();toast(`${nombre} archivado ✓`);
+    }
+  }
 }
 
 async function syncCerrados(){
