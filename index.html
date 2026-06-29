@@ -531,7 +531,7 @@ async function loadNC(){
 }
 async function svNC(c){
   try{
-    await fetch(SB_URL+'/rest/v1/new_clients',{
+    await fetch(SB_URL+'/rest/v1/new_clients?on_conflict=id',{
       method:'POST',
       headers:{...sbH(),'Prefer':'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify({id:c.id,data:c,updated_at:new Date().toISOString()})
@@ -1581,8 +1581,16 @@ function render(){
 
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
   if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
-  if(st.view==='nuevos'){app.innerHTML=rNuevosList();bind();bindNuevos();return;}
-  if(st.view==='nuevoDetail'){app.innerHTML=rNuevoDetail();bind();bindNuevos();return;}
+  if(st.view==='nuevos'){
+    app.innerHTML=rNuevosList();
+    if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());
+    bind();bindNuevos();return;
+  }
+  if(st.view==='nuevoDetail'){
+    app.innerHTML=rNuevoDetail();
+    if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());
+    bind();bindNuevos();return;
+  }
   app.innerHTML=st.view==='list'?rList():rDetail();
   if(st.showNotifPanel)app.insertAdjacentHTML('beforeend',rNotifPanel());
   if(st.showEditModal)app.insertAdjacentHTML('beforeend',rEditModal());
