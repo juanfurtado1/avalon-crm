@@ -133,6 +133,14 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .login-btn:hover{box-shadow:0 6px 28px rgba(155,109,255,.6);transform:translateY(-1px)}
 .login-error{background:rgba(217,95,95,.1);border:1px solid rgba(217,95,95,.3);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--red);font-weight:600;text-align:center;margin-bottom:14px;display:none}
 .login-error.show{display:block}
+.acciones-panel{border-top:1px solid var(--border);padding:10px 14px 12px;background:var(--surface2);border-radius:0 0 8px 8px}
+.accion-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border)}
+.accion-row:last-child{border-bottom:none}
+.accion-ico{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.accion-tipo{font-size:11px;font-weight:700;color:var(--text)}
+.accion-desc{font-size:11px;color:var(--text-muted);margin-top:1px}
+.accion-fecha{font-size:10px;color:var(--text-muted);margin-top:2px}
+.sin-contacto-alert{background:rgba(196,154,32,.1);border:1px solid rgba(196,154,32,.3);border-radius:6px;padding:7px 10px;font-size:10px;color:var(--yellow);font-weight:700;display:flex;align-items:center;gap:6px}
 @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .s-sin-definir{background:rgba(85,79,110,.12);color:#6b6585}
 .s-pendiente{background:rgba(230,130,40,.12);color:#e6823a}
@@ -404,7 +412,7 @@ const TASK_MSGS={'Activa':'Iniciar conversación por WhatsApp','Esperando respue
 // ── NOTIFICATIONS ──
 function getTasks(){return JSON.parse(localStorage.getItem('avalon_tasks')||'[]');}
 function saveTasks(tasks){localStorage.setItem('avalon_tasks',JSON.stringify(tasks));}
-function getPendingCount(){return getTasks().filter(t=>!t.done).length;}
+function getPendingCount(){const sc=(typeof getSinContactoAbonos==="function"&&abonos.length)?getSinContactoAbonos().length:0;return getTasks().filter(t=>!t.done).length+sc;}
 function addNotif(c,newEstado){
   const tasks=getTasks();
   const msg=TASK_MSGS[newEstado]||'Seguimiento pendiente';
@@ -651,7 +659,7 @@ let st={
   dragClient:null,
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
   // Clientes Nuevos
-  activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,loadingRubro:false,
+  activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,loadingRubro:false,showAccionModal:false,accionModalAbono:null,
   // LC Consumo
   showLCModal:false,lcDraft:null,loadingLCImg:false,loadingLCPdf:false,
   showProyecciones:false,showNotifPanel:false,showEmailNotifyModal:false,showCerradaModal:false,cerradaClientId:null,showCerradasKanban:true
@@ -1345,7 +1353,40 @@ async function generarInforme(){
   p('function go(n){s[c].classList.remove("on");c=Math.max(0,Math.min(c+n,ts-1));s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===ts-1;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});}');
   p('var dc=document.getElementById("dots");for(var i=0;i<ts;i++){var d=document.createElement("div");d.className="dot"+(i===0?" on":"");d.setAttribute("data-i",i);d.onclick=function(){var n=parseInt(this.getAttribute("data-i"));s[c].classList.remove("on");c=n;s[c].classList.add("on");document.getElementById("cn").textContent=c+1;document.getElementById("pb").disabled=c===0;document.getElementById("nb").disabled=c===ts-1;document.querySelectorAll(".dot").forEach(function(d,i){d.className="dot"+(i===c?" on":"");});};dc.appendChild(d);}');
   p('document.addEventListener("keydown",function(e){if(e.key==="ArrowLeft")go(-1);if(e.key==="ArrowRight")go(1);});');
-  p('<'+'/script></body></html>');
+  // ── SLIDE: Acciones del mes ──
+  const mesActual=new Date().toLocaleString('es-AR',{month:'long',year:'numeric'});
+  const todasAcciones=abonos.filter(a=>a.activo).flatMap(a=>(a.acciones||[]).map(ac=>({...ac,cliente:a.company||a.name})));
+  const mesStr=new Date().toISOString().slice(0,7);
+  const accionesMes=todasAcciones.filter(ac=>ac.fecha&&ac.fecha.startsWith(mesStr)).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const coloresTipo={'Upselling':'#4aab7a','Fidelización':'#6a9fd8','Revisión':'#c4a0ff','Alerta de churn':'#d95f5f','Nota general':'#888'};
+  if(accionesMes.length){
+    p('<div class="slide" id="slide-acciones">');
+    p('<div class="slide-title">Acciones del mes</div>');
+    p('<div class="slide-sub">'+mesActual+'</div>');
+    p('<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px">');
+    ['Upselling','Fidelización','Revisión','Alerta de churn','Nota general'].forEach(function(tipo){
+      var count=accionesMes.filter(function(a){return a.tipo===tipo;}).length;
+      if(!count)return;
+      var col=coloresTipo[tipo]||'#888';
+      p('<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">'+
+        '<div style="font-size:28px;font-weight:800;color:'+col+'">'+count+'</div>'+
+        '<div style="font-size:11px;color:#aaa;font-weight:600">'+tipo+'</div></div>');
+    });
+    p('</div>');
+    p('<div style="margin-top:24px;display:flex;flex-direction:column;gap:6px">');
+    accionesMes.slice(0,8).forEach(function(ac){
+      var col=coloresTipo[ac.tipo]||'#888';
+      var fecha=ac.fecha?new Date(ac.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short'}):'';
+      p('<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:8px 12px">'+
+        '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:'+col+'22;color:'+col+';border:1px solid '+col+'44;border-radius:4px;padding:2px 7px;flex-shrink:0;min-width:80px;text-align:center">'+ac.tipo+'</span>'+
+        '<span style="font-size:12px;color:#ddd;flex:1">'+ac.cliente+' — '+(ac.desc||'')+'</span>'+
+        '<span style="font-size:10px;color:#666;flex-shrink:0">'+fecha+'</span></div>');
+    });
+    if(accionesMes.length>8)p('<div style="font-size:10px;color:#666;text-align:center;margin-top:4px">+'+(accionesMes.length-8)+' acciones más este mes</div>');
+    p('</div>');
+    p('</div>');
+  }
+  p('<'+'/'+'script></body></html>');
   // Intentar window.open primero; si está bloqueado, descargar como archivo
   const html=S.join('');
   const win=window.open('','_blank');
@@ -1550,6 +1591,7 @@ function render(){
   if(st.showNewModal)app.insertAdjacentHTML('beforeend',rNewModal());
   if(st.showLCModal)app.insertAdjacentHTML('beforeend',rLCModal());
   if(st.showCerradaModal)app.insertAdjacentHTML('beforeend',rCerradaModal());
+  if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());
   bind();
 }
 
@@ -1698,10 +1740,22 @@ function rProyecciones(allClients){
 }
 
 // ── NOTIF PANEL ──
+function getSinContactoAbonos(){
+  const hoy=Date.now();
+  return abonos.filter(a=>{
+    if(!a.activo)return false;
+    const acciones=a.acciones||[];
+    if(!acciones.length)return true;
+    const ultima=acciones.slice().sort((x,y)=>y.fecha.localeCompare(x.fecha))[0];
+    const dias=Math.floor((hoy-new Date(ultima.fecha+'T12:00:00').getTime())/(1000*60*60*24));
+    return dias>30;
+  });
+}
 function rNotifPanel(){
   const tasks=getTasks();
   const pending=tasks.filter(t=>!t.done).length;
   if(!st.showNotifPanel)return'';
+  const sinContacto=getSinContactoAbonos();
   return`<div class="notif-panel" id="notif-panel">
     <div class="notif-header">
       <span style="font-size:12px;font-weight:800;color:var(--text)">🔔 Tareas${pending?` <span style="background:var(--red);color:#fff;border-radius:4px;padding:1px 6px;font-size:9px">${pending}</span>`:''}</span>
@@ -1722,6 +1776,20 @@ function rNotifPanel(){
         </div>`).join('')
       }
     </div>
+    ${sinContacto.length?`<div style="border-top:1px solid var(--border);padding:10px 14px">
+      <div style="font-size:9px;color:var(--yellow);font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">⚠ Sin contacto +30 días (${sinContacto.length})</div>
+      ${sinContacto.map(a=>{
+        const acc=(a.acciones||[]).slice().sort((x,y)=>y.fecha.localeCompare(x.fecha));
+        const dias=acc.length?Math.floor((Date.now()-new Date(acc[0].fecha+'T12:00:00').getTime())/(1000*60*60*24)):null;
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text)">${a.company||a.name}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${dias?`+${dias} días sin acción`:'Sin acciones registradas'}</div>
+          </div>
+          <button class="btn-sm btn-notif-go-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 7px;color:var(--yellow);border-color:rgba(196,154,32,.3)">Ver →</button>
+        </div>`;
+      }).join('')}
+    </div>`:''}
     ${Notification.permission==='default'?`<div style="padding:8px 14px;background:rgba(155,109,255,.07);border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between"><span>Activar notificaciones del browser</span><button class="btn-sm" id="btn-req-notif" style="font-size:9px;padding:3px 7px;color:var(--gold);border-color:rgba(155,109,255,.4)">Activar</button></div>`:''}
   </div>`;
 }
@@ -2942,6 +3010,9 @@ function bind(){
   $('#btn-close-notif')?.addEventListener('click',()=>{st.showNotifPanel=false;render()});
   $('#btn-mark-all-done')?.addEventListener('click',()=>{const t=getTasks().map(x=>({...x,done:true}));saveTasks(t);render()});
   $('#btn-req-notif')?.addEventListener('click',()=>requestNotifPermission());
+  document.querySelectorAll('.btn-notif-go-abono').forEach(btn=>{
+    btn.addEventListener('click',()=>{st.showNotifPanel=false;st.view='abonos';render();});
+  });
   document.querySelectorAll('.notif-item[data-taskidx]').forEach(el=>el.addEventListener('click',()=>{
     const tasks=getTasks();const i=parseInt(el.dataset.taskidx);
     if(tasks[i])tasks[i].done=!tasks[i].done;
@@ -3653,6 +3724,48 @@ async function saveEdit(){
 }
 
 // ── ABONOS — RENDER ──
+function accionMeta(tipo){
+  const map={
+    'Upselling':       {ico:'🎯',bg:'rgba(74,171,122,.15)',color:'var(--green)'},
+    'Fidelización':    {ico:'💛',bg:'rgba(106,159,216,.15)',color:'var(--blue)'},
+    'Revisión':        {ico:'📈',bg:'rgba(155,109,255,.15)',color:'#c4a0ff'},
+    'Alerta de churn': {ico:'⚠️',bg:'rgba(217,95,95,.15)',color:'var(--red)'},
+    'Nota general':    {ico:'📝',bg:'rgba(128,128,128,.15)',color:'var(--text-muted)'},
+  };
+  return map[tipo]||map['Nota general'];
+}
+function rAccionModal(abono){
+  const a=abono;
+  const hoy=new Date().toISOString().slice(0,10);
+  return`<div class="modal-overlay" id="accion-modal-overlay">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Nueva acción — ${a.company||a.name}</div>
+      <div style="margin-top:14px">
+        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Tipo</label>
+        <select id="accion-tipo" class="field-input" style="width:100%">
+          <option>Upselling</option>
+          <option>Fidelización</option>
+          <option>Revisión</option>
+          <option>Alerta de churn</option>
+          <option>Nota general</option>
+        </select>
+      </div>
+      <div style="margin-top:12px">
+        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Descripción</label>
+        <textarea id="accion-desc" class="field-input" style="width:100%;height:70px;resize:none" placeholder="¿Qué pasó? ¿Qué se acordó?"></textarea>
+      </div>
+      <div style="margin-top:12px">
+        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Fecha</label>
+        <input type="date" id="accion-fecha" class="field-input" style="width:100%" value="${hoy}">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button class="btn-sm" id="btn-cancel-accion">Cancelar</button>
+        <button class="btn-sm" id="btn-save-accion" data-abonoid="${a.id}" style="background:var(--green);color:#fff;border-color:var(--green);font-weight:700">Guardar</button>
+      </div>
+    </div>
+  </div>`;
+}
 function rAbonosList(){
   const pms=['Salma','Lucas','Caro'];
   // Filtro PM
@@ -3822,11 +3935,38 @@ function rAbonosList(){
               ${a.historialIPC&&a.historialIPC.length?`<div style="font-size:8px;color:var(--text-muted);margin-top:2px">IPC x${a.historialIPC.length}</div>`:''}
             </div>
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
             <button class="btn-sm btn-edit-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px">✏ Editar</button>
             <button class="btn-sm btn-baja-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:var(--yellow);border-color:rgba(196,154,32,.3)">⬇ Baja</button>
+            <button class="btn-sm btn-add-accion" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:#c4a0ff;border-color:rgba(155,109,255,.35);background:rgba(155,109,255,.08)">+ Acción</button>
             <button class="btn-sm btn-del-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 8px;color:var(--red);border-color:rgba(217,95,95,.3);margin-left:auto">🗑 Eliminar</button>
           </div>
+          ${(()=>{
+            const acciones=(a.acciones||[]).slice().sort((x,y)=>y.fecha.localeCompare(x.fecha));
+            const dias=acciones.length?Math.floor((Date.now()-new Date(acciones[0].fecha+'T12:00:00').getTime())/(1000*60*60*24)):999;
+            const sinContacto=dias>30;
+            if(!acciones.length&&!sinContacto)return'';
+            let html='<div class="acciones-panel">';
+            if(sinContacto)html+='<div class="sin-contacto-alert">⚠ Sin acciones hace '+(dias===999?'siempre':'+'+dias+' días')+' — ¿Hace falta contacto?</div>';
+            acciones.slice(0,2).forEach(ac=>{
+              const m=accionMeta(ac.tipo);
+              const fecha=ac.fecha?new Date(ac.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short'}):'';
+              html+='<div class="accion-row">'+
+                '<div class="accion-ico" style="background:'+m.bg+'">'+m.ico+'</div>'+
+                '<div style="flex:1;min-width:0">'+
+                  '<div style="display:flex;align-items:center;gap:6px">'+
+                    '<span class="accion-tipo">'+ac.tipo+'</span>'+
+                    '<span style="font-size:9px;color:var(--text-muted)">'+fecha+'</span>'+
+                  '</div>'+
+                  '<div class="accion-desc">'+(ac.desc||'')+'</div>'+
+                '</div>'+
+                '<button class="btn-del-accion" data-abonoid="'+a.id+'" data-accionid="'+ac.id+'" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:10px;padding:2px 4px;flex-shrink:0" title="Eliminar">✕</button>'+
+              '</div>';
+            });
+            if(acciones.length>2)html+='<div style="font-size:10px;color:var(--text-muted);margin-top:6px;text-align:center">'+(acciones.length-2)+' acción/es más</div>';
+            html+='</div>';
+            return html;
+          })()}
         </div>`;
       }).join('')}
     </div>`}
@@ -3843,6 +3983,7 @@ function rAbonosList(){
   ${st.showAbonoModal?rAbonoModal():''}
   ${st.showBajaAbonoModal?rBajaAbonoModal():''}
   ${st.showAbonoIPC?rAbonoIPCModal():''}
+  ${st.showAccionModal&&st.accionModalAbono?rAccionModal(st.accionModalAbono):''}
   `;
 }
 
@@ -4396,6 +4537,57 @@ function bindAbonos(){
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   $('#btn-abonos-back')?.addEventListener('click',()=>{st.view='list';render();});
+
+  // ── Acciones ──
+  document.querySelectorAll('.btn-add-accion').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id=btn.dataset.abonoid;
+      st.accionModalAbono=abonos.find(a=>a.id===id)||null;
+      st.showAccionModal=true;
+      render();
+    });
+  });
+  document.getElementById('btn-cancel-accion')?.addEventListener('click',()=>{st.showAccionModal=false;st.accionModalAbono=null;render();});
+  document.getElementById('accion-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='accion-modal-overlay'){st.showAccionModal=false;st.accionModalAbono=null;render();}});
+  document.getElementById('btn-save-accion')?.addEventListener('click',async()=>{
+    const id=document.getElementById('btn-save-accion').dataset.abonoid;
+    const tipo=document.getElementById('accion-tipo').value;
+    const desc=document.getElementById('accion-desc').value.trim();
+    const fecha=document.getElementById('accion-fecha').value;
+    if(!desc){toast('Escribí una descripción');return;}
+    const abono=abonos.find(a=>a.id===id);
+    if(!abono)return;
+    const nueva={id:Date.now().toString(36),tipo,desc,fecha};
+    abono.acciones=[nueva,...(abono.acciones||[])];
+    // Save to Supabase
+    const r=await fetch(SB_URL+'/rest/v1/new_clients?id=eq.'+id,{
+      method:'PATCH',
+      headers:{...sbH(),'Content-Type':'application/json'},
+      body:JSON.stringify({data:{...abono}})
+    });
+    if(r.ok){
+      st.showAccionModal=false;st.accionModalAbono=null;
+      toast('✓ Acción guardada');render();
+    } else {
+      toast('Error al guardar');
+    }
+  });
+  document.querySelectorAll('.btn-del-accion').forEach(btn=>{
+    btn.addEventListener('click',async e=>{
+      e.stopPropagation();
+      if(!confirm('¿Eliminar esta acción?'))return;
+      const abono=abonos.find(a=>a.id===btn.dataset.abonoid);
+      if(!abono)return;
+      abono.acciones=(abono.acciones||[]).filter(ac=>ac.id!==btn.dataset.accionid);
+      const r=await fetch(SB_URL+'/rest/v1/new_clients?id=eq.'+abono.id,{
+        method:'PATCH',
+        headers:{...sbH(),'Content-Type':'application/json'},
+        body:JSON.stringify({data:{...abono}})
+      });
+      if(r.ok){toast('Acción eliminada');render();}
+    });
+  });
   // Sort y filtro PM
   document.querySelectorAll('[data-absort]').forEach(b=>b.addEventListener('click',()=>{
     const prev=st.abonoSort;
