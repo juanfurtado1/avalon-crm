@@ -3803,7 +3803,7 @@ function rAbonosList(){
       const ib=st.abonoOrdenCustom.indexOf(b.id);
       return (ia===-1?999:ia)-(ib===-1?999:ib);
     }
-    return 0; // default: orden de carga
+    return abonos.indexOf(a)-abonos.indexOf(b); // default: más reciente primero (orden de carga)t: orden de carga
   });
   const inactivos=abonos.filter(a=>!a.activo);
   const totalARS=activos.reduce((s,a)=>s+(parseInt(a.montoARS)||0),0);
@@ -4180,7 +4180,7 @@ function rNuevosList(){
           </div>
           <div class="nc-card-body">
             <div class="ob-steps" style="margin-bottom:8px">
-              ${NC_OB_STEPS.map(s=>`<div class="ob-step ${ob[s.key]?'done':''}"><div class="ob-check">${ob[s.key]?'✓':''}</div>${s.label}</div>`).join('')}
+              ${NC_OB_STEPS.map(s=>`<div class="ob-step ${ob[s.key]==='Completo'?'done':''}"><div class="ob-check">${ob[s.key]==='Completo'?'✓':''}</div>${s.label}</div>`).join('')}
             </div>
             ${scopeList.length?`<div style="display:flex;gap:4px;flex-wrap:wrap">${scopeList.map(s=>`<span class="scope-chip">${s}</span>`).join('')}${c.scope.length>4?`<span class="scope-chip">+${c.scope.length-4}</span>`:''}</div>`:''}
           </div>
