@@ -446,7 +446,7 @@ const NC_TEAMS={
 
 // ── SUPABASE ──
 const SB_URL='https://jbfpwrkcyhoclqxvxuqq.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZnB3cmtjeWhvY2xxeHZ4dXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjQ0ODY0OSwiZXhwIjoyMDkyMDI0NjQ5fQ.TAISW34HqVSC4cN3kgX1Xel-ul_i2gTciER-8YhZT1I';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiZnB3cmtjeWhvY2xxeHZ4dXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDg2NDksImV4cCI6MjA5MjAyNDY0OX0.P93RK6PKiU7LlDdWGT00ad_nHOVU6aSM0dsQjVUl05M';
 function sbH(){return{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}
 let clients=[];
 async function loadC(){
@@ -4157,7 +4157,7 @@ function rNuevosList(){
       ?`<div class="empty"><div class="empty-icon">🚀</div><div style="font-size:12px;margin-bottom:8px">Sin clientes nuevos aún</div><div style="font-size:11px;color:var(--text-muted)">Los clientes con estado <strong>Cerrada</strong> del CRM aparecen acá automáticamente</div></div>`
       :nuevos.map(c=>{
         const ob=c.onboarding||{};
-        const done=Object.values(ob).filter(Boolean).length;
+        const done=Object.values(ob).filter(v=>v==='Completo').length;
         const total=NC_OB_STEPS.length;
         const pct=Math.round(done/total*100);
         const ready=done===total;
@@ -4367,14 +4367,23 @@ async function delPresentacionScreenshot(idx){
 }
 
 // ── CLIENTES NUEVOS — ACTIONS ──
+let _savingNuevo=false;
 async function saveNuevoFromModal(){
+  if(_savingNuevo)return; // evita doble-submit (doble click / doble evento)
   const name=gi('nm-name');const company=gi('nm-company');
   if(!name||!company){toast('Completá nombre y empresa');return;}
-  const scope=[...document.querySelectorAll('#nm-scope-grid .need-toggle.on')].map(t=>t.dataset.scope);
-  const c=ncNew({name,company,rubro:gi('nm-rubro')||'',web:gi('nm-web')||'',instagram:gi('nm-ig')||'',tiktok:gi('nm-tiktok')||'',phone:gi('nm-phone')||'',pm:document.getElementById('nm-pm')?.value||'',fechaInicio:document.getElementById('nm-fecha')?.value||'',scope});
-  nuevos.unshift(c);await svNC(c);
-  st.showNuevoModal=false;st.activeNuevo=c.id;st.view='nuevoDetail';
-  toast('Cliente creado ✓');render();
+  _savingNuevo=true;
+  const btn=document.getElementById('btn-save-nuevo');
+  if(btn)btn.disabled=true;
+  try{
+    const scope=[...document.querySelectorAll('#nm-scope-grid .need-toggle.on')].map(t=>t.dataset.scope);
+    const c=ncNew({name,company,rubro:gi('nm-rubro')||'',web:gi('nm-web')||'',instagram:gi('nm-ig')||'',tiktok:gi('nm-tiktok')||'',phone:gi('nm-phone')||'',pm:document.getElementById('nm-pm')?.value||'',fechaInicio:document.getElementById('nm-fecha')?.value||'',scope});
+    nuevos.unshift(c);await svNC(c);
+    st.showNuevoModal=false;st.activeNuevo=c.id;st.view='nuevoDetail';
+    toast('Cliente creado ✓');render();
+  } finally {
+    _savingNuevo=false;
+  }
 }
 
 async function saveNuevoDetail(){
