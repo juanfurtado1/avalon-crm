@@ -616,7 +616,7 @@ async function claude(messages){
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:SP,messages})
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:SP,messages})
   });
   const d=await r.json();
   if(d.error)throw new Error(d.error.message||'API error');
@@ -773,7 +773,7 @@ async function lcImportFromImage(file){
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:2000,
         messages:[{
           role:'user',
@@ -825,7 +825,7 @@ async function lcImportFromPDF(file){
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:4000,
         messages:[{
           role:'user',
@@ -3642,7 +3642,7 @@ Servicios disponibles: Estrategia de Comunicación, Paid Media / Media Planner, 
       const resp=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:SP,messages:[{role:'user',content:[...imgContent,{type:'text',text:p}]}]})
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2000,system:SP,messages:[{role:'user',content:[...imgContent,{type:'text',text:p}]}]})
       });
       const d=await resp.json();
       if(d.error)throw new Error(d.error.message);
@@ -4437,7 +4437,7 @@ ${text}`;
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})
     });
     const data=await resp.json();
     if(!resp.ok){
@@ -5020,7 +5020,7 @@ function bindAbonos(){
       const resp=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2000,
           messages:[{role:'user',content:[
             {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
             {type:'text',text:'Analizá esta imagen de un listado de clientes. Extraé cada cliente con: nombre, empresa (si hay), PM asignado, plataformas (Meta Ads, Google Ads, TikTok Ads, Pinterest, LinkedIn, CM y Diseño, Filmmaker, CRM), abono en ARS y/o USD por mes. Respondé SOLO con JSON válido, sin explicaciones ni markdown. Formato: [{"name":"...","company":"...","pm":"...","plataformas":["..."],"montoARS":0,"montoUSD":0}]. Si un campo no está claro usá string vacío o 0.'}
