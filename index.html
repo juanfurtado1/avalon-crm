@@ -4170,7 +4170,7 @@ function rNuevosList(){
               <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
                 ${c.pm?`<span class="pm-badge">👤 ${c.pm}</span>`:'<span style="font-size:9px;color:var(--text-muted);font-weight:600">Sin PM</span>'}
                 ${c.fechaInicio?`<span style="font-size:9px;color:var(--text-muted);font-weight:600">📅 ${fmtDate(c.fechaInicio)}</span>`:''}
-                ${ready?'<span class="ready-badge">✓ Listo para PM</span>':''}
+                ${ready?'<span class="ready-badge">✓ Listo para PM</span><button class="btn-sm btn-pasar-abono" data-ncid="'+c.id+'" style="font-size:9px;padding:2px 8px;margin-left:6px;background:rgba(196,154,32,.12);border-color:rgba(196,154,32,.4);color:var(--yellow);font-weight:800">→ Pasar a Abonos</button>':''}
               </div>
             </div>
             <div style="text-align:right;flex-shrink:0">
@@ -4403,31 +4403,46 @@ async function saveNuevoDetail(){
   await svNC(c);toast('Guardado ✓');
 }
 
+async function pasarAAbono(c,opts={}){
+  const nombre=c.company||c.name;
+  if(!opts.skipConfirm){
+    if(!confirm(`✅ ${nombre} — onboarding completo.\n¿Pasarlo a Abonos? Va a salir de Clientes Nuevos y va a quedar disponible como cliente activo (con monto en $0 para completar).`))return;
+  }
+  // Buscar abono existente con el mismo crmClientId / nombre / empresa
+  let ab=abonos.find(a=>(c.crmClientId&&a.crmClientId===c.crmClientId)||a.name===c.name||a.company===c.company);
+  if(ab){
+    // Actualizar datos del abono existente
+    ab.pm=c.pm||ab.pm;
+    ab.plataformas=c.scope?.length?c.scope:ab.plataformas;
+    ab.fechaInicio=c.fechaInicio||ab.fechaInicio;
+    ab.equipoAreas=c.equipoAreas||ab.equipoAreas||{};
+  } else {
+    // No existe — crear uno nuevo a partir de los datos del cliente
+    ab=ncAbono({
+      name:c.name,company:c.company,pm:c.pm||'',
+      plataformas:c.scope||[],
+      fechaInicio:c.fechaInicio||new Date().toISOString().split('T')[0],
+      fechaIngreso:new Date().toISOString().split('T')[0],
+      crmClientId:c.crmClientId||c.id,
+      montoARS:0,montoUSD:0,activo:true
+    });
+    abonos.unshift(ab);
+  }
+  await svAbono(ab);
+  nuevos=nuevos.filter(x=>x.id!==c.id);
+  await sbDelNC(c.id);
+  st.activeNuevo=null;st.view='abonos';
+  render();
+  toast(ab.montoARS||ab.montoUSD?`${nombre} pasado a Abonos ✓`:`${nombre} pasado a Abonos — completá el monto ✓`);
+}
 async function toggleOb(key){
   const c=gnc();if(!c)return;
   const idx=NC_OB_ESTADOS.indexOf(c.onboarding[key]||'Sin enviar');
   c.onboarding[key]=NC_OB_ESTADOS[(idx+1)%NC_OB_ESTADOS.length];
   await svNC(c);render();
-  // Si todos los pasos quedaron en Completo, ofrecer archivar
+  // Si todos los pasos quedaron en Completo, ofrecer pasar a Abonos
   const todosCompletos=NC_OB_STEPS.every(s=>(c.onboarding[s.key]||'Sin enviar')==='Completo');
-  if(todosCompletos){
-    const nombre=c.company||c.name;
-    if(confirm(`✅ ${nombre} completó todo el onboarding.\n¿Archivarlo de Clientes Nuevos? Se actualizarán los datos en Abonos.`)){
-      // Buscar el abono correspondiente y sobreescribir datos
-      const ab=abonos.find(a=>a.crmClientId===c.crmClientId||a.name===c.name||a.company===c.company);
-      if(ab){
-        ab.pm=c.pm||ab.pm;
-        ab.plataformas=c.scope?.length?c.scope:ab.plataformas;
-        ab.fechaInicio=c.fechaInicio||ab.fechaInicio;
-        ab.equipoAreas=c.equipoAreas||ab.equipoAreas||{};
-        await svAbono(ab);
-      }
-      nuevos=nuevos.filter(x=>x.id!==c.id);
-      await sbDelNC(c.id);
-      st.activeNuevo=null;st.view='abonos';
-      render();toast(`${nombre} archivado y datos actualizados en Abonos ✓`);
-    }
-  }
+  if(todosCompletos)await pasarAAbono(c);
 }
 
 async function syncCerrados(){
@@ -4845,6 +4860,11 @@ function bindNuevos(){
   $('#btn-open-nuevo')?.addEventListener('click',()=>{st.showNuevoModal=true;render()});
   $('#btn-sync-cerrados')?.addEventListener('click',syncCerrados);
   $$('.nc-card[data-ncid]').forEach(c=>c.addEventListener('click',()=>{st.activeNuevo=c.dataset.ncid;st.view='nuevoDetail';render()}));
+  $$('.btn-pasar-abono').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const c=nuevos.find(x=>x.id===b.dataset.ncid);
+    if(c)await pasarAAbono(c);
+  }));
   $('#nuevo-modal-overlay')?.addEventListener('click',e=>{if(e.target.id==='nuevo-modal-overlay'){st.showNuevoModal=false;render()}});
   $('#btn-cancel-nuevo')?.addEventListener('click',()=>{st.showNuevoModal=false;render()});
   $('#btn-save-nuevo')?.addEventListener('click',saveNuevoFromModal);
