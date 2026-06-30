@@ -4440,9 +4440,18 @@ ${text}`;
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})
     });
     const data=await resp.json();
-    const txt=data.content?.[0]?.text||'{}';
+    if(!resp.ok){
+      const apiMsg=data?.error?.message||resp.statusText||'Error desconocido';
+      throw new Error('API: '+apiMsg);
+    }
+    const txt=data.content?.[0]?.text;
+    if(!txt)throw new Error('La API no devolvió contenido');
     const clean=txt.replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(clean);
+    let parsed;
+    try{parsed=JSON.parse(clean);}
+    catch(e){throw new Error('No se pudo interpretar la respuesta — probá de nuevo');}
+    const camposVacios=['empresa','rubro','objetivo','inversion','redes','contactoNombre','contactoTel'].every(k=>!parsed[k]) && !(parsed.scope||[]).length;
+    if(camposVacios)throw new Error('No se encontró información reconocible en el texto pegado');
     st.mpData=parsed;st.mpStep='review';
   }catch(err){
     st.mpError='Error al analizar el texto: '+err.message;
