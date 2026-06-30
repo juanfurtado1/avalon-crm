@@ -141,6 +141,21 @@ body{background:var(--bg);color:var(--text);font-family:'Montserrat',sans-serif;
 .accion-desc{font-size:11px;color:var(--text-muted);margin-top:1px}
 .accion-fecha{font-size:10px;color:var(--text-muted);margin-top:2px}
 .sin-contacto-alert{background:rgba(196,154,32,.1);border:1px solid rgba(196,154,32,.3);border-radius:6px;padding:7px 10px;font-size:10px;color:var(--yellow);font-weight:700;display:flex;align-items:center;gap:6px}
+.mp-field{margin-bottom:14px}
+.mp-label{font-size:10px;font-weight:800;color:#c4a0ff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;display:block}
+.mp-chip-grid{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.mp-chip{font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(155,109,255,.1);border:1px solid rgba(155,109,255,.3);color:#c4a0ff;cursor:pointer;user-select:none}
+.mp-chip.off{opacity:.35}
+.mp-preview-card{background:#0a0a14;border:1px solid var(--border);border-radius:12px;overflow:hidden;max-width:560px;margin:0 auto}
+.mp-preview-header{background:#0a0a14;padding:18px 22px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(155,109,255,.2)}
+.mp-preview-body{background:#fff;padding:20px 24px;color:#1a1a1a}
+.mp-pv-label{font-size:9px;font-weight:800;color:#9b6dff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.mp-pv-value{font-size:12.5px;color:#222;line-height:1.5;margin-bottom:14px}
+.mp-pv-chip{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:5px;background:#f0eaff;color:#6a4bb8;font-weight:700;margin:0 4px 4px 0}
+.mp-pv-divider{border-top:1px solid #eee;margin:14px 0}
+.mp-badge-cuentas{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;border-radius:6px;font-weight:700}
+.mp-badge-propias{background:#e8f6ee;color:#2a7a4f}
+.mp-badge-cliente{background:#fdf3e0;color:#9a6a0a}
 @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .s-sin-definir{background:rgba(85,79,110,.12);color:#6b6585}
 .s-pendiente{background:rgba(230,130,40,.12);color:#e6823a}
@@ -660,6 +675,7 @@ let st={
   filters:{dateFrom:'',dateTo:'',tipo:'',modalidad:'',plataforma:'',moneda:'',urgencia:''},
   // Clientes Nuevos
   activeNuevo:null,showNuevoModal:false,loadingEmail:false,copiedEmail:false,loadingRubro:false,showAccionModal:false,accionModalAbono:null,
+  showMailPresModal:false,mpStep:'input',mpInputText:'',mpLoading:false,mpData:null,mpError:'',
   // LC Consumo
   showLCModal:false,lcDraft:null,loadingLCImg:false,loadingLCPdf:false,
   showProyecciones:false,showNotifPanel:false,showEmailNotifyModal:false,showCerradaModal:false,cerradaClientId:null,showCerradasKanban:true
@@ -1523,6 +1539,7 @@ function rGlobalNav(){
     <button class="btn-sm" id="btn-go-nuevos" style="flex-shrink:0;background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
     <button class="btn-sm" id="btn-generar-informe-header" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:var(--gold);font-weight:800">📊 Informe</button>
     <button class="btn-sm" id="btn-open-lc" style="flex-shrink:0;background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800">💳 LC</button>
+    <button class="btn-sm" id="btn-open-mailpres-global" title="Generar mail de presentación" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:#c4a0ff;font-weight:700">📧 Mail</button>
     <button class="btn-add" id="btn-open-new" style="flex-shrink:0;font-size:10px;padding:5px 12px">+ Prospecto</button>
   </div>`;
 }
@@ -1580,16 +1597,22 @@ function render(){
   }
 
   if(st.sbLoading){app.innerHTML=rLoading();bind();return;}
-  if(st.view==='abonos'){app.innerHTML=rAbonosList();bind();bindAbonos();return;}
+  if(st.view==='abonos'){
+    app.innerHTML=rAbonosList();
+    if(st.showMailPresModal)app.insertAdjacentHTML('beforeend',rMailPresModal());
+    bind();bindAbonos();bindMailPresGlobal();return;
+  }
   if(st.view==='nuevos'){
     app.innerHTML=rNuevosList();
     if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());
-    bind();bindNuevos();return;
+    if(st.showMailPresModal)app.insertAdjacentHTML('beforeend',rMailPresModal());
+    bind();bindNuevos();bindMailPresGlobal();return;
   }
   if(st.view==='nuevoDetail'){
     app.innerHTML=rNuevoDetail();
     if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());
-    bind();bindNuevos();return;
+    if(st.showMailPresModal)app.insertAdjacentHTML('beforeend',rMailPresModal());
+    bind();bindNuevos();bindMailPresGlobal();return;
   }
   app.innerHTML=st.view==='list'?rList():rDetail();
   if(st.showNotifPanel)app.insertAdjacentHTML('beforeend',rNotifPanel());
@@ -1600,7 +1623,8 @@ function render(){
   if(st.showLCModal)app.insertAdjacentHTML('beforeend',rLCModal());
   if(st.showCerradaModal)app.insertAdjacentHTML('beforeend',rCerradaModal());
   if(st.showNuevoModal)app.insertAdjacentHTML('beforeend',rNuevoModal());
-  bind();
+  if(st.showMailPresModal)app.insertAdjacentHTML('beforeend',rMailPresModal());
+  bind();bindMailPresGlobal();
 }
 
 function rLoading(){
@@ -4220,6 +4244,212 @@ function rNuevoModal(){
   </div></div>`;
 }
 
+const MP_PLATAFORMAS=['Meta Ads','Google Ads','TikTok Ads','LinkedIn Ads','Redes sociales','Diseño','Filmmaker','SEO','Web/Ecommerce','Estrategia de comunicación'];
+function rMailPresModal(){
+  const c=gnc();
+  return`<div class="modal-overlay" id="mp-modal-overlay">
+    <div class="modal" style="max-width:600px;width:94vw">
+      <div class="modal-handle"></div>
+      <div class="modal-title">📧 Mail de presentación${c?' — '+(c.company||c.name):''}</div>
+      ${st.mpStep==='input'?rMpStepInput():''}
+      ${st.mpStep==='review'?rMpStepReview():''}
+      ${st.mpStep==='preview'?rMpStepPreview():''}
+    </div>
+  </div>`;
+}
+function rMpStepInput(){
+  return`<div style="margin-top:14px">
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:6px">Pegá la transcripción de la reunión, notas o el brief del cliente</label>
+    <textarea id="mp-input-text" class="field-input" style="width:100%;height:220px;resize:none;font-size:12px" placeholder="Pegá acá el texto...">${st.mpInputText}</textarea>
+    ${st.mpError?`<div style="color:var(--red);font-size:11px;margin-top:8px">${st.mpError}</div>`:''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn-sm" id="btn-mp-cancel">Cancelar</button>
+      <button class="btn-sm" id="btn-mp-extract" style="background:#9b6dff;color:#fff;border-color:#9b6dff;font-weight:700" ${st.mpLoading?'disabled':''}>
+        ${st.mpLoading?'⏳ Analizando...':'✨ Extraer datos'}
+      </button>
+    </div>
+  </div>`;
+}
+function rMpStepReview(){
+  const d=st.mpData||{};
+  const platChips=MP_PLATAFORMAS.map(p=>`<span class="mp-chip ${((d.scope||[]).includes(p))?'':'off'}" data-plat="${p}">${p}</span>`).join('');
+  return`<div style="margin-top:14px;max-height:60vh;overflow-y:auto;padding-right:4px">
+    <div style="font-size:11px;color:var(--green);margin-bottom:14px">✓ Datos extraídos — revisá y corregí lo que haga falta antes de generar el mail</div>
+
+    <div class="mp-field">
+      <label class="mp-label">Cliente / empresa</label>
+      <input class="field-input" id="mp-empresa" style="width:100%" value="${d.empresa||''}">
+    </div>
+    <div class="mp-field">
+      <label class="mp-label">Rubro / descripción corta</label>
+      <input class="field-input" id="mp-rubro" style="width:100%" value="${d.rubro||''}">
+    </div>
+    <div class="mp-field">
+      <label class="mp-label">Objetivo — corto y mediano plazo</label>
+      <textarea class="field-input" id="mp-objetivo" style="width:100%;height:60px;resize:none">${d.objetivo||''}</textarea>
+    </div>
+    <div class="mp-field">
+      <label class="mp-label">Scope contratado</label>
+      <div class="mp-chip-grid" id="mp-scope-grid">${platChips}</div>
+    </div>
+    <div class="mp-field">
+      <label class="mp-label">Inversión inicial por plataforma</label>
+      <input class="field-input" id="mp-inversion" style="width:100%" value="${d.inversion||''}" placeholder="Ej: Google Ads $1.500.000 · Meta Ads a definir">
+    </div>
+    <div class="mp-field">
+      <label class="mp-label">Cuentas publicitarias</label>
+      <select class="field-input" id="mp-cuentas" style="width:100%">
+        <option value="propias" ${d.cuentasTipo==='propias'?'selected':''}>Cuentas propias de Avalon</option>
+        <option value="cliente" ${d.cuentasTipo!=='propias'?'selected':''}>Cuentas del cliente</option>
+      </select>
+    </div>
+    <div class="mp-field">
+      <label class="mp-label">Redes y web</label>
+      <textarea class="field-input" id="mp-redes" style="width:100%;height:50px;resize:none" placeholder="Web, Instagram, etc — uno por línea">${d.redes||''}</textarea>
+    </div>
+    <div class="mp-field">
+      <label class="mp-label">Contacto — nombre</label>
+      <input class="field-input" id="mp-contacto-nombre" style="width:100%" value="${d.contactoNombre||''}">
+    </div>
+    <div class="mp-field" style="margin-bottom:4px">
+      <label class="mp-label">Contacto — teléfono</label>
+      <input class="field-input" id="mp-contacto-tel" style="width:100%" value="${d.contactoTel||''}">
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:18px">
+      <button class="btn-sm" id="btn-mp-back-input">← Volver a pegar texto</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm" id="btn-mp-cancel">Cancelar</button>
+        <button class="btn-sm" id="btn-mp-go-preview" style="background:#9b6dff;color:#fff;border-color:#9b6dff;font-weight:700">Ver preview →</button>
+      </div>
+    </div>
+  </div>`;
+}
+function rMpStepPreview(){
+  const d=st.mpData||{};
+  const cuentasBadge=d.cuentasTipo==='propias'
+    ?`<span class="mp-badge-cuentas mp-badge-propias">✓ Cuentas propias de Avalon</span>`
+    :`<span class="mp-badge-cuentas mp-badge-cliente">⚠ Cuentas del cliente</span>`;
+  const scopeChips=(d.scope||[]).map(p=>`<span class="mp-pv-chip">${p}</span>`).join('');
+  const redesHtml=(d.redes||'').split('\n').filter(x=>x.trim()).map(r=>`<div>${r}</div>`).join('');
+  return`<div style="margin-top:14px">
+    <div class="mp-preview-card" id="mp-preview-content">
+      <div class="mp-preview-header">
+        <div style="width:16px;height:16px;background:linear-gradient(135deg,#9b6dff,#4aab7a);border-radius:4px;flex-shrink:0"></div>
+        <span style="color:#fff;font-size:12px;font-weight:700;letter-spacing:.3px">Avalon Agency</span>
+        <span style="font-size:9px;font-weight:700;color:#c4a0ff;text-transform:uppercase;letter-spacing:1.2px;margin-left:auto">Nuevo cliente</span>
+      </div>
+      <div class="mp-preview-body">
+        <div style="font-size:17px;font-weight:800;color:#111;margin-bottom:2px">${d.empresa||''}</div>
+        <div style="font-size:12px;color:#888;margin-bottom:18px">${d.rubro||''}</div>
+
+        <div class="mp-pv-label">🎯 Objetivo</div>
+        <div class="mp-pv-value">${(d.objetivo||'').replace(/\n/g,'<br>')}</div>
+
+        <div class="mp-pv-label">✅ Scope contratado</div>
+        <div class="mp-pv-value">${scopeChips||'—'}</div>
+
+        <div class="mp-pv-label">💵 Inversión inicial</div>
+        <div class="mp-pv-value">${d.inversion||'—'}</div>
+
+        <div class="mp-pv-label">📢 Cuentas publicitarias</div>
+        <div class="mp-pv-value">${cuentasBadge}</div>
+
+        <div class="mp-pv-divider"></div>
+
+        <div class="mp-pv-label">🌐 Redes y web</div>
+        <div class="mp-pv-value">${redesHtml||'—'}</div>
+
+        <div class="mp-pv-divider"></div>
+
+        <div class="mp-pv-label">👤 Contacto</div>
+        <div class="mp-pv-value" style="margin-bottom:0">${d.contactoNombre||''} ${d.contactoTel?'— '+d.contactoTel:''}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:18px">
+      <button class="btn-sm" id="btn-mp-back-review">← Editar datos</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm" id="btn-mp-cancel">Cerrar</button>
+        <button class="btn-sm" id="btn-mp-copy" style="background:var(--green);color:#fff;border-color:var(--green);font-weight:700">📋 Copiar para Gmail</button>
+      </div>
+    </div>
+  </div>`;
+}
+function mpBuildEmailHtml(d){
+  const cuentasColor=d.cuentasTipo==='propias'?'#2a7a4f':'#9a6a0a';
+  const cuentasBg=d.cuentasTipo==='propias'?'#e8f6ee':'#fdf3e0';
+  const cuentasText=d.cuentasTipo==='propias'?'✓ Cuentas propias de Avalon':'⚠ Cuentas del cliente';
+  const scopeChips=(d.scope||[]).map(p=>`<span style="display:inline-block;font-size:11px;padding:3px 9px;border-radius:5px;background:#f0eaff;color:#6a4bb8;font-weight:700;margin:0 4px 4px 0">${p}</span>`).join('');
+  const redesHtml=(d.redes||'').split('\n').filter(x=>x.trim()).map(r=>`<div>${r}</div>`).join('');
+  return`<div style="font-family:Arial,sans-serif;max-width:560px;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden">
+  <div style="background:#0a0a14;padding:18px 22px;display:flex;align-items:center;gap:10px">
+    <div style="width:16px;height:16px;background:linear-gradient(135deg,#9b6dff,#4aab7a);border-radius:4px"></div>
+    <span style="color:#fff;font-size:13px;font-weight:700">Avalon Agency</span>
+    <span style="font-size:9px;font-weight:700;color:#c4a0ff;text-transform:uppercase;letter-spacing:1.2px;margin-left:auto">Nuevo cliente</span>
+  </div>
+  <div style="background:#fff;padding:22px 24px;color:#1a1a1a">
+    <div style="font-size:18px;font-weight:800;color:#111;margin-bottom:2px">${d.empresa||''}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:18px">${d.rubro||''}</div>
+    <div style="font-size:10px;font-weight:800;color:#9b6dff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🎯 Objetivo</div>
+    <div style="font-size:13px;color:#222;line-height:1.5;margin-bottom:16px">${(d.objetivo||'').replace(/\n/g,'<br>')}</div>
+    <div style="font-size:10px;font-weight:800;color:#9b6dff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">✅ Scope contratado</div>
+    <div style="margin-bottom:16px">${scopeChips}</div>
+    <div style="font-size:10px;font-weight:800;color:#9b6dff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">💵 Inversión inicial</div>
+    <div style="font-size:13px;color:#222;margin-bottom:16px">${d.inversion||'—'}</div>
+    <div style="font-size:10px;font-weight:800;color:#9b6dff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">📢 Cuentas publicitarias</div>
+    <div style="margin-bottom:16px"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;border-radius:6px;font-weight:700;background:${cuentasBg};color:${cuentasColor}">${cuentasText}</span></div>
+    <div style="border-top:1px solid #eee;margin:16px 0"></div>
+    <div style="font-size:10px;font-weight:800;color:#9b6dff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🌐 Redes y web</div>
+    <div style="font-size:13px;color:#222;line-height:1.6;margin-bottom:16px">${redesHtml||'—'}</div>
+    <div style="border-top:1px solid #eee;margin:16px 0"></div>
+    <div style="font-size:10px;font-weight:800;color:#9b6dff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">👤 Contacto</div>
+    <div style="font-size:13px;color:#222">${d.contactoNombre||''} ${d.contactoTel?'— '+d.contactoTel:''}</div>
+  </div>
+</div>`;
+}
+async function mpExtractData(){
+  const text=document.getElementById('mp-input-text')?.value.trim();
+  if(!text){st.mpError='Pegá un texto primero';render();return;}
+  const key=getApiKey();
+  if(!key){st.mpError='Necesitás configurar tu API key (⚙ en la barra superior)';render();return;}
+  st.mpInputText=text;st.mpLoading=true;st.mpError='';render();
+  try{
+    const prompt=`Analizá el siguiente texto (transcripción de reunión, notas o brief de presentación de un cliente nuevo de una agencia de marketing) y extraé estos campos. Respondé SOLO con JSON válido, sin explicaciones ni markdown.
+
+Formato exacto:
+{"empresa":"","rubro":"","objetivo":"","scope":["..."],"inversion":"","cuentasTipo":"propias|cliente","redes":"","contactoNombre":"","contactoTel":""}
+
+Reglas:
+- empresa: nombre de la marca/empresa cliente
+- rubro: descripción corta del rubro o servicio que vende (no el servicio que le vendemos)
+- objetivo: 1-3 oraciones resumiendo el objetivo a corto y mediano plazo que tiene el proyecto con Avalon
+- scope: array con los servicios contratados, usando SOLO estos valores si aplican: ${MP_PLATAFORMAS.join(', ')}
+- inversion: monto de inversión inicial por plataforma, formato breve "Google Ads $X · Meta Ads $Y"
+- cuentasTipo: "propias" si las pautas se manejan con cuentas de Avalon, "cliente" si son cuentas del cliente
+- redes: web, instagram, tienda, mercadolibre, etc — una por línea
+- contactoNombre: nombre de la persona de contacto principal del cliente
+- contactoTel: teléfono del contacto
+
+Si un campo no aparece en el texto, usá string vacío "" o array vacío [].
+
+TEXTO:
+${text}`;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    const txt=data.content?.[0]?.text||'{}';
+    const clean=txt.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    st.mpData=parsed;st.mpStep='review';
+  }catch(err){
+    st.mpError='Error al analizar el texto: '+err.message;
+    console.error(err);
+  }
+  st.mpLoading=false;render();
+}
 function rNuevoDetail(){
   const c=gnc();if(!c){st.view='nuevos';render();return'';}
   const ob=c.onboarding||{};
@@ -4234,6 +4464,7 @@ function rNuevoDetail(){
       <div style="font-size:15px;font-weight:800;color:var(--green);letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.company?`${c.company} | ${c.name}`:c.name}</div>
       ${c.rubro?`<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600">${c.rubro}</div>`:''}
     </div>
+    <button class="btn-sm" id="btn-open-mailpres" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:#c4a0ff;font-weight:700">📧 Mail de presentación</button>
     ${ready?'<span class="ready-badge" style="flex-shrink:0">✓ Listo para PM</span>':''}
   </div>
   <div class="gold-bar" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div>
@@ -4853,6 +5084,55 @@ function recalcIPCPreview(){
 }
 
 
+function bindMailPresGlobal(){
+  const $=s=>document.querySelector(s);
+  const $$=s=>document.querySelectorAll(s);
+  $('#btn-open-mailpres-global')?.addEventListener('click',()=>{
+    st.showMailPresModal=true;st.mpStep='input';st.mpData=null;st.mpError='';render();
+  });
+  $('#btn-mp-cancel')?.addEventListener('click',()=>{
+    st.showMailPresModal=false;st.mpStep='input';st.mpInputText='';st.mpData=null;st.mpError='';render();
+  });
+  document.getElementById('mp-modal-overlay')?.addEventListener('click',e=>{
+    if(e.target.id==='mp-modal-overlay'){st.showMailPresModal=false;render();}
+  });
+  $('#btn-mp-extract')?.addEventListener('click',mpExtractData);
+  $('#btn-mp-back-input')?.addEventListener('click',()=>{st.mpStep='input';render();});
+  $('#btn-mp-back-review')?.addEventListener('click',()=>{st.mpStep='review';render();});
+  $$('.mp-chip[data-plat]').forEach(chip=>chip.addEventListener('click',()=>{
+    chip.classList.toggle('off');
+    const plat=chip.dataset.plat;
+    if(!st.mpData)st.mpData={};
+    let scope=st.mpData.scope||[];
+    if(chip.classList.contains('off'))scope=scope.filter(p=>p!==plat);
+    else if(!scope.includes(plat))scope=[...scope,plat];
+    st.mpData.scope=scope;
+  }));
+  $('#btn-mp-go-preview')?.addEventListener('click',()=>{
+    if(!st.mpData)st.mpData={};
+    st.mpData.empresa=document.getElementById('mp-empresa')?.value||'';
+    st.mpData.rubro=document.getElementById('mp-rubro')?.value||'';
+    st.mpData.objetivo=document.getElementById('mp-objetivo')?.value||'';
+    st.mpData.inversion=document.getElementById('mp-inversion')?.value||'';
+    st.mpData.cuentasTipo=document.getElementById('mp-cuentas')?.value||'cliente';
+    st.mpData.redes=document.getElementById('mp-redes')?.value||'';
+    st.mpData.contactoNombre=document.getElementById('mp-contacto-nombre')?.value||'';
+    st.mpData.contactoTel=document.getElementById('mp-contacto-tel')?.value||'';
+    st.mpStep='preview';render();
+  });
+  $('#btn-mp-copy')?.addEventListener('click',async()=>{
+    const html=mpBuildEmailHtml(st.mpData||{});
+    try{
+      const blob=new Blob([html],{type:'text/html'});
+      const item=new ClipboardItem({'text/html':blob,'text/plain':new Blob([html],{type:'text/plain'})});
+      await navigator.clipboard.write([item]);
+      toast('✓ Copiado — pegalo directo en Gmail');
+    }catch(e){
+      try{await navigator.clipboard.writeText(html);toast('Copiado como texto (pegalo en Gmail)');}
+      catch(e2){toast('No se pudo copiar — copiá manualmente');}
+    }
+  });
+}
 function bindNuevos(){
   const $=s=>document.querySelector(s);
   const $$=s=>document.querySelectorAll(s);
@@ -4869,6 +5149,9 @@ function bindNuevos(){
   $('#btn-cancel-nuevo')?.addEventListener('click',()=>{st.showNuevoModal=false;render()});
   $('#btn-save-nuevo')?.addEventListener('click',saveNuevoFromModal);
   $$('#nm-scope-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+  $('#btn-open-mailpres')?.addEventListener('click',()=>{
+    st.showMailPresModal=true;st.mpStep='input';st.mpData=null;st.mpError='';render();
+  });
   $('#btn-nd-back')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $('#btn-nd-delete')?.addEventListener('click',async()=>{
     if(!confirm('¿Eliminar este cliente del onboarding?'))return;
