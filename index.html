@@ -4453,6 +4453,8 @@ ${text}`;
     const camposVacios=['empresa','rubro','objetivo','inversion','redes','contactoNombre','contactoTel'].every(k=>!parsed[k]) && !(parsed.scope||[]).length;
     if(camposVacios)throw new Error('No se encontró información reconocible en el texto pegado');
     st.mpData=parsed;st.mpStep='review';
+    // Auto-save extracted data to client
+    const c=gnc();if(c){c.mpData=parsed;c.mpInputText=st.mpInputText;await svNC(c);}
   }catch(err){
     st.mpError='Error al analizar el texto: '+err.message;
     console.error(err);
@@ -4473,7 +4475,7 @@ function rNuevoDetail(){
       <div style="font-size:15px;font-weight:800;color:var(--green);letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.company?`${c.company} | ${c.name}`:c.name}</div>
       ${c.rubro?`<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600">${c.rubro}</div>`:''}
     </div>
-    <button class="btn-sm" id="btn-open-mailpres" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:#c4a0ff;font-weight:700">📧 Mail de presentación</button>
+    <button class="btn-sm" id="btn-open-mailpres" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:#c4a0ff;font-weight:700">📧 Mail de presentación${c.mpData?'<span style="background:#9b6dff;color:#fff;border-radius:3px;padding:0 4px;font-size:9px;margin-left:5px">BORRADOR</span>':''}</button>
     ${ready?'<span class="ready-badge" style="flex-shrink:0">✓ Listo para PM</span>':''}
   </div>
   <div class="gold-bar" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div>
@@ -5099,11 +5101,30 @@ function bindMailPresGlobal(){
   $('#btn-open-mailpres-global')?.addEventListener('click',()=>{
     st.showMailPresModal=true;st.mpStep='input';st.mpData=null;st.mpError='';render();
   });
-  $('#btn-mp-cancel')?.addEventListener('click',()=>{
-    st.showMailPresModal=false;st.mpStep='input';st.mpInputText='';st.mpData=null;st.mpError='';render();
+  $('#btn-mp-cancel')?.addEventListener('click',async()=>{
+    // Save current draft to client before closing
+    const c=gnc();
+    if(c){
+      const textEl=document.getElementById('mp-input-text');
+      if(textEl?.value)st.mpInputText=textEl.value;
+      if(st.mpInputText)c.mpInputText=st.mpInputText;
+      if(st.mpData)c.mpData=st.mpData;
+      if(st.mpInputText||st.mpData)await svNC(c);
+    }
+    st.showMailPresModal=false;st.mpError='';render();
   });
-  document.getElementById('mp-modal-overlay')?.addEventListener('click',e=>{
-    if(e.target.id==='mp-modal-overlay'){st.showMailPresModal=false;render();}
+  document.getElementById('mp-modal-overlay')?.addEventListener('click',async e=>{
+    if(e.target.id==='mp-modal-overlay'){
+      const c=gnc();
+      if(c){
+        const textEl=document.getElementById('mp-input-text');
+        if(textEl?.value)st.mpInputText=textEl.value;
+        if(st.mpInputText)c.mpInputText=st.mpInputText;
+        if(st.mpData)c.mpData=st.mpData;
+        if(st.mpInputText||st.mpData)await svNC(c);
+      }
+      st.showMailPresModal=false;render();
+    }
   });
   $('#btn-mp-extract')?.addEventListener('click',mpExtractData);
   $('#btn-mp-back-input')?.addEventListener('click',()=>{st.mpStep='input';render();});
@@ -5117,7 +5138,7 @@ function bindMailPresGlobal(){
     else if(!scope.includes(plat))scope=[...scope,plat];
     st.mpData.scope=scope;
   }));
-  $('#btn-mp-go-preview')?.addEventListener('click',()=>{
+  $('#btn-mp-go-preview')?.addEventListener('click',async()=>{
     if(!st.mpData)st.mpData={};
     st.mpData.empresa=document.getElementById('mp-empresa')?.value||'';
     st.mpData.rubro=document.getElementById('mp-rubro')?.value||'';
@@ -5127,7 +5148,10 @@ function bindMailPresGlobal(){
     st.mpData.redes=document.getElementById('mp-redes')?.value||'';
     st.mpData.contactoNombre=document.getElementById('mp-contacto-nombre')?.value||'';
     st.mpData.contactoTel=document.getElementById('mp-contacto-tel')?.value||'';
-    st.mpStep='preview';render();
+    st.mpStep='preview';
+    // Save validated data to client
+    const cv=gnc();if(cv){cv.mpData=st.mpData;cv.mpInputText=st.mpInputText;await svNC(cv);}
+    render();
   });
   $('#btn-mp-copy')?.addEventListener('click',async()=>{
     const html=mpBuildEmailHtml(st.mpData||{});
@@ -5159,7 +5183,13 @@ function bindNuevos(){
   $('#btn-save-nuevo')?.addEventListener('click',saveNuevoFromModal);
   $$('#nm-scope-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
   $('#btn-open-mailpres')?.addEventListener('click',()=>{
-    st.showMailPresModal=true;st.mpStep='input';st.mpData=null;st.mpError='';render();
+    const c=gnc();
+    // Restore saved draft if exists
+    if(c?.mpData&&!st.mpData){st.mpData=c.mpData;}
+    if(c?.mpInputText&&!st.mpInputText){st.mpInputText=c.mpInputText;}
+    st.showMailPresModal=true;
+    st.mpStep=(st.mpData&&Object.values(st.mpData).some(v=>v&&(typeof v==='string'?v.trim():v.length)))?'review':'input';
+    st.mpError='';render();
   });
   $('#btn-nd-back')?.addEventListener('click',()=>{st.view='nuevos';render()});
   $('#btn-nd-delete')?.addEventListener('click',async()=>{
