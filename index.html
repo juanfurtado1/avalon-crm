@@ -4636,8 +4636,22 @@ async function saveNuevoFromModal(){
     const scope=[...document.querySelectorAll('#nm-scope-grid .need-toggle.on')].map(t=>t.dataset.scope);
     const c=ncNew({name,company,rubro:gi('nm-rubro')||'',web:gi('nm-web')||'',instagram:gi('nm-ig')||'',tiktok:gi('nm-tiktok')||'',phone:gi('nm-phone')||'',pm:document.getElementById('nm-pm')?.value||'',fechaInicio:document.getElementById('nm-fecha')?.value||'',scope});
     nuevos.unshift(c);await svNC(c);
+    // Crear abono en espejo, igual que al pasar desde Leads (Cerrada) — queda en $0 para completar etapas
+    if(!abonos.find(a=>a.crmClientId===c.id||(a.name===c.name&&a.company===c.company))){
+      const ab=ncAbono({
+        name:c.name,company:c.company,
+        pm:c.pm||'',
+        plataformas:c.scope||[],
+        fechaInicio:c.fechaInicio||new Date().toISOString().split('T')[0],
+        fechaIngreso:new Date().toISOString().split('T')[0],
+        crmClientId:c.id,
+        montoARS:0,montoUSD:0,activo:true
+      });
+      abonos.unshift(ab);
+      await svAbono(ab);
+    }
     st.showNuevoModal=false;st.activeNuevo=c.id;st.view='nuevoDetail';
-    toast('Cliente creado ✓');render();
+    toast('Cliente creado + 💰 Abono creado ✓');render();
   } finally {
     _savingNuevo=false;
   }
