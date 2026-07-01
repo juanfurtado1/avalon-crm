@@ -3816,11 +3816,20 @@ function rAbonosList(){
   if(!st.abonoOrdenCustom.length||st.abonoOrdenCustom.length!==activosFilt.length){
     st.abonoOrdenCustom=activosFilt.map(a=>a.id);
   }
+  const getAddedTs=a=>{
+    if(a.fechaIngreso){
+      const t=new Date(a.fechaIngreso+'T00:00:00').getTime();
+      if(!isNaN(t))return t;
+    }
+    const m=(a.id||'').match(/(\d{10,})/);
+    return m?parseInt(m[1]):0;
+  };
   const activos=[...activosFilt].sort((a,b)=>{
     if(st.abonoSort==='az')return a.name.localeCompare(b.name,'es');
     if(st.abonoSort==='za')return b.name.localeCompare(a.name,'es');
     if(st.abonoSort==='mayor')return getMontoSort(b)-getMontoSort(a);
     if(st.abonoSort==='menor')return getMontoSort(a)-getMontoSort(b);
+    if(st.abonoSort==='reciente')return getAddedTs(b)-getAddedTs(a);
     if(st.abonoSort==='custom'){
       const ia=st.abonoOrdenCustom.indexOf(a.id);
       const ib=st.abonoOrdenCustom.indexOf(b.id);
@@ -3883,8 +3892,8 @@ function rAbonosList(){
   <!-- SORT + FILTRO PM -->
   <div style="display:flex;gap:6px;padding:10px 14px 0;align-items:center;flex-wrap:wrap">
     <span style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">Ordenar:</span>
-    ${['default','az','za','mayor','menor','custom'].map(s=>{
-      const labels={default:'Por defecto',az:'A → Z',za:'Z → A',mayor:'Mayor precio',menor:'Menor precio',custom:'✋ Personalizado'};
+    ${['default','reciente','az','za','mayor','menor','custom'].map(s=>{
+      const labels={default:'Por defecto',reciente:'🆕 Recientes',az:'A → Z',za:'Z → A',mayor:'Mayor precio',menor:'Menor precio',custom:'✋ Personalizado'};
       return`<button class="filter-chip ${st.abonoSort===s?'on':''}" data-absort="${s}" style="font-size:9px;padding:3px 8px">${labels[s]}</button>`;
     }).join('')}
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
