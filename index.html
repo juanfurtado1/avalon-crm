@@ -1539,7 +1539,6 @@ function rGlobalNav(){
     <button class="btn-sm" id="btn-go-nuevos" style="flex-shrink:0;background:rgba(74,171,122,.1);border-color:rgba(74,171,122,.4);color:var(--green);font-weight:800">🚀 Nuevos${nuevos.length?` <span style="background:var(--green);color:#000;border-radius:3px;padding:0 4px;font-size:9px">${nuevos.length}</span>`:''}</button>
     <button class="btn-sm" id="btn-generar-informe-header" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:var(--gold);font-weight:800">📊 Informe</button>
     <button class="btn-sm" id="btn-open-lc" style="flex-shrink:0;background:rgba(106,159,216,.1);border-color:rgba(106,159,216,.4);color:#6a9fd8;font-weight:800">💳 LC</button>
-    <button class="btn-sm" id="btn-open-mailpres-global" title="Generar mail de presentación" style="flex-shrink:0;background:rgba(155,109,255,.1);border-color:rgba(155,109,255,.4);color:#c4a0ff;font-weight:700">📧 Mail</button>
     <button class="btn-add" id="btn-open-new" style="flex-shrink:0;font-size:10px;padding:5px 12px">+ Prospecto</button>
   </div>`;
 }
@@ -4259,14 +4258,17 @@ function rMailPresModal(){
 }
 function rMpStepInput(){
   return`<div style="margin-top:14px">
-    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:6px">Pegá la transcripción de la reunión, notas o el brief del cliente</label>
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:6px">Agregá notas, transcripción o info que quieras sumar al mail (los datos del cliente ya están pre-cargados)</label>
     <textarea id="mp-input-text" class="field-input" style="width:100%;height:220px;resize:none;font-size:12px" placeholder="Pegá acá el texto...">${st.mpInputText}</textarea>
     ${st.mpError?`<div style="color:var(--red);font-size:11px;margin-top:8px">${st.mpError}</div>`:''}
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:16px">
       <button class="btn-sm" id="btn-mp-cancel">Cancelar</button>
-      <button class="btn-sm" id="btn-mp-extract" style="background:#9b6dff;color:#fff;border-color:#9b6dff;font-weight:700" ${st.mpLoading?'disabled':''}>
-        ${st.mpLoading?'⏳ Analizando...':'✨ Extraer datos'}
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm" id="btn-mp-skip-to-review" style="color:var(--text-muted)">Ir a revisar →</button>
+        <button class="btn-sm" id="btn-mp-extract" style="background:#9b6dff;color:#fff;border-color:#9b6dff;font-weight:700" ${st.mpLoading?'disabled':''}>
+          ${st.mpLoading?'⏳ Analizando...':'✨ Completar con IA'}
+        </button>
+      </div>
     </div>
   </div>`;
 }
@@ -4274,7 +4276,7 @@ function rMpStepReview(){
   const d=st.mpData||{};
   const platChips=MP_PLATAFORMAS.map(p=>`<span class="mp-chip ${((d.scope||[]).includes(p))?'':'off'}" data-plat="${p}">${p}</span>`).join('');
   return`<div style="margin-top:14px;max-height:60vh;overflow-y:auto;padding-right:4px">
-    <div style="font-size:11px;color:var(--green);margin-bottom:14px">✓ Datos extraídos — revisá y corregí lo que haga falta antes de generar el mail</div>
+    <div style="font-size:11px;color:var(--green);margin-bottom:14px">✓ Datos del cliente pre-cargados — revisá y completá lo que falte</div>
 
     <div class="mp-field">
       <label class="mp-label">Cliente / empresa</label>
@@ -4317,7 +4319,7 @@ function rMpStepReview(){
     </div>
 
     <div style="display:flex;gap:8px;justify-content:space-between;margin-top:18px">
-      <button class="btn-sm" id="btn-mp-back-input">← Volver a pegar texto</button>
+      <button class="btn-sm" id="btn-mp-back-input" style="color:#c4a0ff;border-color:rgba(155,109,255,.3)">✨ Agregar notas y completar con IA</button>
       <div style="display:flex;gap:8px">
         <button class="btn-sm" id="btn-mp-cancel">Cancelar</button>
         <button class="btn-sm" id="btn-mp-go-preview" style="background:#9b6dff;color:#fff;border-color:#9b6dff;font-weight:700">Ver preview →</button>
@@ -4452,9 +4454,22 @@ ${text}`;
     catch(e){throw new Error('No se pudo interpretar la respuesta — probá de nuevo');}
     const camposVacios=['empresa','rubro','objetivo','inversion','redes','contactoNombre','contactoTel'].every(k=>!parsed[k]) && !(parsed.scope||[]).length;
     if(camposVacios)throw new Error('No se encontró información reconocible en el texto pegado');
-    st.mpData=parsed;st.mpStep='review';
-    // Auto-save extracted data to client
-    const c=gnc();if(c){c.mpData=parsed;c.mpInputText=st.mpInputText;await svNC(c);}
+    // Merge: AI fills empty fields, doesn't overwrite existing data
+    const existing=st.mpData||{};
+    const merged={
+      empresa: existing.empresa||parsed.empresa||'',
+      rubro: existing.rubro||parsed.rubro||'',
+      objetivo: parsed.objetivo||(existing.objetivo||''),
+      scope: (parsed.scope&&parsed.scope.length)?[...new Set([...(existing.scope||[]),...parsed.scope])]:existing.scope||[],
+      inversion: parsed.inversion||(existing.inversion||''),
+      cuentasTipo: parsed.cuentasTipo||(existing.cuentasTipo||'cliente'),
+      redes: existing.redes||(parsed.redes||''),
+      contactoNombre: existing.contactoNombre||parsed.contactoNombre||'',
+      contactoTel: existing.contactoTel||parsed.contactoTel||''
+    };
+    st.mpData=merged;st.mpStep='review';
+    // Auto-save to client
+    const c=gnc();if(c){c.mpData=merged;c.mpInputText=st.mpInputText;await svNC(c);}
   }catch(err){
     st.mpError='Error al analizar el texto: '+err.message;
     console.error(err);
@@ -5098,9 +5113,7 @@ function recalcIPCPreview(){
 function bindMailPresGlobal(){
   const $=s=>document.querySelector(s);
   const $$=s=>document.querySelectorAll(s);
-  $('#btn-open-mailpres-global')?.addEventListener('click',()=>{
-    st.showMailPresModal=true;st.mpStep='input';st.mpData=null;st.mpError='';render();
-  });
+
   $('#btn-mp-cancel')?.addEventListener('click',async()=>{
     // Save current draft to client before closing
     const c=gnc();
@@ -5127,6 +5140,7 @@ function bindMailPresGlobal(){
     }
   });
   $('#btn-mp-extract')?.addEventListener('click',mpExtractData);
+  $('#btn-mp-skip-to-review')?.addEventListener('click',()=>{st.mpStep='review';render();});
   $('#btn-mp-back-input')?.addEventListener('click',()=>{st.mpStep='input';render();});
   $('#btn-mp-back-review')?.addEventListener('click',()=>{st.mpStep='review';render();});
   $$('.mp-chip[data-plat]').forEach(chip=>chip.addEventListener('click',()=>{
@@ -5183,12 +5197,35 @@ function bindNuevos(){
   $('#btn-save-nuevo')?.addEventListener('click',saveNuevoFromModal);
   $$('#nm-scope-grid .need-toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
   $('#btn-open-mailpres')?.addEventListener('click',()=>{
-    const c=gnc();
-    // Restore saved draft if exists
-    if(c?.mpData&&!st.mpData){st.mpData=c.mpData;}
-    if(c?.mpInputText&&!st.mpInputText){st.mpInputText=c.mpInputText;}
+    const c=gnc();if(!c)return;
+    // Build initial mpData from client's existing fields
+    const fromClient={
+      empresa: c.company||c.name||'',
+      rubro: c.rubro||'',
+      objetivo: '',
+      scope: c.scope||[],
+      inversion: '',
+      cuentasTipo: 'cliente',
+      redes: [c.web,c.instagram,c.tiktok].filter(Boolean).join('\n'),
+      contactoNombre: c.name||'',
+      contactoTel: c.phone||''
+    };
+    // Merge with saved draft (draft wins for fields that already have content)
+    const saved=c.mpData||{};
+    st.mpData={
+      empresa: saved.empresa||fromClient.empresa,
+      rubro: saved.rubro||fromClient.rubro,
+      objetivo: saved.objetivo||fromClient.objetivo,
+      scope: (saved.scope&&saved.scope.length)?saved.scope:fromClient.scope,
+      inversion: saved.inversion||fromClient.inversion,
+      cuentasTipo: saved.cuentasTipo||fromClient.cuentasTipo,
+      redes: saved.redes||fromClient.redes,
+      contactoNombre: saved.contactoNombre||fromClient.contactoNombre,
+      contactoTel: saved.contactoTel||fromClient.contactoTel
+    };
+    st.mpInputText=c.mpInputText||'';
     st.showMailPresModal=true;
-    st.mpStep=(st.mpData&&Object.values(st.mpData).some(v=>v&&(typeof v==='string'?v.trim():v.length)))?'review':'input';
+    st.mpStep='review';
     st.mpError='';render();
   });
   $('#btn-nd-back')?.addEventListener('click',()=>{st.view='nuevos';render()});
