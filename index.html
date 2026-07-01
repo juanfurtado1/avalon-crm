@@ -574,6 +574,7 @@ async function saveLCMaster(){
     });
   }catch(e){console.error('Save LC error',e);}
 }
+function _normName(s){return(s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
 function ncNew(d={}){
   return{
     id:d.id||Date.now().toString(),
@@ -4163,7 +4164,7 @@ function rAbonoIPCModal(){
 function rNuevosList(){
   const listo=nuevos.filter(c=>Object.values(c.onboarding||{}).every(v=>v==='Completo')).length;
   const enProceso=nuevos.filter(c=>!Object.values(c.onboarding||{}).every(v=>v==='Completo')).length;
-  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id)&&!abonos.find(a=>a.crmClientId===c.id));
+  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id)&&!abonos.find(a=>a.crmClientId===c.id||(_normName(a.company)&&_normName(a.company)===_normName(c.company))||(_normName(a.name)&&_normName(a.name)===_normName(c.company))||(_normName(a.name)&&_normName(a.name)===_normName(c.name))));
   return`
   <div class="nc-header">
     <div style="display:flex;align-items:center;gap:10px">
@@ -4212,7 +4213,13 @@ function rNuevosList(){
           </div>
           <div class="nc-card-body">
             <div class="ob-steps" style="margin-bottom:8px">
-              ${NC_OB_STEPS.map(s=>`<div class="ob-step ${ob[s.key]==='Completo'?'done':''}"><div class="ob-check">${ob[s.key]==='Completo'?'✓':''}</div>${s.label}</div>`).join('')}
+              ${NC_OB_STEPS.map(s=>{
+                const est=ob[s.key]||'Sin enviar';
+                const obColors={'Sin enviar':null,'Enviado':'var(--gold)','Firmado':'var(--blue)','Completo':'var(--green)'};
+                const obIcons={'Sin enviar':'','Enviado':'◔','Firmado':'◑','Completo':'✓'};
+                const col=obColors[est];
+                return`<div class="ob-step" style="${col?`background:${col==='var(--green)'?'rgba(74,171,122,.12)':col==='var(--blue)'?'rgba(106,159,216,.12)':'rgba(155,109,255,.14)'};border-color:${col==='var(--green)'?'rgba(74,171,122,.4)':col==='var(--blue)'?'rgba(106,159,216,.4)':'rgba(155,109,255,.4)'};color:${col}`:''}"><div class="ob-check">${obIcons[est]}</div>${s.label}</div>`;
+              }).join('')}
             </div>
             ${scopeList.length?`<div style="display:flex;gap:4px;flex-wrap:wrap">${scopeList.map(s=>`<span class="scope-chip">${s}</span>`).join('')}${c.scope.length>4?`<span class="scope-chip">+${c.scope.length-4}</span>`:''}</div>`:''}
           </div>
@@ -4726,7 +4733,7 @@ async function toggleOb(key){
 }
 
 async function syncCerrados(){
-  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id)&&!abonos.find(a=>a.crmClientId===c.id));
+  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id)&&!abonos.find(a=>a.crmClientId===c.id||(_normName(a.company)&&_normName(a.company)===_normName(c.company))||(_normName(a.name)&&_normName(a.name)===_normName(c.company))||(_normName(a.name)&&_normName(a.name)===_normName(c.name))));
   if(!synceable.length){toast('Sin cerrados nuevos para importar');return;}
   for(const cr of synceable){
     const n=ncNew({name:cr.name,company:cr.company,phone:cr.phone||'',email:cr.email||'',web:cr.web||'',instagram:cr.instagram||'',rubro:'',pm:'',fechaInicio:cr.mesIngreso||'',scope:cr.plataformas||[],contexto:cr.investigacion?.resultado?cr.investigacion.resultado.substring(0,500):'',crmClientId:cr.id,fromCRM:true});
