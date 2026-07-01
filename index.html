@@ -4702,7 +4702,7 @@ async function pasarAAbono(c,opts={}){
   await svAbono(ab);
   nuevos=nuevos.filter(x=>x.id!==c.id);
   await sbDelNC(c.id);
-  st.activeNuevo=null;st.view='abonos';
+  st.activeNuevo=null;st.view='nuevos';
   render();
   toast(ab.montoARS||ab.montoUSD?`${nombre} pasado a Abonos ✓`:`${nombre} pasado a Abonos — completá el monto ✓`);
 }
