@@ -4163,7 +4163,7 @@ function rAbonoIPCModal(){
 function rNuevosList(){
   const listo=nuevos.filter(c=>Object.values(c.onboarding||{}).every(v=>v==='Completo')).length;
   const enProceso=nuevos.filter(c=>!Object.values(c.onboarding||{}).every(v=>v==='Completo')).length;
-  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id));
+  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id)&&!abonos.find(a=>a.crmClientId===c.id));
   return`
   <div class="nc-header">
     <div style="display:flex;align-items:center;gap:10px">
@@ -4726,7 +4726,7 @@ async function toggleOb(key){
 }
 
 async function syncCerrados(){
-  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id));
+  const synceable=clients.filter(c=>c.estado==='Cerrada'&&!nuevos.find(n=>n.crmClientId===c.id)&&!abonos.find(a=>a.crmClientId===c.id));
   if(!synceable.length){toast('Sin cerrados nuevos para importar');return;}
   for(const cr of synceable){
     const n=ncNew({name:cr.name,company:cr.company,phone:cr.phone||'',email:cr.email||'',web:cr.web||'',instagram:cr.instagram||'',rubro:'',pm:'',fechaInicio:cr.mesIngreso||'',scope:cr.plataformas||[],contexto:cr.investigacion?.resultado?cr.investigacion.resultado.substring(0,500):'',crmClientId:cr.id,fromCRM:true});
