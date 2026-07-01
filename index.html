@@ -4653,7 +4653,7 @@ async function saveNuevoFromModal(){
     const c=ncNew({name,company,rubro:gi('nm-rubro')||'',web:gi('nm-web')||'',instagram:gi('nm-ig')||'',tiktok:gi('nm-tiktok')||'',phone:gi('nm-phone')||'',pm:document.getElementById('nm-pm')?.value||'',fechaInicio:document.getElementById('nm-fecha')?.value||'',scope});
     nuevos.unshift(c);await svNC(c);
     // Crear abono en espejo, igual que al pasar desde Leads (Cerrada) — queda en $0 para completar etapas
-    if(!abonos.find(a=>a.crmClientId===c.id||(a.name===c.name&&a.company===c.company))){
+    if(!abonos.find(a=>a.crmClientId===c.id||(_normName(a.company)&&_normName(a.company)===_normName(c.company))||(_normName(a.name)&&_normName(a.name)===_normName(c.company)))){
       const ab=ncAbono({
         name:c.name,company:c.company,
         pm:c.pm||'',
@@ -4696,7 +4696,7 @@ async function pasarAAbono(c,opts={}){
     if(!confirm(`✅ ${nombre} — onboarding completo.\n¿Pasarlo a Abonos? Va a salir de Clientes Nuevos y va a quedar disponible como cliente activo (con monto en $0 para completar).`))return;
   }
   // Buscar abono existente con el mismo crmClientId / nombre / empresa
-  let ab=abonos.find(a=>(c.crmClientId&&a.crmClientId===c.crmClientId)||a.name===c.name||a.company===c.company);
+  let ab=abonos.find(a=>(c.crmClientId&&a.crmClientId===c.crmClientId)||a.id===c.id||(a.crmClientId&&a.crmClientId===c.id)||(_normName(a.company)&&_normName(a.company)===_normName(c.company))||(_normName(a.name)&&_normName(a.name)===_normName(c.company))||(_normName(a.name)&&_normName(a.name)===_normName(c.name)));
   if(ab){
     // Actualizar datos del abono existente
     ab.pm=c.pm||ab.pm;
