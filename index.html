@@ -575,6 +575,14 @@ async function saveLCMaster(){
   }catch(e){console.error('Save LC error',e);}
 }
 function _normName(s){return(s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
+function abonoMoneyFromLead(c){
+  const etapasValidas=(c.etapas||[]).filter(e=>e&&(e.mes||e.monto));
+  if(etapasValidas.length){
+    const etapasAbono=etapasValidas.map(e=>({mes:e.mes||'',montoARS:parseInt(e.monto||0)||0,montoUSD:0}));
+    return{tipoAbono:'etapas',etapasAbono,montoARS:etapasAbono[0]?.montoARS||0,montoUSD:0};
+  }
+  return{tipoAbono:'fijo',etapasAbono:[],montoARS:parseInt(c.presupuesto||0)||0,montoUSD:0};
+}
 function ncNew(d={}){
   return{
     id:d.id||Date.now().toString(),
@@ -663,7 +671,7 @@ function nc(d={}){
 
 // ── STATE ──
 let st={
-  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',abonoOrdenCustom:[],lcSelARS:[],lcSelUSD:[],showBajaAbonoModal:false,bajaAbonoId:null,cerradaCrearAbono:true,
+  view:'list',filter:'Todos',activeClient:null,activeTab:'inv',showAbonoImport:false,showAbonoIPC:false,abonoSort:'default',abonoFiltPM:'',abonoOrdenCustom:[],abonoCompact:false,lcSelARS:[],lcSelUSD:[],showBajaAbonoModal:false,bajaAbonoId:null,cerradaCrearAbono:true,
   showNewModal:false,showEditModal:false,showFilters:false,showApiModal:false,showSbModal:false,
   sbLoading:false,loadingInv:false,loadingPropuesta:false,loadingFollowup:false,
   calOpen:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),
@@ -2878,15 +2886,17 @@ async function confirmCerrada(){
   await svNC(n);
   // Crear abono si está activado
   if(st.cerradaCrearAbono&&!abonos.find(a=>a.crmClientId===c.id||a.name===c.name)){
+    const money=abonoMoneyFromLead(c);
     const ab=ncAbono({
       name:c.name,company:c.company||'',
       pm:c.pm||'',
       plataformas:c.plataformas||[],
-      montoARS:parseInt(c.presupuesto||0)||0,
-      montoUSD:0,
+      montoARS:money.montoARS,
+      montoUSD:money.montoUSD,
       fechaInicio:new Date().toISOString().split('T')[0],
       fechaIngreso:new Date().toISOString().split('T')[0],
-      tipoAbono:'fijo',
+      tipoAbono:money.tipoAbono,
+      etapasAbono:money.etapasAbono,
       crmClientId:c.id,
       activo:true
     });
@@ -3364,13 +3374,14 @@ function bind(){
     if(st.cerradaCrearAbono){
       const c=clients.find(x=>x.id===st.cerradaClientId);
       if(c&&!abonos.find(a=>a.crmClientId===c.id||a.name===c.name)){
+        const money=abonoMoneyFromLead(c);
         const ab=ncAbono({
           name:c.name,company:c.company||'',
           pm:c.pm||'',plataformas:c.plataformas||[],
-          montoARS:parseInt(c.presupuesto||0)||0,montoUSD:0,
+          montoARS:money.montoARS,montoUSD:money.montoUSD,
           fechaInicio:new Date().toISOString().split('T')[0],
           fechaIngreso:new Date().toISOString().split('T')[0],
-          tipoAbono:'fijo',crmClientId:c.id,activo:true
+          tipoAbono:money.tipoAbono,etapasAbono:money.etapasAbono,crmClientId:c.id,activo:true
         });
         abonos.push(ab);await svAbono(ab);
         toast('💰 Abono creado ✓');
@@ -3884,7 +3895,8 @@ function rAbonosList(){
         <span style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.8px">/ Proyección</span>
       </div>
     </div>
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;align-items:center">
+      ${tcBlue?`<span style="font-size:9px;color:var(--green);font-weight:700;background:rgba(74,171,122,.1);border:1px solid rgba(74,171,122,.3);border-radius:5px;padding:3px 8px">💵 TC Blue $${tcBlue.toLocaleString('es-AR')}</span>`:''}
       <button class="btn-sm" id="btn-abono-ipc" style="color:var(--yellow);border-color:rgba(196,154,32,.4);background:rgba(196,154,32,.07)">📈 Ajuste IPC</button>
       <button class="btn-add" id="btn-abono-nuevo" style="background:linear-gradient(135deg,#c49a20,#a07a10)">+ Abono</button>
     </div>
@@ -3898,6 +3910,7 @@ function rAbonosList(){
       return`<button class="filter-chip ${st.abonoSort===s?'on':''}" data-absort="${s}" style="font-size:9px;padding:3px 8px">${labels[s]}</button>`;
     }).join('')}
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <button class="filter-chip ${st.abonoCompact?'on':''}" id="btn-abono-compact" style="font-size:9px;padding:3px 8px">${st.abonoCompact?'☰ Compacta':'▤ Completa'}</button>
       <span style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px">PM:</span>
       <button class="filter-chip ${!st.abonoFiltPM?'on':''}" data-abpm-filt="" style="font-size:9px;padding:3px 8px">Todos</button>
       ${pms.map(p=>`<button class="filter-chip ${st.abonoFiltPM===p?'on':''}" data-abpm-filt="${p}" style="font-size:9px;padding:3px 8px">${p}</button>`).join('')}
@@ -3907,7 +3920,7 @@ function rAbonosList(){
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 14px 0">
     <div class="stat"><div class="stat-n" style="color:var(--yellow)">${activos.length}</div><div class="stat-l">Activos</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--green);font-size:16px">${fmtARS(totalARS)}</div><div class="stat-l">Total ARS/mes</div></div>
-    <div class="stat"><div class="stat-n" style="color:var(--blue);font-size:16px">${fmtUSD(totalUSD)}</div><div class="stat-l">Total USD/mes</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--blue);font-size:16px">${fmtUSD(totalUSD)}</div><div class="stat-l">Total USD/mes</div>${tcBlue&&totalUSD?`<div style="font-size:9px;color:var(--green);font-weight:700;margin-top:3px">≈ ${fmtARS(Math.round(totalUSD*tcBlue))}</div>`:''}</div>
     <div class="stat" style="cursor:pointer" id="stat-pm-block">
       <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Por PM</div>
       ${Object.entries(byPM).map(([pm,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px"><span style="color:var(--text2);font-weight:600">${pm}</span><span style="color:var(--yellow);font-weight:700">${v.n} clientes</span></div>`).join('')}
@@ -3944,6 +3957,27 @@ function rAbonosList(){
           if(pasadas.length){const ult=pasadas[pasadas.length-1];montoActual=ult.montoARS||0;montoUSDActual=ult.montoUSD||0;}
           else if(etapas[0]){montoActual=etapas[0].montoARS||0;montoUSDActual=etapas[0].montoUSD||0;}
         }
+        if(st.abonoCompact){
+          return`<div class="card ab-drag-card" style="padding:7px 12px;${st.abonoSort==='custom'?'cursor:grab':''}" data-abonoid="${a.id}" draggable="${st.abonoSort==='custom'}">
+            <div class="card-bar" style="background:${esEtapas?'var(--blue)':'var(--yellow)'}"></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden">
+                <span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.company||a.name}</span>
+                ${a.company&&a.name?`<span style="font-size:10px;color:var(--text-muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">| ${a.name}</span>`:''}
+                ${a.pm?`<span style="font-size:8px;color:var(--text-muted);font-weight:700;flex-shrink:0;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px">👤${a.pm}</span>`:''}
+                <span style="font-size:7px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:1px 5px;border-radius:3px;flex-shrink:0;${esEtapas?'background:rgba(106,159,216,.15);color:var(--blue)':'background:rgba(196,154,32,.12);color:var(--yellow)'}">${esEtapas?'3 ETAPAS':'FIJO'}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                <div style="text-align:right">
+                  <div style="font-size:12px;font-weight:800;color:var(--yellow);line-height:1.1">${montoActual?'$'+parseInt(montoActual).toLocaleString('es-AR'):'—'}</div>
+                  ${montoUSDActual?`<div style="font-size:9px;font-weight:700;color:var(--blue);line-height:1.1">USD ${parseFloat(montoUSDActual).toLocaleString('es-AR')}${tcBlue?` <span style="color:var(--green);font-weight:600">(≈$${Math.round(montoUSDActual*tcBlue).toLocaleString('es-AR')})</span>`:''}</div>`:''}
+                </div>
+                <button class="btn-sm btn-edit-abono" data-abonoid="${a.id}" style="font-size:9px;padding:3px 7px">✏</button>
+                <button class="btn-sm btn-add-accion" data-abonoid="${a.id}" style="font-size:9px;padding:3px 7px;color:#c4a0ff;border-color:rgba(155,109,255,.35);background:rgba(155,109,255,.08)">+</button>
+              </div>
+            </div>
+          </div>`;
+        }
         return`<div class="card ab-drag-card" style="padding:12px 14px 12px 16px;${st.abonoSort==='custom'?'cursor:grab':''}" data-abonoid="${a.id}" draggable="${st.abonoSort==='custom'}">
           <div class="card-bar" style="background:${esEtapas?'var(--blue)':'var(--yellow)'}"></div>
           ${st.abonoSort==='custom'?`<div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--border2);font-size:16px;pointer-events:none;letter-spacing:-2px">⋮⋮</div>`:''}
@@ -3973,6 +4007,7 @@ function rAbonosList(){
             <div style="text-align:right;flex-shrink:0">
               ${montoActual?`<div style="font-size:14px;font-weight:800;color:var(--yellow)">$${parseInt(montoActual).toLocaleString('es-AR')}</div>`:''}
               ${montoUSDActual?`<div style="font-size:12px;font-weight:700;color:var(--blue)">USD ${parseFloat(montoUSDActual).toLocaleString('es-AR')}</div>`:''}
+              ${montoUSDActual&&tcBlue?`<div style="font-size:10px;font-weight:700;color:var(--green)">≈ $${Math.round(montoUSDActual*tcBlue).toLocaleString('es-AR')}</div>`:''}
               ${a.historialIPC&&a.historialIPC.length?`<div style="font-size:8px;color:var(--text-muted);margin-top:2px">IPC x${a.historialIPC.length}</div>`:''}
             </div>
           </div>
@@ -4705,13 +4740,17 @@ async function pasarAAbono(c,opts={}){
     ab.equipoAreas=c.equipoAreas||ab.equipoAreas||{};
   } else {
     // No existe — crear uno nuevo a partir de los datos del cliente
+    const leadOrigen=clients.find(x=>x.id===(c.crmClientId||c.id));
+    const money=leadOrigen?abonoMoneyFromLead(leadOrigen):{tipoAbono:'fijo',etapasAbono:[],montoARS:0,montoUSD:0};
     ab=ncAbono({
       name:c.name,company:c.company,pm:c.pm||'',
       plataformas:c.scope||[],
       fechaInicio:c.fechaInicio||new Date().toISOString().split('T')[0],
       fechaIngreso:new Date().toISOString().split('T')[0],
       crmClientId:c.crmClientId||c.id,
-      montoARS:0,montoUSD:0,activo:true
+      montoARS:money.montoARS,montoUSD:money.montoUSD,
+      tipoAbono:money.tipoAbono,etapasAbono:money.etapasAbono,
+      activo:true
     });
     abonos.unshift(ab);
   }
@@ -4951,6 +4990,7 @@ function bindAbonos(){
     });
   });
   document.querySelectorAll('[data-abpm-filt]').forEach(b=>b.addEventListener('click',()=>{st.abonoFiltPM=b.dataset.abpmFilt;render();}));
+  $('#btn-abono-compact')?.addEventListener('click',()=>{st.abonoCompact=!st.abonoCompact;render();});
   $('#btn-abono-nuevo')?.addEventListener('click',()=>{st.editingAbono=null;st.showAbonoModal=true;st.abonoTipoEtapas=null;render();});
   $('#btn-abono-import')?.addEventListener('click',()=>{st.showAbonoImport=true;st.abonoImportPreview=null;st.abonoImportFile=null;st.abonoImportLoading=false;render();});
   $('#btn-abono-ipc')?.addEventListener('click',()=>{st.showAbonoIPC=true;render();});
@@ -5348,6 +5388,13 @@ function tryLogin(){
     setTimeout(()=>err?.classList.remove('show'),2500);
   }
 }
+let tcBlue=null;
+async function fetchTcBlue(){
+  try{
+    const r=await fetch('https://dolarapi.com/v1/dolares/blue',{signal:AbortSignal.timeout(4000)});
+    if(r.ok){const d=await r.json();tcBlue=d.venta||null;render();}
+  }catch(e){console.warn('TC blue fetch error',e);}
+}
 async function initApp(){
   st.sbLoading=true;
   render();
@@ -5357,6 +5404,7 @@ async function initApp(){
   await loadAbonos();
   st.sbLoading=false;
   render();
+  fetchTcBlue();
   setTimeout(requestNotifPermission,2000);
 }
 // Arranque con auth
